@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Users from './pages/Users'
+import Empleados from './pages/Empleados'
 import './App.css'
 
 function App() {
@@ -16,7 +17,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/usuarios" element={<Users />} />
         <Route path="/afiliaciones" element={<Dashboard />} />
-        <Route path="/empleados" element={<Dashboard />} />
+        <Route path="/empleados" element={<Empleados />} />
         <Route path="/certificacion" element={<Dashboard />} />
         <Route path="/contratos" element={<Dashboard />} />
         <Route path="/memorandos" element={<Dashboard />} />

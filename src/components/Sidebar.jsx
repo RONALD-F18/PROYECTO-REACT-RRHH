@@ -7,7 +7,7 @@ function Sidebar({ isOpen, onClose }) {
   const menuItems = [
     { path: '/dashboard', label: 'Dashboard', icon: '⊞' },
     { path: '/afiliaciones', label: 'Afiliaciones', icon: '▤' },
-    { path: '/empleados', label: 'Empleados', icon: '👥' },
+    { path: '/Empleados', label: 'Empleados', icon: '👥' },
     { path: '/certificacion', label: 'Certificación', icon: '🎓' },
     { path: '/contratos', label: 'Contratos', icon: '📄' },
     { path: '/memorandos', label: 'Memorandos', icon: '⚠' },

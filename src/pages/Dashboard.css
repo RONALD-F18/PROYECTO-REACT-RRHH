@@ -241,6 +241,13 @@
   color: #d97706;
 }
 
+.quick-actions {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
 .quick-actions h3 {
   font-size: 15px;
   color: #1a1a2e;
@@ -252,20 +259,25 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
+  justify-items: center;
+  align-items: center;
 }
 
-.action-btn {
-  padding: 16px;
+.action-btn1 {
+  display: block;
+  padding: 30px 0; 
   border-radius: 8px;
   text-align: center;
   font-size: 13px;
   font-weight: 500;
+  text-decoration: none;
+  width: 100%;
 }
 
-.btn-yellow { background: #fef3c7; color: #000C; }
-.btn-pink { background: #fce7f3; color: #000C; }
-.btn-orange { background: #ffedd5; color: #000C; }
-.btn-green { background: #d1fae5; color: #000C; }
+.btn-yellow { background: #fef3c7; color: rgba(0, 0, 0, 0.795); font-weight: 700; }
+.btn-pink { background: #fce7f3; color: rgba(0, 0, 0, 0.795); font-weight: 700;}
+.btn-orange { background: #ffedd5; color: rgba(0, 0, 0, 0.795); font-weight: 700; }
+.btn-green { background: #d1fae5; color: rgba(0, 0, 0, 0.795); font-weight: 700;}
 
 @media (max-width: 900px) {
   .main-content {

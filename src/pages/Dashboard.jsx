@@ -133,10 +133,10 @@ function Dashboard() {
             <div className="quick-actions">
               <h3>Acciones Rapidas</h3>
               <div className="actions-grid">
-                <Link to="/empleados" className="action-btn btn-yellow">Nuevo Empleado</Link>
-                <Link to="/contratos" className="action-btn btn-pink">Crear Contrato</Link>
-                <Link to="/prestaciones" className="action-btn btn-orange">Registrar Prestación</Link>
-                <Link to="/afiliaciones" className="action-btn btn-green">Registrar Afiliación</Link>
+                <Link to="/Empleados" className="action-btn1 btn-yellow">Nuevo Empleado</Link>
+                <Link to="/contratos" className="action-btn1 btn-pink">Crear Contrato</Link>
+                <Link to="/prestaciones" className="action-btn1 btn-orange">Registrar Prestación</Link>
+                <Link to="/afiliaciones" className="action-btn1 btn-green">Registrar Afiliación</Link>
               </div>
             </div>
           </div>

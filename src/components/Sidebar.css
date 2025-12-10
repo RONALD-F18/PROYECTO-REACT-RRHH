@@ -1,0 +1,161 @@
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(94, 255, 0);
+  z-index: 99;
+  display: none;
+}
+
+.sidebar {
+  width: 240px;
+  height: 100vh;
+  background: #FFF;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-top {
+  padding: 18px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: linear-gradient(to right, #7914a1 40%,  #fd2ed0 100%);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon {
+  flex-shrink: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-title {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.brand-sub {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  color: #ffffff;
+  font-size: 20px;
+  padding: 0;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sidebar-menu {
+  flex: 1;
+  padding: 10px 0;
+  overflow-y: auto;
+  background-color: #ce15970c;
+
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 18px;
+  color: #4A4545;
+  font-size: 15px;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+}
+
+.menu-item:hover {
+  background: rgba(154, 115, 226, 0.842);
+  color: #fff;
+}
+
+.menu-item.active {
+  background: rgba(154, 115, 226, 0.842);
+  color: #fff;
+  border-left-color: #8b5cf6;
+}
+
+.menu-icon {
+  width: 18px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.sidebar-bottom {
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding: 10px 0;
+  background-color: #ce15970c;
+}
+
+.help-item {
+  margin-bottom: 5px;
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  margin-top: 5px;
+}
+
+.user-avatar {
+  width: 38px;
+  height: 38px;
+  background: #ec4899;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  color: #242020;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.user-email {
+  color: #a5a5c0;
+  font-size: 15px;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .sidebar-overlay {
+    display: block;
+  }
+}

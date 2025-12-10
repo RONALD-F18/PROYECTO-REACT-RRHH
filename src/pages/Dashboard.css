@@ -1,0 +1,284 @@
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 240px;
+}
+
+.page-header {
+  background: #fff;
+  padding: 20px 25px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  background: none;
+  padding: 5px;
+}
+
+.hamburger span {
+  width: 20px;
+  height: 2px;
+  background: #333;
+}
+
+.header-info h1 {
+  font-size: 22px;
+  color: #1a1a2e;
+  margin-bottom: 2px;
+}
+
+.header-info p {
+  font-size: 13px;
+  color: #888;
+}
+
+.header-date {
+  margin-left: auto;
+  font-size: 13px;
+  color: #666;
+}
+
+.dashboard-body {
+  padding: 25px;
+}
+
+.stats-column {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.stat-icon.yellow { background: #fef3c7; }
+.stat-icon.pink { background: #fce7f3; }
+.stat-icon.orange { background: #ffedd5; }
+.stat-icon.blue { background: #dbeafe; }
+.stat-icon.green { background: #d1fae5; }
+
+.stat-number {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.stat-text {
+  font-size: 12px;
+  color: #888;
+}
+
+.activities-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.card-top h3 {
+  font-size: 15px;
+  color: #1a1a2e;
+  font-weight: 600;
+}
+
+.link-blue {
+  font-size: 12px;
+  color: #3b82f6;
+}
+
+.tasks-badge {
+  background: #3b82f6;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.activities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.activity-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.activity-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.activity-text {
+  display: block;
+  font-size: 13px;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.badge-green {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.badge-red {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.activity-time {
+  font-size: 11px;
+  color: #999;
+}
+
+.tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #f9fafb;
+  padding: 14px;
+  border-radius: 8px;
+}
+
+.task-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: #3b82f6;
+}
+
+.task-text {
+  display: block;
+  font-size: 13px;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.task-date {
+  font-size: 11px;
+  color: #888;
+}
+
+.priority {
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+}
+
+.priority-alta {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.priority-media {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.quick-actions h3 {
+  font-size: 15px;
+  color: #1a1a2e;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.action-btn {
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.btn-yellow { background: #fef3c7; color: #000C; }
+.btn-pink { background: #fce7f3; color: #000C; }
+.btn-orange { background: #ffedd5; color: #000C; }
+.btn-green { background: #d1fae5; color: #000C; }
+
+@media (max-width: 900px) {
+  .main-content {
+    margin-left: 0;
+  }
+  
+  .hamburger {
+    display: flex;
+  }
+}
+
+@media (max-width: 500px) {
+  .actions-grid {
+    grid-template-columns: 1fr;
+  }
+}

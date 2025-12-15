@@ -1,50 +1,22 @@
 import './FormField.css'
 
-function FormField({ 
-  label, 
-  type = 'text', 
-  name, 
-  value, 
-  onChange, 
-  placeholder, 
-  options = [], 
-  required = false,
-  rows = 4 
-}) {
-  const handleChange = (e) => {
-    onChange(name, e.target.value)
-  }
-
+function FormField({ label, type = 'text', name, value, placeholder, options = [] }) {
   return (
     <div className="form-field">
-      <label>
-        {label}{required && '*'}
-      </label>
+      <label>{label}</label>
       {type === 'select' ? (
-        <select name={name} value={value} onChange={handleChange}>
+        <select name={name} value={value}>
           <option value="">Seleccione</option>
           {options.map((opt, idx) => (
-            <option key={idx} value={opt.value || opt}>
-              {opt.label || opt}
+            <option key={idx} value={opt}>
+              {opt}
             </option>
           ))}
         </select>
       ) : type === 'textarea' ? (
-        <textarea 
-          name={name}
-          value={value}
-          onChange={handleChange}
-          placeholder={placeholder}
-          rows={rows}
-        />
+        <textarea name={name} value={value} placeholder={placeholder} />
       ) : (
-        <input 
-          type={type}
-          name={name}
-          value={value}
-          onChange={handleChange}
-          placeholder={placeholder}
-        />
+        <input type={type} name={name} value={value} placeholder={placeholder} />
       )}
     </div>
   )

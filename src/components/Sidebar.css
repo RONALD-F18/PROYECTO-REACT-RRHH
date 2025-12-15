@@ -1,12 +1,4 @@
-.sidebar-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgb(94, 255, 0);
-  z-index: 99;
-  display: none;
-}
-
-.sidebar {
+.barra-lateral {
   width: 240px;
   height: 100vh;
   background: #FFF;
@@ -18,51 +10,42 @@
   flex-direction: column;
 }
 
-.sidebar-top {
+.encabezado-lateral {
   padding: 18px 15px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  background: linear-gradient(to right, #7914a1 40%,  #fd2ed0 100%);
+  background: #48E;
 }
 
-.sidebar-brand {
+.marca-lateral {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.brand-icon {
+.marca-icono {
   flex-shrink: 0;
 }
 
-.brand-text {
+.marca-texto {
   display: flex;
   flex-direction: column;
 }
 
-.brand-title {
+.marca-titulo {
   color: #fff;
   font-size: 20px;
   font-weight: 700;
 }
 
-.brand-sub {
+.marca-subtitulo {
   color: #ffffff;
   font-size: 14px;
   font-weight: 600;
 }
 
-.close-btn {
-  background: none;
-  color: #ffffff;
-  font-size: 20px;
-  padding: 0;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.sidebar-menu {
+.menu-lateral {
   flex: 1;
   padding: 10px 0;
   overflow-y: auto;
@@ -70,7 +53,7 @@
 
 }
 
-.menu-item {
+.opcion-menu {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -81,34 +64,28 @@
   border-left: 3px solid transparent;
 }
 
-.menu-item:hover {
-  background: rgba(154, 115, 226, 0.842);
+.opcion-menu:hover {
+  background: rgba(87, 128, 241, 0.842);
   color: #fff;
 }
 
-.menu-item.active {
-  background: rgba(154, 115, 226, 0.842);
+.opcion-menu.active {
+  background: rgba(87, 128, 241, 0.842);
   color: #fff;
-  border-left-color: #8b5cf6;
+  border-left-color: #5cd7f6;
 }
 
-.menu-icon {
-  width: 18px;
-  text-align: center;
-  font-size: 14px;
-}
-
-.sidebar-bottom {
+.pie-lateral {
   border-top: 1px solid rgba(255,255,255,0.1);
   padding: 10px 0;
   background-color: #ce15970c;
 }
 
-.help-item {
+.opcion-ayuda {
   margin-bottom: 5px;
 }
 
-.user-card {
+.tarjeta-usuario {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -117,7 +94,7 @@
   margin-top: 5px;
 }
 
-.user-avatar {
+.avatar-usuario {
   width: 38px;
   height: 38px;
   background: #ec4899;
@@ -130,32 +107,28 @@
   font-size: 15px;
 }
 
-.user-details {
+.datos-usuario {
   display: flex;
   flex-direction: column;
 }
 
-.user-name {
+.nombre-usuario {
   color: #242020;
   font-size: 17px;
   font-weight: 700;
 }
 
-.user-email {
+.correo-usuario {
   color: #a5a5c0;
   font-size: 15px;
 }
 
 @media (max-width: 900px) {
-  .sidebar {
+  .barra-lateral {
     transform: translateX(-100%);
   }
   
-  .sidebar.open {
+  .barra-lateral.open {
     transform: translateX(0);
-  }
-  
-  .sidebar-overlay {
-    display: block;
   }
 }

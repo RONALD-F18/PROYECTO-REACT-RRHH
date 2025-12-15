@@ -1,85 +1,57 @@
-import { Link, useLocation } from 'react-router-dom'
-import './Sidebar.css'
+import { Link } from "react-router-dom";
+import "./Sidebar.css";
 
-function Sidebar({ isOpen, onClose }) {
-  const location = useLocation()
-  
-  const menuItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: '⊞' },
-    { path: '/afiliaciones', label: 'Afiliaciones', icon: '▤' },
-    { path: '/Empleados', label: 'Empleados', icon: '👥' },
-    { path: '/certificacion', label: 'Certificación', icon: '🎓' },
-    { path: '/contratos', label: 'Contratos', icon: '📄' },
-    { path: '/memorandos', label: 'Memorandos', icon: '⚠' },
-    { path: '/prestaciones', label: 'Prestaciones Sociales', icon: '⊕' },
-    { path: '/inasistencias', label: 'Inasistencias', icon: '📅' },
-    { path: '/incapacidades', label: 'Incapacidades', icon: '🏥' },
-    { path: '/actividades', label: 'Actividades', icon: '📌' },
-    { path: '/reportes', label: 'Reportes', icon: '📊' },
-    { path: '/usuarios', label: 'Usuarios', icon: '👤' },
-  ]
+function Sidebar() {
+  const enlacesMenu = [
+    { path: "/dashboard", label: "Dashboard" },
+    { path: "/afiliaciones", label: "Afiliaciones" },
+    { path: "/empleados", label: "Empleados" },
+    { path: "/certificacion", label: "Certificación" },
+    { path: "/contratos", label: "Contratos" },
+    { path: "/memorandos", label: "Memorandos" },
+    { path: "/prestaciones", label: "Prestaciones Sociales" },
+    { path: "/inasistencias", label: "Inasistencias" },
+    { path: "/incapacidades", label: "Incapacidades" },
+    { path: "/actividades", label: "Actividades" },
+    { path: "/reportes", label: "Reportes" },
+    { path: "/usuarios", label: "Usuarios" },
+  ];
 
   return (
-    <>
-      {isOpen && <div className="sidebar-overlay" onClick={onClose}></div>}
-      <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-        <div className="sidebar-top">
-          <div className="sidebar-brand">
-            <div className="brand-icon">
-              <svg width="32" height="32" viewBox="0 0 32 32">
-                <circle cx="16" cy="16" r="14" fill="url(#sideGrad)" />
-                <ellipse cx="16" cy="16" rx="9" ry="3.5" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="0.8"/>
-                <ellipse cx="16" cy="16" rx="9" ry="3.5" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" transform="rotate(60 16 16)"/>
-                <ellipse cx="16" cy="16" rx="9" ry="3.5" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" transform="rotate(-60 16 16)"/>
-                <circle cx="16" cy="16" r="2.5" fill="white"/>
-                <defs>
-                  <linearGradient id="sideGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#ec4899" />
-                    <stop offset="50%" stopColor="#8b5cf6" />
-                    <stop offset="100%" stopColor="#3b82f6" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
-            <div className="brand-text">
-              <span className="brand-title">Talent Sphere</span>
-              <span className="brand-sub">Gestión de RRHH</span>
-            </div>
+    <aside className="barra-lateral">
+      <div className="encabezado-lateral">
+        <div className="marca-lateral">
+          <div className="marca-icono"></div>
+          <div className="marca-texto">
+            <span className="marca-titulo">Talent Sphere</span>
+            <span className="marca-subtitulo">Gestión de RRHH</span>
           </div>
-          <button className="close-btn" onClick={onClose}>✕</button>
         </div>
-        
-        <nav className="sidebar-menu">
-          {menuItems.map(item => (
-            <Link 
-              key={item.path}
-              to={item.path} 
-              className={`menu-item ${location.pathname === item.path ? 'active' : ''}`}
-              onClick={onClose}
-            >
-              <span className="menu-icon">{item.icon}</span>
-              <span className="menu-label">{item.label}</span>
-            </Link>
-          ))}
-        </nav>
+      </div>
 
-        <div className="sidebar-bottom">
-          <Link to="#" className="menu-item help-item">
-            <span className="menu-icon">?</span>
-            <span className="menu-label">Ayuda</span>
+      <nav className="menu-lateral">
+        {enlacesMenu.map((item) => (
+          <Link key={item.path} to={item.path} className="opcion-menu">
+            <span className="opcion-etiqueta">{item.label}</span>
           </Link>
-          
-          <div className="user-card">
-            <div className="user-avatar">A</div>
-            <div className="user-details">
-              <span className="user-name">Admin</span>
-              <span className="user-email">gatafuriosa@gmail.com</span>
-            </div>
+        ))}
+      </nav>
+
+      <div className="pie-lateral">
+        <Link to="#" className="opcion-menu opcion-ayuda">
+          <span className="opcion-etiqueta">Ayuda</span>
+        </Link>
+
+        <div className="tarjeta-usuario">
+          <div className="avatar-usuario">A</div>
+          <div className="datos-usuario">
+            <span className="nombre-usuario">Admin</span>
+            <span className="correo-usuario">gatafuriosa@gmail.com</span>
           </div>
         </div>
-      </aside>
-    </>
-  )
+      </div>
+    </aside>
+  );
 }
 
-export default Sidebar
+export default Sidebar;

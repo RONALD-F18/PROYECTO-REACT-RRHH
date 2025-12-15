@@ -1,11 +1,12 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Home from './pages/Home'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Dashboard from './pages/Dashboard'
-import Users from './pages/Users'
-import Empleados from './pages/Empleados'
-import './App.css'
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import Users from "./pages/usuarios/Users";
+import Empleados from "./pages/empleados/Empleados";
+import PrestacionesSociales from "./pages/prestaciones/PrestacionesSociales";
+import "./App.css";
 
 function App() {
   return (
@@ -21,14 +22,14 @@ function App() {
         <Route path="/certificacion" element={<Dashboard />} />
         <Route path="/contratos" element={<Dashboard />} />
         <Route path="/memorandos" element={<Dashboard />} />
-        <Route path="/prestaciones" element={<Dashboard />} />
+        <Route path="/prestaciones" element={<PrestacionesSociales />} />
         <Route path="/inasistencias" element={<Dashboard />} />
         <Route path="/incapacidades" element={<Dashboard />} />
         <Route path="/actividades" element={<Dashboard />} />
         <Route path="/reportes" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;

@@ -1,3 +1,20 @@
 .app {
   min-height: 100vh;
 }
+
+.contenedor-aplicacion {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.zona-principal {
+  flex: 1;
+  margin-left: 240px;
+}
+
+@media (max-width: 900px) {
+  .zona-principal {
+    margin-left: 0;
+  }
+}

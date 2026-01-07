@@ -1,0 +1,39 @@
+.tarjeta-info {
+  background: var(--color-fondo-tarjeta);
+  border-radius: var(--radio-xl);
+  padding: 20px;
+  box-shadow: var(--sombra-sm);
+}
+
+.tarjeta-info-titulo {
+  font-size: var(--texto-base);
+  font-weight: 600;
+  color: var(--color-texto-oscuro);
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gris-100);
+}
+
+.tarjeta-info-contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fila-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.fila-info-etiqueta {
+  font-size: var(--texto-sm);
+  color: var(--color-texto-claro);
+}
+
+.fila-info-valor {
+  font-size: var(--texto-sm);
+  font-weight: 500;
+  color: var(--color-texto-oscuro);
+}

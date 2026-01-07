@@ -1,0 +1,56 @@
+.campo-formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campo-formulario label {
+  font-size: var(--texto-sm);
+  font-weight: 500;
+  color: var(--color-texto);
+}
+
+.campo-formulario .requerido {
+  color: var(--color-error);
+  margin-left: 2px;
+}
+
+.campo-formulario input,
+.campo-formulario select,
+.campo-formulario textarea {
+  padding: 12px 14px;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  font-size: var(--texto-sm);
+  color: var(--color-texto-oscuro);
+  background: var(--color-fondo-tarjeta);
+  transition: all var(--transicion-rapida);
+}
+
+.campo-formulario input:focus,
+.campo-formulario select:focus,
+.campo-formulario textarea:focus {
+  border-color: var(--color-primario);
+  box-shadow: 0 0 0 3px rgba(var(--color-primario-rgb), 0.1);
+}
+
+.campo-formulario input::placeholder,
+.campo-formulario textarea::placeholder {
+  color: var(--gris-400);
+}
+
+.campo-formulario textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.campo-formulario.campo-error input,
+.campo-formulario.campo-error select,
+.campo-formulario.campo-error textarea {
+  border-color: var(--color-error);
+}
+
+.campo-formulario .mensaje-error {
+  font-size: var(--texto-xs);
+  color: var(--color-error);
+}

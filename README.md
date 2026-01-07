@@ -1,18 +1,111 @@
-# React + Vite
+# Talent Sphere - Sistema de Gestión de RRHH
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema de gestión de recursos humanos desarrollado con React + Vite.
 
-Currently, two official plugins are available:
+## 📁 Estructura del Proyecto
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```
+src/
+├── componentes/              # Componentes reutilizables
+│   ├── comunes/             # Componentes genéricos (toda la app)
+│   │   ├── TablaDatos.jsx
+│   │   ├── CampoFormulario.jsx
+│   │   ├── TarjetaInfo.jsx
+│   │   ├── EncabezadoModulo.jsx
+│   │   └── index.js
+│   ├── layout/              # Estructura general
+│   │   ├── BarraLateral.jsx
+│   │   ├── ContenedorPrincipal.jsx
+│   │   └── index.js
+│   └── index.js
+│
+├── modulos/                  # Módulos/páginas de la aplicación
+│   ├── autenticacion/       # Login, Registro
+│   │   ├── componentes/     # Componentes SOLO de este módulo
+│   │   ├── InicioSesion.jsx
+│   │   ├── Registro.jsx
+│   │   └── index.js
+│   ├── dashboard/
+│   │   ├── componentes/     # Componentes SOLO del dashboard
+│   │   ├── Panel.jsx
+│   │   └── index.js
+│   ├── empleados/
+│   ├── usuarios/
+│   ├── prestaciones/
+│   ├── inicio/              # Landing page
+│   └── index.js
+│
+├── rutas/                    # Configuración de rutas
+│   ├── EnrutadorPrincipal.jsx
+│   └── index.js
+│
+├── estilos/                  # TODOS los CSS van aquí
+│   ├── variables.css        # Variables CSS globales
+│   ├── base.css             # Reset y estilos base
+│   ├── componentes/         # Estilos de componentes comunes
+│   │   ├── botones.css
+│   │   ├── etiquetas.css
+│   │   ├── filtros.css
+│   │   ├── tarjetas.css
+│   │   ├── tabla-datos.css
+│   │   ├── campo-formulario.css
+│   │   ├── tarjeta-info.css
+│   │   └── encabezado-modulo.css
+│   ├── layout/              # Estilos de layout
+│   │   ├── barra-lateral.css
+│   │   └── contenedor.css
+│   ├── modulos/             # Estilos específicos por módulo
+│   │   ├── autenticacion.css
+│   │   ├── dashboard.css
+│   │   └── inicio.css
+│   └── index.css            # Importa todos los estilos
+│
+├── recursos/                 # Assets (imágenes, íconos)
+├── App.jsx
+└── main.jsx
+```
 
-## React Compiler
+## 🎯 Organización
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+### Componentes Comunes (`/componentes/comunes`)
+Componentes reutilizables en TODA la aplicación:
+- `TablaDatos` - Tabla genérica con acciones
+- `CampoFormulario` - Inputs, selects, textareas
+- `TarjetaInfo` - Tarjetas de información
+- `EncabezadoModulo` - Header de cada módulo
 
-Note: This will impact Vite dev & build performances.
+### Componentes de Módulo (`/modulos/*/componentes`)
+Componentes que SOLO se usan en un módulo específico.
 
-## Expanding the ESLint configuration
+### Estilos (`/estilos`)
+TODOS los CSS están centralizados aquí:
+- `variables.css` - Colores, espaciados, fuentes
+- `componentes/` - CSS de componentes comunes
+- `layout/` - CSS de sidebar, contenedor
+- `modulos/` - CSS específico de cada página
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🚀 Instalación
+
+```bash
+npm install
+npm run dev
+```
+
+## 📋 Rutas
+
+| Ruta | Módulo |
+|------|--------|
+| `/` | Landing page |
+| `/login` | Inicio de sesión |
+| `/registro` | Registro de usuario |
+| `/dashboard` | Panel principal |
+| `/empleados` | Gestión de empleados |
+| `/usuarios` | Gestión de usuarios |
+| `/prestaciones` | Prestaciones sociales |
+
+## 🎨 Convenciones
+
+- **Componentes**: PascalCase en español
+- **Variables**: camelCase en español
+- **CSS**: Clases en español con guiones
+- **Archivos**: PascalCase para componentes

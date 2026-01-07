@@ -1,0 +1,19 @@
+.contenedor-app {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-fondo);
+}
+
+.contenido-principal {
+  flex: 1;
+  margin-left: var(--ancho-sidebar);
+  padding: 24px 32px;
+  min-height: 100vh;
+}
+
+@media (max-width: 900px) {
+  .contenido-principal {
+    margin-left: 0;
+    padding: 16px;
+  }
+}

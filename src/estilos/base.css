@@ -1,0 +1,86 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--fuente-principal);
+  font-size: var(--texto-base);
+  line-height: 1.5;
+  color: var(--color-texto);
+  background-color: var(--color-fondo);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--color-texto-oscuro);
+}
+
+a {
+  color: var(--color-primario);
+  text-decoration: none;
+  transition: color var(--transicion-rapida);
+}
+
+a:hover {
+  color: var(--color-primario-oscuro);
+}
+
+img, video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: 100%;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input:focus, select:focus, textarea:focus, button:focus {
+  outline: none;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--gris-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gris-300);
+  border-radius: 3px;
+}
+
+::selection {
+  background-color: var(--color-primario);
+  color: white;
+}

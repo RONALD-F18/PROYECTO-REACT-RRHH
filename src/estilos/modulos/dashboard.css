@@ -1,0 +1,215 @@
+/* Encabezado del Dashboard */
+.dashboard-encabezado {
+  background: linear-gradient(135deg, var(--color-acento-azul), var(--color-primario));
+  padding: 20px 25px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--radio-xl);
+  margin-bottom: 24px;
+}
+
+.dashboard-encabezado-texto h1 {
+  font-size: var(--texto-xl);
+  color: #fff;
+  font-weight: bold;
+  margin: 0 0 4px 0;
+}
+
+.dashboard-encabezado-texto p {
+  font-size: var(--texto-sm);
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+}
+
+.dashboard-fecha {
+  font-size: var(--texto-sm);
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: capitalize;
+}
+
+/* Layout del Dashboard */
+.dashboard-cuerpo {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+}
+
+.dashboard-resumen {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.dashboard-actividades {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Tarjeta genérica del dashboard */
+.dashboard-tarjeta {
+  background: var(--color-fondo-tarjeta);
+  border-radius: var(--radio-xl);
+  padding: 20px;
+  box-shadow: var(--sombra-sm);
+}
+
+.dashboard-tarjeta-superior {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.dashboard-tarjeta-superior h3 {
+  font-size: var(--texto-base);
+  color: var(--color-texto-oscuro);
+  font-weight: 600;
+  margin: 0;
+}
+
+.dashboard-enlace {
+  font-size: var(--texto-sm);
+  color: var(--color-secundario);
+  font-weight: 500;
+}
+
+.dashboard-contador {
+  background: linear-gradient(135deg, var(--color-secundario), var(--color-primario));
+  color: #fff;
+  padding: 5px 12px;
+  border-radius: var(--radio-xl);
+  font-size: var(--texto-xs);
+  font-weight: 500;
+}
+
+/* Lista de actividades */
+.dashboard-lista-actividades {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.dashboard-actividad {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--gris-100);
+}
+
+.dashboard-actividad:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.dashboard-actividad-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dashboard-actividad-texto {
+  font-size: var(--texto-sm);
+  color: var(--color-texto);
+}
+
+.dashboard-actividad-tiempo {
+  font-size: var(--texto-xs);
+  color: var(--gris-400);
+}
+
+/* Lista de tareas */
+.dashboard-lista-tareas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dashboard-tarea {
+  background: var(--gris-50);
+  padding: 14px 16px;
+  border-radius: var(--radio-lg);
+  transition: background var(--transicion-rapida);
+}
+
+.dashboard-tarea:hover {
+  background: var(--gris-100);
+}
+
+.dashboard-tarea-contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dashboard-tarea-texto {
+  font-size: var(--texto-sm);
+  color: var(--color-texto);
+  font-weight: 500;
+}
+
+.dashboard-tarea-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-tarea-fecha {
+  font-size: var(--texto-xs);
+  color: var(--color-texto-claro);
+}
+
+/* Acciones rápidas */
+.dashboard-acciones {
+  background: var(--color-fondo-tarjeta);
+  border-radius: var(--radio-xl);
+  padding: 20px;
+  box-shadow: var(--sombra-sm);
+}
+
+.dashboard-acciones h3 {
+  font-size: var(--texto-base);
+  color: var(--color-texto-oscuro);
+  margin: 0 0 16px 0;
+  font-weight: 600;
+}
+
+.dashboard-acciones-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-cuerpo {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-resumen {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-resumen .tarjeta-dato {
+    flex: 1;
+    min-width: 200px;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-encabezado {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .dashboard-resumen {
+    flex-direction: column;
+  }
+
+  .dashboard-acciones-grid {
+    grid-template-columns: 1fr;
+  }
+}

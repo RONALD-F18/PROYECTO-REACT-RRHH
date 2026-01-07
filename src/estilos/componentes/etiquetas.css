@@ -1,0 +1,72 @@
+/* Etiquetas de estado */
+.etiqueta {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: var(--radio-completo);
+  font-size: var(--texto-xs);
+  font-weight: 600;
+}
+
+.etiqueta-verde,
+.etiqueta-activo {
+  background: var(--color-exito-claro);
+  color: #047857;
+}
+
+.etiqueta-roja,
+.etiqueta-error {
+  background: var(--color-error-claro);
+  color: #dc2626;
+}
+
+.etiqueta-amarilla,
+.etiqueta-advertencia {
+  background: var(--color-advertencia-claro);
+  color: #d97706;
+}
+
+.etiqueta-azul,
+.etiqueta-info {
+  background: var(--color-info-claro);
+  color: #2563eb;
+}
+
+.etiqueta-gris,
+.etiqueta-inactivo {
+  background: var(--gris-100);
+  color: var(--gris-600);
+}
+
+/* Etiquetas de rol */
+.etiqueta-admin {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.etiqueta-funcionario {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+/* Prioridades */
+.prioridad {
+  padding: 3px 10px;
+  border-radius: var(--radio-md);
+  font-size: var(--texto-xs);
+  font-weight: 500;
+}
+
+.prioridad-alta {
+  background: var(--color-error-claro);
+  color: #dc2626;
+}
+
+.prioridad-media {
+  background: var(--color-advertencia-claro);
+  color: #d97706;
+}
+
+.prioridad-baja {
+  background: var(--color-exito-claro);
+  color: #059669;
+}

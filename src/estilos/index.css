@@ -1,0 +1,26 @@
+/* ============================================
+   TALENT SPHERE - ESTILOS GLOBALES
+   ============================================ */
+
+/* Variables y Base */
+@import './variables.css';
+@import './base.css';
+
+/* Layout */
+@import './layout/barra-lateral.css';
+@import './layout/contenedor.css';
+
+/* Componentes Comunes */
+@import './componentes/botones.css';
+@import './componentes/etiquetas.css';
+@import './componentes/filtros.css';
+@import './componentes/tarjetas.css';
+@import './componentes/tabla-datos.css';
+@import './componentes/campo-formulario.css';
+@import './componentes/tarjeta-info.css';
+@import './componentes/encabezado-modulo.css';
+
+/* Módulos */
+@import './modulos/autenticacion.css';
+@import './modulos/dashboard.css';
+@import './modulos/inicio.css';

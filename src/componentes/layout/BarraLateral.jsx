@@ -7,18 +7,18 @@ function BarraLateral() {
   const ubicacion = useLocation();
 
   const enlacesMenu = [
-    { ruta: '/dashboard', etiqueta: 'Dashboard', icono: '📊' },
-    { ruta: '/afiliaciones', etiqueta: 'Afiliaciones', icono: '📋' },
-    { ruta: '/empleados', etiqueta: 'Empleados', icono: '👥' },
-    { ruta: '/certificacion', etiqueta: 'Certificación', icono: '📜' },
-    { ruta: '/contratos', etiqueta: 'Contratos', icono: '📄' },
-    { ruta: '/memorandos', etiqueta: 'Memorandos', icono: '📝' },
-    { ruta: '/prestaciones', etiqueta: 'Prestaciones Sociales', icono: '💰' },
-    { ruta: '/inasistencias', etiqueta: 'Inasistencias', icono: '🚫' },
-    { ruta: '/incapacidades', etiqueta: 'Incapacidades', icono: '🏥' },
-    { ruta: '/actividades', etiqueta: 'Actividades', icono: '📅' },
-    { ruta: '/reportes', etiqueta: 'Reportes', icono: '📈' },
-    { ruta: '/usuarios', etiqueta: 'Usuarios', icono: '⚙️' },
+    { ruta: '/dashboard', etiqueta: 'Dashboard', icono: '' },
+    { ruta: '/afiliaciones', etiqueta: 'Afiliaciones', icono: '' },
+    { ruta: '/empleados', etiqueta: 'Empleados', icono: '' },
+    { ruta: '/certificacion', etiqueta: 'Certificación', icono: '' },
+    { ruta: '/contratos', etiqueta: 'Contratos', icono: '' },
+    { ruta: '/memorandos', etiqueta: 'Memorandos', icono: '' },
+    { ruta: '/prestaciones', etiqueta: 'Prestaciones Sociales', icono: '' },
+    { ruta: '/inasistencias', etiqueta: 'Inasistencias', icono: '' },
+    { ruta: '/incapacidades', etiqueta: 'Incapacidades', icono: '' },
+    { ruta: '/actividades', etiqueta: 'Actividades', icono: '' },
+    { ruta: '/reportes', etiqueta: 'Reportes', icono: '' },
+    { ruta: '/usuarios', etiqueta: 'Usuarios', icono: '' },
   ];
 
   const estaActivo = (ruta) => ubicacion.pathname === ruta;
@@ -50,7 +50,7 @@ function BarraLateral() {
 
       <div className="barra-lateral-pie">
         <Link to="#" className="barra-lateral-opcion">
-          <span className="barra-lateral-opcion-icono">❓</span>
+          <span className="barra-lateral-opcion-icono"></span>
           <span>Ayuda</span>
         </Link>
 

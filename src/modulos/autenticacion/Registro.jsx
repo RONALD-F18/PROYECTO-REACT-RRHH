@@ -1,40 +1,120 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import * as validaciones from "../../utils/validaciones";
 
 function Registro() {
   const navegar = useNavigate();
   const [datosFormulario, setDatosFormulario] = useState({
-    nombres: '',
-    apellidos: '',
-    nombreUsuario: '',
-    tipoDocumento: '',
-    numeroDocumento: '',
-    correo: '',
-    contrasena: '',
-    confirmarContrasena: '',
-    telefono: '',
-    fechaNacimiento: '',
+    nombres: "",
+    apellidos: "",
+    nombreUsuario: "",
+    tipoDocumento: "",
+    numeroDocumento: "",
+    correo: "",
+    contrasena: "",
+    confirmarContrasena: "",
+    telefono: "",
+    fechaNacimiento: "",
     aceptaTerminos: false,
   });
 
+  const [errores, setErrores] = useState({});
+  const [camposTocados, setCamposTocados] = useState({});
+
+  const validadores = {
+    nombres: validaciones.validarNombres,
+    apellidos: validaciones.validarApellidos,
+    nombreUsuario: validaciones.validarNombreUsuario,
+    tipoDocumento: validaciones.validarTipoDocumento,
+    numeroDocumento: validaciones.validarNumeroDocumento,
+    correo: validaciones.validarCorreo,
+    contrasena: validaciones.validarContrasena,
+    confirmarContrasena: (valor) => validaciones.validarConfirmarContrasena(valor, datosFormulario.contrasena),
+    telefono: validaciones.validarTelefono,
+    fechaNacimiento: validaciones.validarFechaNacimiento,
+    aceptaTerminos: validaciones.validarTerminos,
+  };
+
+  const validarCampo = (nombre, valor) => {
+    const validador = validadores[nombre];
+    return validador ? validador(valor) : null;
+  };
+
   const manejarCambio = (evento) => {
     const { name, value, type, checked } = evento.target;
+    const valorFinal = type === "checkbox" ? checked : value;
+
     setDatosFormulario((anterior) => ({
       ...anterior,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: valorFinal,
     }));
+
+    if (camposTocados[name]) {
+      const error = validarCampo(name, valorFinal);
+      setErrores((anteriores) => ({ ...anteriores, [name]: error }));
+    }
+
+    if (name === "contrasena" && camposTocados.confirmarContrasena) {
+      const errorConfirmar = validarCampo("confirmarContrasena", datosFormulario.confirmarContrasena);
+      setErrores((anteriores) => ({ ...anteriores, confirmarContrasena: errorConfirmar }));
+    }
+  };
+
+  const manejarBlur = (evento) => {
+    const { name, value, type, checked } = evento.target;
+    const valorFinal = type === "checkbox" ? checked : value;
+
+    setCamposTocados((anteriores) => ({ ...anteriores, [name]: true }));
+    const error = validarCampo(name, valorFinal);
+    setErrores((anteriores) => ({ ...anteriores, [name]: error }));
+  };
+
+  const validarFormularioCompleto = () => {
+    const nuevosErrores = {};
+    const todosTocados = {};
+
+    Object.keys(datosFormulario).forEach((campo) => {
+      todosTocados[campo] = true;
+      const error = validarCampo(campo, datosFormulario[campo]);
+      if (error) nuevosErrores[campo] = error;
+    });
+
+    setCamposTocados(todosTocados);
+    setErrores(nuevosErrores);
+    return Object.keys(nuevosErrores).length === 0;
   };
 
   const manejarEnvio = (evento) => {
     evento.preventDefault();
-    navegar('/login');
+    if (validarFormularioCompleto()) {
+      navegar("/login");
+    }
   };
 
   const tiposDocumento = [
-    { valor: 'CC', texto: 'Cédula de Ciudadanía' },
-    { valor: 'CE', texto: 'Cédula de Extranjería' },
-    { valor: 'TI', texto: 'Tarjeta de Identidad' },
+    { valor: "CC", texto: "Cédula de Ciudadanía" },
+    { valor: "CE", texto: "Cédula de Extranjería" },
+    { valor: "TI", texto: "Tarjeta de Identidad" },
   ];
+
+  const obtenerClaseCampo = (nombreCampo) => {
+    if (errores[nombreCampo]) return "campo-error";
+    if (camposTocados[nombreCampo] && !errores[nombreCampo] && datosFormulario[nombreCampo]) {
+      return "campo-valido";
+    }
+    return "";
+  };
+
+  const mostrarMensaje = (nombreCampo) => {
+    if (!camposTocados[nombreCampo]) return null;
+    if (errores[nombreCampo]) {
+      return <span className="mensaje-error">{errores[nombreCampo]}</span>;
+    }
+    if (datosFormulario[nombreCampo]) {
+      return <span className="mensaje-exito">✓ Correcto</span>;
+    }
+    return null;
+  };
 
   return (
     <div className="registro-contenedor">
@@ -54,8 +134,11 @@ function Registro() {
                 name="nombres"
                 value={datosFormulario.nombres}
                 onChange={manejarCambio}
+                onBlur={manejarBlur}
                 placeholder="Ingresa tu nombre"
+                className={obtenerClaseCampo("nombres")}
               />
+              {mostrarMensaje("nombres")}
             </div>
             <div className="registro-campo">
               <label>Apellido(s)*</label>
@@ -64,8 +147,11 @@ function Registro() {
                 name="apellidos"
                 value={datosFormulario.apellidos}
                 onChange={manejarCambio}
+                onBlur={manejarBlur}
                 placeholder="Ingresa tus apellidos"
+                className={obtenerClaseCampo("apellidos")}
               />
+              {mostrarMensaje("apellidos")}
             </div>
           </div>
 
@@ -77,8 +163,11 @@ function Registro() {
                 name="nombreUsuario"
                 value={datosFormulario.nombreUsuario}
                 onChange={manejarCambio}
+                onBlur={manejarBlur}
                 placeholder="Usuario único"
+                className={obtenerClaseCampo("nombreUsuario")}
               />
+              {mostrarMensaje("nombreUsuario")}
             </div>
             <div className="registro-campo">
               <label>Tipo de Documento*</label>
@@ -86,6 +175,8 @@ function Registro() {
                 name="tipoDocumento"
                 value={datosFormulario.tipoDocumento}
                 onChange={manejarCambio}
+                onBlur={manejarBlur}
+                className={obtenerClaseCampo("tipoDocumento")}
               >
                 <option value="">Seleccionar...</option>
                 {tiposDocumento.map((tipo) => (
@@ -94,6 +185,7 @@ function Registro() {
                   </option>
                 ))}
               </select>
+              {mostrarMensaje("tipoDocumento")}
             </div>
           </div>
 
@@ -105,8 +197,11 @@ function Registro() {
                 name="numeroDocumento"
                 value={datosFormulario.numeroDocumento}
                 onChange={manejarCambio}
+                onBlur={manejarBlur}
                 placeholder="Número de identificación"
+                className={obtenerClaseCampo("numeroDocumento")}
               />
+              {mostrarMensaje("numeroDocumento")}
             </div>
             <div className="registro-campo">
               <label>Correo Electrónico*</label>
@@ -115,8 +210,11 @@ function Registro() {
                 name="correo"
                 value={datosFormulario.correo}
                 onChange={manejarCambio}
+                onBlur={manejarBlur}
                 placeholder="correo@ejemplo.com"
+                className={obtenerClaseCampo("correo")}
               />
+              {mostrarMensaje("correo")}
             </div>
           </div>
 
@@ -128,8 +226,11 @@ function Registro() {
                 name="contrasena"
                 value={datosFormulario.contrasena}
                 onChange={manejarCambio}
+                onBlur={manejarBlur}
                 placeholder="••••••••••••"
+                className={obtenerClaseCampo("contrasena")}
               />
+              {mostrarMensaje("contrasena")}
             </div>
             <div className="registro-campo">
               <label>Confirmar Contraseña*</label>
@@ -138,8 +239,11 @@ function Registro() {
                 name="confirmarContrasena"
                 value={datosFormulario.confirmarContrasena}
                 onChange={manejarCambio}
+                onBlur={manejarBlur}
                 placeholder="••••••••••••"
+                className={obtenerClaseCampo("confirmarContrasena")}
               />
+              {mostrarMensaje("confirmarContrasena")}
             </div>
           </div>
 
@@ -151,8 +255,11 @@ function Registro() {
                 name="telefono"
                 value={datosFormulario.telefono}
                 onChange={manejarCambio}
-                placeholder="300 123 4567"
+                onBlur={manejarBlur}
+                placeholder="3001234567"
+                className={obtenerClaseCampo("telefono")}
               />
+              {mostrarMensaje("telefono")}
             </div>
             <div className="registro-campo">
               <label>Fecha de Nacimiento*</label>
@@ -161,7 +268,10 @@ function Registro() {
                 name="fechaNacimiento"
                 value={datosFormulario.fechaNacimiento}
                 onChange={manejarCambio}
+                onBlur={manejarBlur}
+                className={obtenerClaseCampo("fechaNacimiento")}
               />
+              {mostrarMensaje("fechaNacimiento")}
             </div>
           </div>
 
@@ -174,18 +284,22 @@ function Registro() {
             </ul>
           </div>
 
-          <label className="registro-terminos">
-            <input
-              type="checkbox"
-              name="aceptaTerminos"
-              checked={datosFormulario.aceptaTerminos}
-              onChange={manejarCambio}
-            />
-            <span>
-              Acepto los <a href="#">Términos y Condiciones</a> y la{' '}
-              <a href="#">Política de Privacidad</a>
-            </span>
-          </label>
+          <div className="registro-campo-terminos">
+            <label className="registro-terminos">
+              <input
+                type="checkbox"
+                name="aceptaTerminos"
+                checked={datosFormulario.aceptaTerminos}
+                onChange={manejarCambio}
+                onBlur={manejarBlur}
+              />
+              <span>
+                Acepto los <a href="#">Términos y Condiciones</a> y la{" "}
+                <a href="#">Política de Privacidad</a>
+              </span>
+            </label>
+            {mostrarMensaje("aceptaTerminos")}
+          </div>
 
           <div className="registro-botones">
             <Link to="/" className="registro-btn-cancelar">

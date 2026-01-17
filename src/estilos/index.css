@@ -19,8 +19,10 @@
 @import './componentes/campo-formulario.css';
 @import './componentes/tarjeta-info.css';
 @import './componentes/encabezado-modulo.css';
+@import './componentes/modal.css';
 
 /* Módulos */
 @import './modulos/autenticacion.css';
 @import './modulos/dashboard.css';
 @import './modulos/inicio.css';
+@import './modulos/usuarios.css';

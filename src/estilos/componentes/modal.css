@@ -1,0 +1,262 @@
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-contenido {
+  background: var(--color-fondo-tarjeta);
+  border-radius: var(--radio-xl);
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--sombra-lg);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-borde);
+  background: linear-gradient(135deg, var(--color-primario), var(--color-secundario));
+  border-radius: var(--radio-xl) var(--radio-xl) 0 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #fff;
+  font-size: var(--texto-xl);
+  font-weight: 600;
+}
+
+.modal-cerrar {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #fff;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radio-md);
+  transition: background var(--transicion-rapida);
+}
+
+.modal-cerrar:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+/* Formulario en modal */
+.formulario-seccion {
+  margin-bottom: 24px;
+}
+
+.formulario-seccion h3 {
+  font-size: var(--texto-lg);
+  color: var(--color-texto-oscuro);
+  margin: 0 0 16px 0;
+  font-weight: 600;
+}
+
+.formulario-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.formulario-grid-doble {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.columna-izquierda,
+.columna-derecha {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.campo-formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campo-formulario label {
+  font-size: var(--texto-sm);
+  color: var(--color-texto-oscuro);
+  font-weight: 500;
+}
+
+.campo-formulario input,
+.campo-formulario select,
+.campo-formulario textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  font-size: var(--texto-sm);
+  color: var(--color-texto);
+  transition: border-color var(--transicion-rapida);
+}
+
+.campo-formulario input:focus,
+.campo-formulario select:focus,
+.campo-formulario textarea:focus {
+  outline: none;
+  border-color: var(--color-primario);
+}
+
+.campo-formulario textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Roles opciones */
+.roles-opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rol-opcion {
+  display: flex;
+  align-items: center;
+  padding: 14px;
+  border: 2px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  cursor: pointer;
+  transition: all var(--transicion-rapida);
+}
+
+.rol-opcion:hover {
+  border-color: var(--color-primario);
+  background: var(--gris-50);
+}
+
+.rol-opcion.activo {
+  border-color: var(--color-primario);
+  background: var(--color-primario-claro);
+}
+
+.rol-opcion input[type="radio"] {
+  margin-right: 12px;
+  cursor: pointer;
+}
+
+.rol-contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rol-titulo {
+  font-weight: 600;
+  color: var(--color-texto-oscuro);
+  font-size: var(--texto-base);
+}
+
+.rol-descripcion {
+  font-size: var(--texto-sm);
+  color: var(--color-texto-claro);
+}
+
+/* Botones de acción */
+.modal-acciones {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-borde);
+}
+
+.btn-cancelar {
+  padding: 10px 20px;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  background: var(--color-fondo-tarjeta);
+  color: var(--color-texto);
+  font-size: var(--texto-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transicion-rapida);
+}
+
+.btn-cancelar:hover {
+  background: var(--gris-50);
+}
+
+.btn-guardar {
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radio-lg);
+  background: linear-gradient(135deg, var(--color-primario), var(--color-secundario));
+  color: #fff;
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transicion-rapida);
+}
+
+.btn-guardar:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--sombra-md);
+}
+
+/* Mensajes de validación en modal */
+.modal-body .mensaje-error {
+  display: block;
+  font-size: var(--texto-xs);
+  color: var(--color-error);
+  margin-top: 6px;
+  padding-left: 4px;
+}
+
+.modal-body .mensaje-exito {
+  display: block;
+  font-size: var(--texto-xs);
+  color: var(--color-exito);
+  margin-top: 6px;
+  padding-left: 4px;
+  font-weight: 500;
+}
+
+.modal-body .campo-error {
+  border-color: var(--color-error) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.modal-body .campo-valido {
+  border-color: var(--color-exito) !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+}
+
+@media (max-width: 768px) {
+  .formulario-grid,
+  .formulario-grid-doble {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-contenido {
+    max-width: 100%;
+  }
+}
+

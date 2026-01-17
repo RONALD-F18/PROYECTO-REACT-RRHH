@@ -65,7 +65,7 @@ function Panel() {
           <div className="dashboard-tarjeta">
             <div className="dashboard-tarjeta-superior">
               <h3>Actividades recientes</h3>
-              <a href="#" className="dashboard-enlace">Ver todas</a>
+              <Link to="/actividades" className="dashboard-enlace">Ver todas</Link>
             </div>
             <div className="dashboard-lista-actividades">
               {actividadesRecientes.map((actividad, indice) => (

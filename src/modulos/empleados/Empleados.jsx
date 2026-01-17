@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { ContenedorPrincipal, EncabezadoModulo } from '../../componentes';
+import { ModalEmpleado } from './componentes';
 
 function Empleados() {
+  const [mostrarModal, setMostrarModal] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [filtroCargo, setFiltroCargo] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
@@ -42,14 +44,14 @@ function Empleados() {
         titulo="Módulo de Empleados"
         subtitulo="Sistema de Gestión de Recursos Humanos"
         textoBoton="Nuevo Empleado"
-        alHacerClic={() => console.log('Nuevo empleado')}
+        alHacerClic={() => setMostrarModal(true)}
       />
 
       <div className="bloque-filtros">
         <h2>Empleados Registrados</h2>
         <div className="fila-filtros-grid">
           <div className="caja-busqueda">
-            <span className="icono-busqueda">🔍</span>
+            <span className="icono-busqueda"></span>
             <input
               placeholder="Buscar por documento, nombre o cargo..."
               value={busqueda}
@@ -118,6 +120,11 @@ function Empleados() {
           </div>
         )}
       </div>
+
+      <ModalEmpleado
+        mostrar={mostrarModal}
+        cerrar={() => setMostrarModal(false)}
+      />
     </ContenedorPrincipal>
   );
 }

@@ -166,19 +166,8 @@ function Inicio() {
         <p className="inicio-subtitulo">
           Soluciones integrales para la gestión de tu talento humano
         </p>
-        <div className="inicio-servicios-grid">
-          {servicios.map((servicio, i) => (
-            <div
-              key={i}
-              className={`inicio-servicio ${
-                servicio.destacado ? "destacado" : ""
-              }`}
-            >
-              <h3>{servicio.titulo}</h3>
-              <p>{servicio.descripcion}</p>
-            </div>
-          ))}
-        </div>
+       
+       
       </section>
 
       <section id="nosotros" className="inicio-caracteristicas">

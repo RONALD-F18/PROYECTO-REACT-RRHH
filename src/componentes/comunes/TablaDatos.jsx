@@ -47,8 +47,10 @@ function TablaDatos({ columnas, datos, acciones = true, renderAcciones }) {
             ))
           ) : (
             <tr>
-              <td colSpan={columnas.length + (acciones ? 1 : 0)} className="tabla-sin-datos">
-                No hay datos disponibles
+              <td colSpan={columnas.length + (acciones ? 1 : 0)}>
+                <div className="tabla-sin-datos">
+                  No hay datos disponibles
+                </div>
               </td>
             </tr>
           )}

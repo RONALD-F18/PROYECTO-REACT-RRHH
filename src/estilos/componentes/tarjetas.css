@@ -147,3 +147,17 @@
 .tarjeta-prestacion.azul .tarjeta-prestacion-valor { color: #2563eb; }
 .tarjeta-prestacion.morado .tarjeta-prestacion-valor { color: #9333ea; }
 .tarjeta-prestacion.naranja .tarjeta-prestacion-valor { color: #d97706; }
+
+@media (max-width: 768px) {
+  .tarjetas-resumen {
+    grid-template-columns: 1fr;
+  }
+
+  .tarjetas-prestaciones {
+    grid-template-columns: 1fr;
+  }
+
+  .tarjeta-prestacion {
+    padding: 20px;
+  }
+}

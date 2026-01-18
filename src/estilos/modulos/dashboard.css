@@ -9,6 +9,12 @@
   margin-bottom: 24px;
 }
 
+.dashboard-encabezado-izquierda {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .dashboard-encabezado-texto h1 {
   font-size: var(--texto-xl);
   color: #fff;
@@ -26,6 +32,32 @@
   font-size: var(--texto-sm);
   color: rgba(255, 255, 255, 0.9);
   text-transform: capitalize;
+}
+
+@media (max-width: 768px) {
+  .dashboard-encabezado {
+    padding: 16px 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .dashboard-encabezado-izquierda {
+    width: 100%;
+  }
+
+  .dashboard-encabezado-texto h1 {
+    font-size: var(--texto-lg);
+  }
+
+  .dashboard-fecha {
+    align-self: flex-end;
+    font-size: var(--texto-xs);
+  }
+
+  .dashboard-cuerpo {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Layout del Dashboard */

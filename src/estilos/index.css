@@ -19,6 +19,7 @@
 @import './componentes/campo-formulario.css';
 @import './componentes/tarjeta-info.css';
 @import './componentes/encabezado-modulo.css';
+@import './componentes/boton-menu.css';
 @import './componentes/modal.css';
 
 /* Módulos */
@@ -26,3 +27,6 @@
 @import './modulos/dashboard.css';
 @import './modulos/inicio.css';
 @import './modulos/usuarios.css';
+@import './modulos/prestaciones.css';
+@import './modulos/empleados.css';
+@import './modulos/incapacidades.css';

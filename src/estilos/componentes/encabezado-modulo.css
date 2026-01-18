@@ -14,6 +14,7 @@
   gap: 16px;
 }
 
+
 .encabezado-modulo-logo {
   background: rgba(255, 255, 255, 0.15);
   border-radius: var(--radio-lg);
@@ -59,4 +60,23 @@
 .encabezado-modulo-btn-icono {
   font-size: 18px;
   font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .encabezado-modulo {
+    padding: 16px 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .encabezado-modulo-info h1 {
+    font-size: var(--texto-xl);
+  }
+
+  .encabezado-modulo-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 20px;
+  }
 }

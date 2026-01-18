@@ -1,3 +1,5 @@
+import BotonMenu from './BotonMenu';
+
 /**
  * Componente de encabezado para módulos
  */
@@ -11,6 +13,7 @@ function EncabezadoModulo({
   return (
     <header className="encabezado-modulo">
       <div className="encabezado-modulo-izquierda">
+        <BotonMenu />
         <div className="encabezado-modulo-info">
           <h1>{titulo}</h1>
           <p>{subtitulo}</p>

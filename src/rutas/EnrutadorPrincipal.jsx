@@ -5,8 +5,11 @@ import {
   Registro,
   Panel,
   Empleados,
+  DetallesEmpleado,
   Usuarios,
   PrestacionesSociales,
+  DetallesPrestaciones,
+  Incapacidades,
 } from "../modulos";
 
 // Rutas públicas
@@ -20,8 +23,11 @@ export const rutasPublicas = [
 export const rutasPrivadas = [
   { ruta: "/dashboard", componente: Panel },
   { ruta: "/empleados", componente: Empleados },
+  { ruta: "/empleados/:id", componente: DetallesEmpleado },
   { ruta: "/usuarios", componente: Usuarios },
   { ruta: "/prestaciones", componente: PrestacionesSociales },
+  { ruta: "/prestaciones/:id", componente: DetallesPrestaciones },
+  { ruta: "/incapacidades", componente: Incapacidades },
 ];
 
 function EnrutadorPrincipal() {

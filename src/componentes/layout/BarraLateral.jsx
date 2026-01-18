@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 /**
  * Componente de barra lateral de navegación
  */
-function BarraLateral() {
+function BarraLateral({ menuAbierto = false, cerrarMenu }) {
   const ubicacion = useLocation();
 
   const enlacesMenu = [
@@ -23,8 +23,14 @@ function BarraLateral() {
 
   const estaActivo = (ruta) => ubicacion.pathname === ruta;
 
+  const manejarClick = () => {
+    if (cerrarMenu) {
+      cerrarMenu();
+    }
+  };
+
   return (
-    <aside className="barra-lateral">
+    <aside className={`barra-lateral ${menuAbierto ? 'abierta' : ''}`}>
       <div className="barra-lateral-encabezado">
         <div className="barra-lateral-marca">
           <div className="barra-lateral-icono"></div>
@@ -41,6 +47,7 @@ function BarraLateral() {
             key={item.ruta}
             to={item.ruta}
             className={`barra-lateral-opcion ${estaActivo(item.ruta) ? 'activo' : ''}`}
+            onClick={manejarClick}
           >
             <span className="barra-lateral-opcion-icono">{item.icono}</span>
             <span>{item.etiqueta}</span>

@@ -65,3 +65,20 @@
   text-align: center;
   color: var(--color-texto-claro);
 }
+
+@media (max-width: 768px) {
+  .contenedor-tabla {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabla-datos {
+    min-width: 600px;
+  }
+
+  .tabla-datos th,
+  .tabla-datos td {
+    padding: 10px 12px;
+    font-size: var(--texto-xs);
+  }
+}

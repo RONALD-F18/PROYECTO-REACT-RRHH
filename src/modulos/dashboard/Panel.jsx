@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ContenedorPrincipal } from '../../componentes';
+import BotonMenu from '../../componentes/comunes/BotonMenu';
 
 function Panel() {
   const tarjetasResumen = [
@@ -39,9 +40,12 @@ function Panel() {
   return (
     <ContenedorPrincipal>
       <header className="dashboard-encabezado">
-        <div className="dashboard-encabezado-texto">
-          <h1>Panel General</h1>
-          <p>Resumen rápido de la operación</p>
+        <div className="dashboard-encabezado-izquierda">
+          <BotonMenu />
+          <div className="dashboard-encabezado-texto">
+            <h1>Panel General</h1>
+            <p>Resumen rápido de la operación</p>
+          </div>
         </div>
         <span className="dashboard-fecha">{obtenerFecha()}</span>
       </header>

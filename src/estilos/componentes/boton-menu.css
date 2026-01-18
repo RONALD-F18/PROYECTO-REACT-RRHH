@@ -1,0 +1,67 @@
+.btn-menu-hamburguesa {
+  width: 42px;
+  height: 42px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radio-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transicion-rapida);
+  flex-shrink: 0;
+  backdrop-filter: blur(4px);
+}
+
+.btn-menu-hamburguesa:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.btn-menu-hamburguesa:active {
+  transform: scale(0.95);
+}
+
+.icono-menu {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: #ffffff;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.icono-menu::before,
+.icono-menu::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 2px;
+  background: #ffffff;
+  left: 0;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.icono-menu::before {
+  top: -7px;
+}
+
+.icono-menu::after {
+  top: 7px;
+}
+
+.icono-menu.activo {
+  background: transparent;
+}
+
+.icono-menu.activo::before {
+  transform: rotate(45deg) translate(5px, 5px);
+  top: 0;
+}
+
+.icono-menu.activo::after {
+  transform: rotate(-45deg) translate(5px, -5px);
+  top: 0;
+}
+

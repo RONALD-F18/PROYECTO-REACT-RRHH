@@ -18,3 +18,4 @@ function Modal({ mostrar, cerrar, titulo, children }) {
 
 export default Modal;
 
+

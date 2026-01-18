@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { ContenedorPrincipal, EncabezadoModulo } from '../../componentes';
+import { useNavigate } from 'react-router-dom';
+import { ContenedorPrincipal, EncabezadoModulo, TablaDatos } from '../../componentes';
 import { ModalEmpleado } from './componentes';
 
 function Empleados() {
+  const navegar = useNavigate();
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [empleadoEditar, setEmpleadoEditar] = useState(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtroCargo, setFiltroCargo] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
@@ -15,6 +18,18 @@ function Empleados() {
       nombre: 'Ronaldo Stiven Franco Duran',
       cargo: 'Programador',
       estado: 'Activo',
+      numeroCuenta: '123456789',
+      tipoCuenta: 'Ahorros',
+      banco: '007',
+      direccion: 'Calle 100 #50-30 Bogotá',
+      nacionalidad: 'Colombiana',
+      estadoCivil: 'Soltero',
+      profesion: 'Programador',
+      discapacidad: 'Ninguna',
+      rh: 'Positivo',
+      grupoSanguineo: 'O+',
+      fechaExpedicion: '2015-03-20',
+      descripcion: 'Desarrollador con experiencia en múltiples tecnologías.'
     },
     {
       id: 2,
@@ -22,6 +37,18 @@ function Empleados() {
       nombre: 'Lina Marcela Torres',
       cargo: 'Analista',
       estado: 'Activo',
+      numeroCuenta: '987654321',
+      tipoCuenta: 'Corriente',
+      banco: '007',
+      direccion: 'Carrera 15 #80-45 Medellín',
+      nacionalidad: 'Colombiana',
+      estadoCivil: 'Casado',
+      profesion: 'Analista',
+      discapacidad: 'Ninguna',
+      rh: 'Negativo',
+      grupoSanguineo: 'A-',
+      fechaExpedicion: '2018-07-10',
+      descripcion: 'Analista especializada en procesos de negocio.'
     },
   ];
 
@@ -44,7 +71,10 @@ function Empleados() {
         titulo="Módulo de Empleados"
         subtitulo="Sistema de Gestión de Recursos Humanos"
         textoBoton="Nuevo Empleado"
-        alHacerClic={() => setMostrarModal(true)}
+        alHacerClic={() => {
+          setEmpleadoEditar(null);
+          setMostrarModal(true);
+        }}
       />
 
       <div className="bloque-filtros">
@@ -81,49 +111,55 @@ function Empleados() {
         </div>
       </div>
 
-      <div className="contenedor-tabla" style={{ marginTop: '20px' }}>
-        <table className="tabla-datos">
-          <thead>
-            <tr>
-              <th>Documento</th>
-              <th>Nombre</th>
-              <th>Cargo</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {empleadosFiltrados.map((empleado) => (
-              <tr key={empleado.id}>
-                <td>{empleado.documento}</td>
-                <td>{empleado.nombre}</td>
-                <td>{empleado.cargo}</td>
-                <td>
-                  <span className={`etiqueta etiqueta-${empleado.estado === 'Activo' ? 'activo' : 'inactivo'}`}>
-                    {empleado.estado}
-                  </span>
-                </td>
-                <td>
-                  <div className="tabla-acciones">
-                    <button className="btn-accion-tabla" title="Editar">✎</button>
-                    <button className="btn-accion-tabla" title="Ver">👁</button>
-                    <button className="btn-accion-tabla" title="Eliminar">🗑</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {empleadosFiltrados.length === 0 && (
-          <div className="tabla-sin-datos">
-            No se encontraron empleados con los filtros seleccionados.
-          </div>
-        )}
+      <div style={{ marginTop: '20px' }}>
+        <TablaDatos
+          columnas={[
+            { campo: 'documento', encabezado: 'Documento' },
+            { campo: 'nombre', encabezado: 'Nombre' },
+            { campo: 'cargo', encabezado: 'Cargo' },
+            {
+              campo: 'estado',
+              encabezado: 'Estado',
+              renderizar: (estado) => (
+                <span className={`etiqueta etiqueta-${estado === 'Activo' ? 'activo' : 'inactivo'}`}>
+                  {estado}
+                </span>
+              )
+            }
+          ]}
+          datos={empleadosFiltrados}
+          renderAcciones={(empleado) => (
+            <>
+              <button 
+                className="btn-accion-tabla" 
+                title="Editar"
+                onClick={() => {
+                  setEmpleadoEditar(empleado);
+                  setMostrarModal(true);
+                }}
+              >
+                ✎
+              </button>
+              <button 
+                className="btn-accion-tabla" 
+                title="Ver"
+                onClick={() => navegar(`/empleados/${empleado.id}`)}
+              >
+                👁
+              </button>
+              <button className="btn-accion-tabla" title="Eliminar">🗑</button>
+            </>
+          )}
+        />
       </div>
 
       <ModalEmpleado
         mostrar={mostrarModal}
-        cerrar={() => setMostrarModal(false)}
+        cerrar={() => {
+          setMostrarModal(false);
+          setEmpleadoEditar(null);
+        }}
+        datosEmpleado={empleadoEditar}
       />
     </ContenedorPrincipal>
   );

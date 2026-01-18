@@ -1,0 +1,393 @@
+/* ============================================
+   MÓDULO DE INCAPACIDADES
+   ============================================ */
+
+.incapacidades-contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.incapacidades-titulo {
+  font-size: var(--texto-2xl);
+  font-weight: 700;
+  color: var(--color-texto-oscuro);
+  margin: 0;
+}
+
+.incapacidades-subtitulo {
+  font-size: var(--texto-sm);
+  color: var(--color-texto-claro);
+  margin: 4px 0 0 0;
+}
+
+/* Tarjetas de resumen */
+.tarjetas-resumen-incapacidades {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.tarjeta-resumen-incapacidad {
+  background: var(--color-fondo-tarjeta);
+  border-radius: var(--radio-xl);
+  padding: 18px;
+  box-shadow: var(--sombra-sm);
+  transition: all var(--transicion-normal);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tarjeta-resumen-incapacidad:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sombra-md);
+}
+
+.tarjeta-resumen-valor {
+  font-size: var(--texto-3xl);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tarjeta-resumen-morado {
+  color: #9333ea;
+}
+
+.tarjeta-resumen-rojo {
+  color: #ef4444;
+}
+
+.tarjeta-resumen-verde {
+  color: #10b981;
+}
+
+.tarjeta-resumen-naranja {
+  color: #ea580c;
+}
+
+/* Tarjeta de costo total */
+.tarjeta-costo-total {
+  background: var(--color-fondo-tarjeta);
+  border-left: 4px solid var(--color-advertencia);
+  border-radius: var(--radio-xl);
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--sombra-sm);
+}
+
+.tarjeta-costo-contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tarjeta-costo-etiqueta {
+  font-size: var(--texto-sm);
+  color: var(--color-texto-claro);
+  font-weight: 500;
+}
+
+.tarjeta-costo-valor {
+  font-size: var(--texto-3xl);
+  font-weight: 700;
+  color: var(--gris-700);
+  line-height: 1;
+}
+
+.tarjeta-costo-icono {
+  font-size: 40px;
+  color: var(--gris-300);
+  font-weight: 300;
+}
+
+/* Filtros de incapacidades */
+.bloque-filtros-incapacidades {
+  background: var(--color-fondo-tarjeta);
+  border-radius: var(--radio-xl);
+  padding: 20px;
+  box-shadow: var(--sombra-sm);
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.input-busqueda {
+  padding: 12px 14px;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  background: var(--gris-50);
+  font-size: var(--texto-sm);
+  color: var(--color-texto);
+  transition: all var(--transicion-rapida);
+}
+
+.input-busqueda:focus {
+  outline: none;
+  border-color: var(--color-primario);
+  background: var(--color-fondo-tarjeta);
+  box-shadow: 0 0 0 3px rgba(var(--color-primario-rgb), 0.1);
+}
+
+.input-busqueda::placeholder {
+  color: var(--gris-400);
+}
+
+.btn-filtrar-incapacidades {
+  background: var(--color-error);
+  color: #ffffff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: var(--radio-lg);
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transicion-normal);
+  white-space: nowrap;
+}
+
+.btn-filtrar-incapacidades:hover {
+  background: #dc2626;
+  box-shadow: var(--sombra-sm);
+}
+
+/* Lista de incapacidades */
+.lista-incapacidades {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sin-incapacidades {
+  background: var(--color-fondo-tarjeta);
+  border-radius: var(--radio-xl);
+  padding: 48px;
+  text-align: center;
+  box-shadow: var(--sombra-sm);
+}
+
+.sin-incapacidades p {
+  font-size: var(--texto-lg);
+  color: var(--color-texto-claro);
+  margin: 0;
+}
+
+/* Tarjeta de incapacidad */
+.tarjeta-incapacidad {
+  background: var(--color-fondo-tarjeta);
+  border-radius: var(--radio-xl);
+  padding: 24px;
+  box-shadow: var(--sombra-sm);
+  transition: all var(--transicion-normal);
+}
+
+.tarjeta-incapacidad:hover {
+  box-shadow: var(--sombra-md);
+  transform: translateY(-2px);
+}
+
+.tarjeta-incapacidad-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--gris-200);
+}
+
+.tarjeta-incapacidad-info-empleado {
+  flex: 1;
+}
+
+.tarjeta-incapacidad-nombre {
+  font-size: var(--texto-lg);
+  font-weight: 600;
+  color: var(--color-texto-oscuro);
+  margin: 0 0 6px 0;
+}
+
+.tarjeta-incapacidad-documento {
+  font-size: var(--texto-sm);
+  color: var(--color-texto-claro);
+  margin: 0;
+}
+
+.tarjeta-incapacidad-acciones {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-accion-incapacidad {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radio-md);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all var(--transicion-rapida);
+  font-weight: 600;
+}
+
+.btn-accion-editar {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.btn-accion-editar:hover {
+  background: #a7f3d0;
+  transform: scale(1.1);
+}
+
+.btn-accion-ver {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.btn-accion-ver:hover {
+  background: #bfdbfe;
+  transform: scale(1.1);
+}
+
+.btn-accion-eliminar {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.btn-accion-eliminar:hover {
+  background: #fecaca;
+  transform: scale(1.1);
+}
+
+/* Detalles de incapacidad */
+.tarjeta-incapacidad-detalles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.detalle-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detalle-etiqueta {
+  font-size: var(--texto-xs);
+  color: var(--color-texto-claro);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detalle-valor {
+  font-size: var(--texto-base);
+  color: var(--color-texto-oscuro);
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .bloque-filtros-incapacidades {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .btn-filtrar-incapacidades {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .incapacidades-contenido {
+    gap: 20px;
+  }
+
+  .incapacidades-titulo {
+    font-size: var(--texto-xl);
+  }
+
+  .incapacidades-subtitulo {
+    font-size: var(--texto-sm);
+    margin-top: -12px;
+  }
+
+  .tarjetas-resumen-incapacidades {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .tarjeta-costo-total {
+    padding: 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .tarjeta-costo-valor {
+    font-size: var(--texto-2xl);
+  }
+
+  .tarjeta-costo-icono {
+    font-size: 36px;
+    align-self: flex-end;
+  }
+
+  .bloque-filtros-incapacidades {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .btn-filtrar-incapacidades {
+    grid-column: 1;
+    width: 100%;
+  }
+
+  .tarjeta-incapacidad {
+    padding: 18px;
+  }
+
+  .tarjeta-incapacidad-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .tarjeta-incapacidad-acciones {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .tarjeta-incapacidad-detalles {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tarjetas-resumen-incapacidades {
+    grid-template-columns: 1fr;
+  }
+
+  .tarjeta-resumen-incapacidad {
+    padding: 16px;
+  }
+
+  .tarjeta-costo-total {
+    padding: 18px;
+  }
+
+  .tarjeta-costo-valor {
+    font-size: var(--texto-xl);
+  }
+
+  .bloque-filtros-incapacidades {
+    padding: 16px;
+  }
+}
+

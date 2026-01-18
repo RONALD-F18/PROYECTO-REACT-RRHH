@@ -1,11 +1,14 @@
 import { BrowserRouter } from 'react-router-dom';
+import { MenuProvider } from './contextos/MenuContext';
 import { EnrutadorPrincipal } from './rutas';
 import './estilos/index.css';
 
 function App() {
   return (
     <BrowserRouter>
-      <EnrutadorPrincipal />
+      <MenuProvider>
+        <EnrutadorPrincipal />
+      </MenuProvider>
     </BrowserRouter>
   );
 }

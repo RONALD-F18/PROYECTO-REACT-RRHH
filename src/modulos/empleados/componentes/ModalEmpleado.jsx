@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
 import { validarNumeroDocumento, validarNombres } from '../../../utils/validaciones';
 import { expresionesRegulares } from '../../../utils/validaciones';
@@ -23,6 +23,46 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null }) {
 
   const [errores, setErrores] = useState({});
   const [camposTocados, setCamposTocados] = useState({});
+
+  useEffect(() => {
+    if (datosEmpleado) {
+      setFormulario({
+        documento: datosEmpleado.documento || '',
+        numeroCuenta: datosEmpleado.numeroCuenta || '',
+        tipoCuenta: datosEmpleado.tipoCuenta || '',
+        banco: datosEmpleado.banco || '',
+        direccion: datosEmpleado.direccion || '',
+        nacionalidad: datosEmpleado.nacionalidad || '',
+        estadoCivil: datosEmpleado.estadoCivil || '',
+        profesion: datosEmpleado.profesion || '',
+        discapacidad: datosEmpleado.discapacidad || '',
+        rh: datosEmpleado.rh || '',
+        grupoSanguineo: datosEmpleado.grupoSanguineo || '',
+        fechaExpedicion: datosEmpleado.fechaExpedicion || '',
+        descripcion: datosEmpleado.descripcion || '',
+      });
+      setErrores({});
+      setCamposTocados({});
+    } else {
+      setFormulario({
+        documento: '',
+        numeroCuenta: '',
+        tipoCuenta: '',
+        banco: '',
+        direccion: '',
+        nacionalidad: '',
+        estadoCivil: '',
+        profesion: '',
+        discapacidad: '',
+        rh: '',
+        grupoSanguineo: '',
+        fechaExpedicion: '',
+        descripcion: '',
+      });
+      setErrores({});
+      setCamposTocados({});
+    }
+  }, [datosEmpleado, mostrar]);
 
   const validarCampo = (nombre, valor) => {
     switch (nombre) {
@@ -131,7 +171,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null }) {
   const tiposRH = ['Positivo', 'Negativo'];
 
   return (
-    <Modal mostrar={mostrar} cerrar={cerrar} titulo="Registrar Nuevo Empleado">
+    <Modal mostrar={mostrar} cerrar={cerrar} titulo={esEdicion ? "Editar Empleado" : "Registrar Nuevo Empleado"}>
       <form onSubmit={manejarGuardar}>
         <div className="formulario-grid-doble">
           <div className="columna-izquierda">
@@ -334,7 +374,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null }) {
             Cancelar
           </button>
           <button type="submit" className="btn-guardar">
-            Guardar Empleado
+            {esEdicion ? 'Actualizar Empleado' : 'Guardar Empleado'}
           </button>
         </div>
       </form>

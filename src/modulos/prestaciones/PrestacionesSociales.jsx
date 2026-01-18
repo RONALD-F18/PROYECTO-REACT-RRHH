@@ -1,6 +1,9 @@
-import { ContenedorPrincipal, EncabezadoModulo } from '../../componentes';
+import { useNavigate } from 'react-router-dom';
+import { ContenedorPrincipal, EncabezadoModulo, TablaDatos } from '../../componentes';
 
 function PrestacionesSociales() {
+  const navegar = useNavigate();
+
   const empleados = [
     { id: 1, nombre: 'Carlos Andrés Gomez', documento: '1015432198', contrato: 'N°52265', periodo: 'Desde Enero 2024', cargo: 'Desarrollador', fechaInicio: '03-09-2006' },
     { id: 2, nombre: 'María Fernanda López', documento: '1020567834', contrato: 'N°52266', periodo: 'Desde Enero 2024', cargo: 'Aux Contable', fechaInicio: '03-09-2006' },
@@ -37,42 +40,41 @@ function PrestacionesSociales() {
         ))}
       </div>
 
-      <div className="contenedor-tabla">
-        <table className="tabla-datos">
-          <thead>
-            <tr>
-              <th>Empleado</th>
-              <th>Contrato</th>
-              <th>Cargo</th>
-              <th>Fecha Inicio</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {empleados.map((empleado) => (
-              <tr key={empleado.id}>
-                <td>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontWeight: 600, color: '#1e293b' }}>{empleado.nombre}</span>
-                    <span style={{ fontSize: '13px', color: '#94a3b8' }}>C.C {empleado.documento}</span>
-                  </div>
-                </td>
-                <td>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontWeight: 600, color: '#1e293b' }}>{empleado.contrato}</span>
-                    <span style={{ fontSize: '13px', color: '#94a3b8' }}>{empleado.periodo}</span>
-                  </div>
-                </td>
-                <td>{empleado.cargo}</td>
-                <td>{empleado.fechaInicio}</td>
-                <td>
-                  <button className="btn btn-primario btn-sm">Ver detalles</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <TablaDatos
+        columnas={[
+          {
+            campo: 'nombre',
+            encabezado: 'Empleado',
+            renderizar: (nombre, empleado) => (
+              <div className="usuario-info">
+                <span className="usuario-nombre">{nombre}</span>
+                <span className="usuario-documento">C.C {empleado.documento}</span>
+              </div>
+            )
+          },
+          {
+            campo: 'contrato',
+            encabezado: 'Contrato',
+            renderizar: (contrato, empleado) => (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontWeight: 600, color: '#1e293b' }}>{contrato}</span>
+                <span style={{ fontSize: '13px', color: '#94a3b8' }}>{empleado.periodo}</span>
+              </div>
+            )
+          },
+          { campo: 'cargo', encabezado: 'Cargo' },
+          { campo: 'fechaInicio', encabezado: 'Fecha Inicio' }
+        ]}
+        datos={empleados}
+        renderAcciones={(empleado) => (
+          <button 
+            className="btn btn-primario btn-sm"
+            onClick={() => navegar(`/prestaciones/${empleado.id}`)}
+          >
+            Ver detalles
+          </button>
+        )}
+      />
     </ContenedorPrincipal>
   );
 }

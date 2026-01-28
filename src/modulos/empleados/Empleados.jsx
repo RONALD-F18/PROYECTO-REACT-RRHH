@@ -7,9 +7,6 @@ function Empleados() {
   const navegar = useNavigate();
   const [mostrarModal, setMostrarModal] = useState(false);
   const [empleadoEditar, setEmpleadoEditar] = useState(null);
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroCargo, setFiltroCargo] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('');
 
   const empleados = [
     {
@@ -52,18 +49,6 @@ function Empleados() {
     },
   ];
 
-  const cargosDisponibles = ['Programador', 'Analista', 'Gerente', 'Diseñador'];
-  const estadosDisponibles = ['Activo', 'Inactivo'];
-
-  const empleadosFiltrados = empleados.filter((empleado) => {
-    const coincideBusqueda =
-      empleado.documento.includes(busqueda) ||
-      empleado.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      empleado.cargo.toLowerCase().includes(busqueda.toLowerCase());
-    const coincideCargo = !filtroCargo || empleado.cargo === filtroCargo;
-    const coincideEstado = !filtroEstado || empleado.estado === filtroEstado;
-    return coincideBusqueda && coincideCargo && coincideEstado;
-  });
 
   return (
     <ContenedorPrincipal>
@@ -83,31 +68,24 @@ function Empleados() {
           <div className="caja-busqueda">
             <span className="icono-busqueda"></span>
             <input
-              placeholder="Buscar por documento, nombre o cargo..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              type="text"
+              placeholder="Buscar por nombre o documento..."
             />
           </div>
-          <select
-            className="filtro-select"
-            value={filtroCargo}
-            onChange={(e) => setFiltroCargo(e.target.value)}
-          >
-            <option value="">Todos los Cargos</option>
-            {cargosDisponibles.map((cargo) => (
-              <option key={cargo} value={cargo}>{cargo}</option>
-            ))}
+          <select className="filtro-select">
+            <option value="">Todos los estados</option>
+            <option value="Activo">Activo</option>
+            <option value="Inactivo">Inactivo</option>
           </select>
-          <select
-            className="filtro-select"
-            value={filtroEstado}
-            onChange={(e) => setFiltroEstado(e.target.value)}
-          >
-            <option value="">Todos los Estados</option>
-            {estadosDisponibles.map((estado) => (
-              <option key={estado} value={estado}>{estado}</option>
-            ))}
+          <select className="filtro-select">
+            <option value="">Todos los cargos</option>
+            <option value="Programador">Programador</option>
+            <option value="Analista">Analista</option>
           </select>
+          <button className="btn-filtrar" type="button">
+            <span className="icono-busqueda"></span>
+            Filtrar
+          </button>
         </div>
       </div>
 
@@ -127,11 +105,11 @@ function Empleados() {
               )
             }
           ]}
-          datos={empleadosFiltrados}
+          datos={empleados}
           renderAcciones={(empleado) => (
             <>
-              <button 
-                className="btn-accion-tabla" 
+              <button
+                className="btn-accion-tabla btn-accion-editar"
                 title="Editar"
                 onClick={() => {
                   setEmpleadoEditar(empleado);
@@ -140,14 +118,14 @@ function Empleados() {
               >
                 ✎
               </button>
-              <button 
-                className="btn-accion-tabla" 
+              <button
+                className="btn-accion-tabla btn-accion-ver"
                 title="Ver"
                 onClick={() => navegar(`/empleados/${empleado.id}`)}
               >
                 👁
               </button>
-              <button className="btn-accion-tabla" title="Eliminar">🗑</button>
+              <button className="btn-accion-tabla btn-accion-eliminar" title="Eliminar">🗑</button>
             </>
           )}
         />

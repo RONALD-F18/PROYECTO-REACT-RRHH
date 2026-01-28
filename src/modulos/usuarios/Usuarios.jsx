@@ -52,14 +52,14 @@ function Usuarios() {
         </div>
 
         <div className="bloque-filtros">
-          <div className="caja-busqueda">
-            <span className="icono-busqueda"></span>
-            <input
-              type="text"
-              placeholder="Buscar por nombre o documento..."
-            />
-          </div>
-          <div className="fila-filtros">
+          <div className="fila-filtros-grid">
+            <div className="caja-busqueda">
+              <span className="icono-busqueda"></span>
+              <input
+                type="text"
+                placeholder="Buscar por nombre o documento..."
+              />
+            </div>
             <select className="filtro-select">
               <option value="">Todos los estados</option>
               <option value="Activo">Activo</option>
@@ -70,6 +70,10 @@ function Usuarios() {
               <option value="Administrador">Administrador</option>
               <option value="Funcionario">Funcionario</option>
             </select>
+            <button className="btn-filtrar btn-filtrar-usuarios" type="button">
+              <span className="icono-busqueda"></span>
+              Filtrar
+            </button>
           </div>
         </div>
 

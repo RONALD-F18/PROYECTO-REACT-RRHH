@@ -3,9 +3,6 @@ import { ContenedorPrincipal, EncabezadoModulo } from '../../componentes';
 
 function Incapacidades() {
   const [mostrarModal, setMostrarModal] = useState(false);
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('');
-  const [filtroTipo, setFiltroTipo] = useState('');
 
   const incapacidades = [
     {
@@ -21,23 +18,6 @@ function Incapacidades() {
     }
   ];
 
-  const estadosDisponibles = ['Activas', 'Inactivas', 'Cerradas'];
-  const tiposDisponibles = ['Enfermedad General', 'Accidente Laboral', 'Licencia Maternidad', 'Licencia Paternidad'];
-
-  const incapacidadesFiltradas = incapacidades.filter((incapacidad) => {
-    const coincideBusqueda = !busqueda ||
-      incapacidad.documento.includes(busqueda) ||
-      incapacidad.codigo.toString().includes(busqueda) ||
-      incapacidad.empleado.toLowerCase().includes(busqueda.toLowerCase());
-    
-    const coincideEstado = !filtroEstado || 
-      (filtroEstado === 'Activas' && incapacidad.activa) ||
-      (filtroEstado === 'Inactivas' && !incapacidad.activa);
-    
-    const coincideTipo = !filtroTipo || incapacidad.tipo === filtroTipo;
-    
-    return coincideBusqueda && coincideEstado && coincideTipo;
-  });
 
   const manejarNuevaIncapacidad = () => {
     setMostrarModal(true);
@@ -106,44 +86,41 @@ function Incapacidades() {
         {/* Filtros */}
         <div className="bloque-filtros-incapacidades">
           <input
+            type="text"
             className="input-busqueda"
             placeholder="Buscar documento o código..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
           />
-          <select
-            className="filtro-select"
-            value={filtroEstado}
-            onChange={(e) => setFiltroEstado(e.target.value)}
-          >
-            <option value="">Todos los Estados</option>
-            {estadosDisponibles.map((estado) => (
-              <option key={estado} value={estado}>{estado}</option>
-            ))}
-          </select>
-          <select
-            className="filtro-select"
-            value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value)}
-          >
-            <option value="">Todos los Tipos</option>
-            {tiposDisponibles.map((tipo) => (
-              <option key={tipo} value={tipo}>{tipo}</option>
-            ))}
-          </select>
-          <button className="btn-filtrar-incapacidades">
+          <div className="filtro-grupo">
+            <label>Estado</label>
+            <select className="filtro-select">
+              <option value="">Todo los Estados</option>
+              <option value="Activa">Activa</option>
+              <option value="Inactiva">Inactiva</option>
+            </select>
+          </div>
+          <div className="filtro-grupo">
+            <label>Tipo</label>
+            <select className="filtro-select">
+              <option value="">Todo los Tipos</option>
+              <option value="Accidente Laboral">Accidente Laboral</option>
+              <option value="Enfermedad General">Enfermedad General</option>
+              <option value="Licencia">Licencia</option>
+            </select>
+          </div>
+          <button className="btn-filtrar-incapacidades" type="button">
+            <span className="icono-busqueda"></span>
             Filtrar
           </button>
         </div>
 
         {/* Lista de incapacidades */}
         <div className="lista-incapacidades">
-          {incapacidadesFiltradas.length === 0 ? (
+          {incapacidades.length === 0 ? (
             <div className="sin-incapacidades">
               <p>No se encontraron incapacidades</p>
             </div>
           ) : (
-            incapacidadesFiltradas.map((incapacidad) => (
+            incapacidades.map((incapacidad) => (
               <div key={incapacidad.id} className="tarjeta-incapacidad">
                 <div className="tarjeta-incapacidad-header">
                   <div className="tarjeta-incapacidad-info-empleado">

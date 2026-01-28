@@ -241,9 +241,27 @@
   flex: 1;
 }
 
+/* Estilos de filtros para empleados */
+.bloque-filtros {
+  padding: 24px;
+  background: var(--color-fondo-tarjeta);
+  border-radius: var(--radio-xl);
+  box-shadow: var(--sombra-sm);
+  border: 1px solid var(--color-borde);
+}
+
+@media (max-width: 1024px) {
+  .campos-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
   .detalles-header {
     padding: 16px 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 
   .detalles-header-titulo {
@@ -254,6 +272,7 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+    width: 100%;
   }
 
   .detalles-botones-accion {
@@ -278,6 +297,7 @@
 
   .campos-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .seccion-informacion {
@@ -286,6 +306,37 @@
 
   .seccion-titulo {
     font-size: var(--texto-base);
+  }
+}
+
+@media (max-width: 480px) {
+  .detalles-header {
+    padding: 12px 16px;
+  }
+
+  .detalles-header-titulo {
+    font-size: var(--texto-lg);
+  }
+
+  .tarjeta-perfil {
+    padding: 16px;
+  }
+
+  .perfil-avatar {
+    width: 56px;
+    height: 56px;
+  }
+
+  .avatar-iniciales {
+    font-size: var(--texto-xl);
+  }
+
+  .perfil-nombre {
+    font-size: var(--texto-lg);
+  }
+
+  .seccion-informacion {
+    padding: 12px;
   }
 }
 

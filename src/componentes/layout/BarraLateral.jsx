@@ -1,24 +1,25 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 /**
  * Componente de barra lateral de navegación
  */
 function BarraLateral({ menuAbierto = false, cerrarMenu }) {
   const ubicacion = useLocation();
+  const navegar = useNavigate();
 
   const enlacesMenu = [
     { ruta: '/dashboard', etiqueta: 'Dashboard', icono: '' },
-    { ruta: '/afiliaciones', etiqueta: 'Afiliaciones', icono: '' },
     { ruta: '/empleados', etiqueta: 'Empleados', icono: '' },
-    { ruta: '/certificacion', etiqueta: 'Certificación', icono: '' },
-    { ruta: '/contratos', etiqueta: 'Contratos', icono: '' },
-    { ruta: '/memorandos', etiqueta: 'Memorandos', icono: '' },
-    { ruta: '/prestaciones', etiqueta: 'Prestaciones Sociales', icono: '' },
-    { ruta: '/inasistencias', etiqueta: 'Inasistencias', icono: '' },
+    { ruta: '/usuarios', etiqueta: 'Usuarios', icono: '' },
     { ruta: '/incapacidades', etiqueta: 'Incapacidades', icono: '' },
+    { ruta: '/prestaciones', etiqueta: 'Prestaciones Sociales', icono: '' },
+    { ruta: '/afiliaciones', etiqueta: 'Afiliaciones', icono: '' },
+    { ruta: '/contratos', etiqueta: 'Contratos', icono: '' },
+    { ruta: '/certificacion', etiqueta: 'Certificación', icono: '' },
+    { ruta: '/memorandos', etiqueta: 'Memorandos', icono: '' },
+    { ruta: '/inasistencias', etiqueta: 'Inasistencias', icono: '' },
     { ruta: '/actividades', etiqueta: 'Actividades', icono: '' },
     { ruta: '/reportes', etiqueta: 'Reportes', icono: '' },
-    { ruta: '/usuarios', etiqueta: 'Usuarios', icono: '' },
   ];
 
   const estaActivo = (ruta) => ubicacion.pathname === ruta;
@@ -67,7 +68,32 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
             <span className="barra-lateral-nombre">Admin</span>
             <span className="barra-lateral-correo">admin@talentsphere.com</span>
           </div>
+          <button 
+            className="barra-lateral-cerrar-sesion" 
+            onClick={() => {
+              if (cerrarMenu) {
+                cerrarMenu();
+              }
+              navegar('/');
+            }}
+            title="Cerrar sesión"
+          >
+            <span className="barra-lateral-cerrar-sesion-icono">→</span>
+          </button>
         </div>
+
+        <button 
+          className="barra-lateral-cerrar-sesion-mobile" 
+          onClick={() => {
+            if (cerrarMenu) {
+              cerrarMenu();
+            }
+            navegar('/');
+          }}
+        >
+          <span className="barra-lateral-opcion-icono"></span>
+          <span>Cerrar sesión</span>
+        </button>
       </div>
     </aside>
   );

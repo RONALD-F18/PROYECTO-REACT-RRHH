@@ -41,13 +41,18 @@ function Panel() {
     <ContenedorPrincipal>
       <header className="dashboard-encabezado">
         <div className="dashboard-encabezado-izquierda">
-          <BotonMenu />
-          <div className="dashboard-encabezado-texto">
+          <div className="dashboard-encabezado-logo">
+            <span className="dashboard-encabezado-logo-texto">Talent Sphere</span>
+          </div>
+          <div className="dashboard-encabezado-info">
             <h1>Panel General</h1>
             <p>Resumen rápido de la operación</p>
           </div>
         </div>
-        <span className="dashboard-fecha">{obtenerFecha()}</span>
+        <div className="dashboard-encabezado-derecha">
+          <span className="dashboard-fecha">{obtenerFecha()}</span>
+          <BotonMenu />
+        </div>
       </header>
 
       <div className="dashboard-cuerpo">

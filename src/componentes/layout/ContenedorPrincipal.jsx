@@ -1,9 +1,7 @@
 import { useMenu } from '../../contextos/MenuContext';
 import BarraLateral from './BarraLateral';
+import PanelNavegacion from './PanelNavegacion';
 
-/**
- * Componente contenedor principal con sidebar
- */
 function ContenedorPrincipal({ children }) {
   const { menuAbierto, cerrarMenu } = useMenu();
 
@@ -11,6 +9,7 @@ function ContenedorPrincipal({ children }) {
     <div className="contenedor-app">
       <div className={`overlay-menu ${menuAbierto ? 'activo' : ''}`} onClick={cerrarMenu}></div>
       <BarraLateral menuAbierto={menuAbierto} cerrarMenu={cerrarMenu} />
+      <PanelNavegacion />
       <main className="contenido-principal">
         {children}
       </main>

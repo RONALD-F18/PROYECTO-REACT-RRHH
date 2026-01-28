@@ -9,6 +9,7 @@
 /* Layout */
 @import './layout/barra-lateral.css';
 @import './layout/contenedor.css';
+@import './layout/panel-navegacion.css';
 
 /* Componentes Comunes */
 @import './componentes/botones.css';

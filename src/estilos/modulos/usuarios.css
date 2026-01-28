@@ -49,10 +49,43 @@
   cursor: not-allowed;
 }
 
+.modulo-usuarios .bloque-filtros .fila-filtros-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
 .modulo-usuarios .bloque-filtros .fila-filtros {
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
+}
+
+.btn-filtrar-usuarios {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #6366f1;
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radio-lg);
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transicion-normal);
+  white-space: nowrap;
+  height: fit-content;
+}
+
+.btn-filtrar-usuarios:hover {
+  background: #4f46e5;
+  box-shadow: var(--sombra-sm);
+}
+
+.btn-filtrar-usuarios .icono-busqueda {
+  color: #ffffff;
 }
 
 .modulo-usuarios .bloque-filtros .filtro-select:disabled {
@@ -63,5 +96,81 @@
 
 .modulo-usuarios .contenedor-tabla {
   margin-top: 0;
+}
+
+@media (max-width: 1024px) {
+  .modulo-usuarios .bloque-filtros {
+    padding: 20px;
+  }
+
+  .modulo-usuarios .bloque-filtros .fila-filtros-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .modulo-usuarios .bloque-filtros .caja-busqueda {
+    grid-column: 1 / -1;
+  }
+
+  .btn-filtrar-usuarios {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modulo-usuarios .fila-filtros {
+    flex-direction: column;
+  }
+
+  .modulo-usuarios .fila-filtros .filtro-select {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .modulo-usuarios {
+    gap: 16px;
+  }
+
+  .modulo-usuarios .tarjetas-resumen {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .modulo-usuarios .bloque-filtros {
+    padding: 16px;
+  }
+
+  .modulo-usuarios .bloque-filtros .fila-filtros-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .modulo-usuarios .bloque-filtros h2 {
+    font-size: var(--texto-base);
+  }
+
+  .btn-filtrar-usuarios {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .modulo-usuarios .tarjetas-resumen {
+    grid-template-columns: 1fr;
+  }
+
+  .usuario-info {
+    gap: 2px;
+  }
+
+  .usuario-nombre {
+    font-size: var(--texto-sm);
+  }
+
+  .usuario-documento {
+    font-size: 10px;
+  }
 }
 

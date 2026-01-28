@@ -112,7 +112,7 @@
   display: grid;
   grid-template-columns: 2fr 1fr 1fr auto;
   gap: 12px;
-  align-items: center;
+  align-items: end;
 }
 
 .input-busqueda {
@@ -123,6 +123,7 @@
   font-size: var(--texto-sm);
   color: var(--color-texto);
   transition: all var(--transicion-rapida);
+  width: 100%;
 }
 
 .input-busqueda:focus {
@@ -136,7 +137,24 @@
   color: var(--gris-400);
 }
 
+.filtro-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filtro-grupo label {
+  font-size: var(--texto-xs);
+  font-weight: 600;
+  color: var(--color-texto-oscuro);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .btn-filtrar-incapacidades {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background: var(--color-error);
   color: #ffffff;
   border: none;
@@ -147,11 +165,16 @@
   cursor: pointer;
   transition: all var(--transicion-normal);
   white-space: nowrap;
+  height: fit-content;
 }
 
 .btn-filtrar-incapacidades:hover {
   background: #dc2626;
   box-shadow: var(--sombra-sm);
+}
+
+.btn-filtrar-incapacidades .icono-busqueda {
+  color: #ffffff;
 }
 
 /* Lista de incapacidades */
@@ -222,9 +245,9 @@
 }
 
 .btn-accion-incapacidad {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radio-md);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   border: none;
   cursor: pointer;
   display: flex;
@@ -232,7 +255,6 @@
   justify-content: center;
   font-size: 16px;
   transition: all var(--transicion-rapida);
-  font-weight: 600;
 }
 
 .btn-accion-editar {
@@ -242,7 +264,8 @@
 
 .btn-accion-editar:hover {
   background: #a7f3d0;
-  transform: scale(1.1);
+  color: #047857;
+  transform: scale(1.05);
 }
 
 .btn-accion-ver {
@@ -252,7 +275,8 @@
 
 .btn-accion-ver:hover {
   background: #bfdbfe;
-  transform: scale(1.1);
+  color: #1d4ed8;
+  transform: scale(1.05);
 }
 
 .btn-accion-eliminar {
@@ -262,7 +286,8 @@
 
 .btn-accion-eliminar:hover {
   background: #fecaca;
-  transform: scale(1.1);
+  color: #b91c1c;
+  transform: scale(1.05);
 }
 
 /* Detalles de incapacidad */
@@ -296,10 +321,22 @@
 @media (max-width: 1024px) {
   .bloque-filtros-incapacidades {
     grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .input-busqueda {
+    grid-column: 1 / -1;
   }
 
   .btn-filtrar-incapacidades {
     grid-column: 1 / -1;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .tarjeta-incapacidad-detalles {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -314,7 +351,7 @@
 
   .incapacidades-subtitulo {
     font-size: var(--texto-sm);
-    margin-top: -12px;
+    margin-top: 4px;
   }
 
   .tarjetas-resumen-incapacidades {
@@ -341,11 +378,21 @@
   .bloque-filtros-incapacidades {
     grid-template-columns: 1fr;
     gap: 12px;
+    padding: 16px;
+    align-items: start;
+  }
+
+  .filtro-grupo {
+    width: 100%;
+  }
+
+  .input-busqueda {
+    width: 100%;
   }
 
   .btn-filtrar-incapacidades {
-    grid-column: 1;
     width: 100%;
+    justify-content: center;
   }
 
   .tarjeta-incapacidad {
@@ -390,4 +437,5 @@
     padding: 16px;
   }
 }
+
 

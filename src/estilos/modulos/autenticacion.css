@@ -401,8 +401,168 @@
   margin-left: 26px;
 }
 
-@media (max-width: 550px) {
+@media (max-width: 768px) {
+  .login-contenedor {
+    padding: 16px;
+  }
+
+  .login-caja {
+    max-width: 100%;
+  }
+
+  .login-encabezado {
+    padding: 30px 18px 25px;
+  }
+
+  .login-avatar {
+    width: 65px;
+    height: 65px;
+  }
+
+  .login-cuerpo {
+    padding: 25px 20px;
+  }
+
+  .login-opciones {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .login-social {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .registro-contenedor {
+    padding: 20px 16px;
+  }
+
+  .registro-caja {
+    max-width: 100%;
+  }
+
+  .registro-encabezado {
+    padding: 25px 18px;
+  }
+
+  .registro-cuerpo {
+    padding: 20px 24px 25px;
+  }
+
   .registro-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .registro-botones {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-contenedor {
+    padding: 12px;
+  }
+
+  .login-encabezado {
+    padding: 25px 16px 20px;
+  }
+
+  .login-avatar {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 16px;
+  }
+
+  .login-cuerpo {
+    padding: 20px 16px;
+  }
+
+  .login-campo {
+    margin-bottom: 18px;
+  }
+
+  .login-campo input {
+    padding: 12px 14px;
+  }
+
+  .login-opciones {
+    margin-bottom: 20px;
+  }
+
+  .login-btn {
+    padding: 14px;
+    margin-bottom: 20px;
+  }
+
+  .login-social {
+    margin-bottom: 20px;
+  }
+
+  .registro-contenedor {
+    padding: 16px 12px;
+  }
+
+  .registro-encabezado {
+    padding: 20px 16px;
+  }
+
+  .registro-icono {
+    width: 50px;
+    height: 50px;
+  }
+
+  .registro-cuerpo {
+    padding: 18px 20px 22px;
+  }
+
+  .registro-grid {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .registro-campo {
+    margin-bottom: 0;
+  }
+
+  .registro-requisitos {
+    padding: 12px 16px;
+    margin-bottom: 15px;
+  }
+
+  .registro-terminos {
+    margin-bottom: 18px;
+  }
+
+  .registro-botones {
+    margin-bottom: 18px;
+  }
+}
+
+@media (max-width: 360px) {
+  .login-contenedor {
+    padding: 8px;
+  }
+
+  .login-encabezado {
+    padding: 20px 12px 18px;
+  }
+
+  .login-cuerpo {
+    padding: 18px 12px;
+  }
+
+  .registro-contenedor {
+    padding: 12px 8px;
+  }
+
+  .registro-encabezado {
+    padding: 18px 12px;
+  }
+
+  .registro-cuerpo {
+    padding: 16px 16px 20px;
   }
 }

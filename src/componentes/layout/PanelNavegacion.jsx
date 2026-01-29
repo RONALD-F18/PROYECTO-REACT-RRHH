@@ -1,9 +1,10 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useMenu } from '../../contextos/MenuContext';
 import { useState, useEffect } from 'react';
 
 function PanelNavegacion() {
   const ubicacion = useLocation();
+  const navegar = useNavigate();
   const { menuAbierto, cerrarMenu } = useMenu();
   const [esMobile, setEsMobile] = useState(window.innerWidth <= 900);
 
@@ -82,6 +83,16 @@ function PanelNavegacion() {
               <span className="panel-navegacion-nombre">Admin</span>
               <span className="panel-navegacion-correo">admin@talentsphere.com</span>
             </div>
+            <button
+              className="panel-navegacion-cerrar-sesion"
+              onClick={() => {
+                cerrarMenu();
+                navegar('/');
+              }}
+              title="Cerrar sesión"
+            >
+              <span className="panel-navegacion-cerrar-sesion-icono">→</span>
+            </button>
           </div>
         </div>
       </aside>

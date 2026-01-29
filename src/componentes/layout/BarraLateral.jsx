@@ -68,12 +68,10 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
             <span className="barra-lateral-nombre">Admin</span>
             <span className="barra-lateral-correo">admin@talentsphere.com</span>
           </div>
-          <button 
-            className="barra-lateral-cerrar-sesion" 
+          <button
+            className="barra-lateral-cerrar-sesion"
             onClick={() => {
-              if (cerrarMenu) {
-                cerrarMenu();
-              }
+              cerrarMenu?.();
               navegar('/');
             }}
             title="Cerrar sesión"
@@ -82,8 +80,8 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
           </button>
         </div>
 
-        <button 
-          className="barra-lateral-cerrar-sesion-mobile" 
+        <button
+          className="barra-lateral-cerrar-sesion-mobile"
           onClick={() => {
             if (cerrarMenu) {
               cerrarMenu();

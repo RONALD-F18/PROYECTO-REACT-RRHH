@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ContenedorPrincipal } from '../../componentes';
+import { ContenedorPrincipal, EncabezadoModulo } from '../../componentes';
 import { ModalEmpleado } from './componentes';
 
 function DetallesEmpleado() {
@@ -41,13 +41,13 @@ function DetallesEmpleado() {
 
   return (
     <ContenedorPrincipal>
-      <div className="detalles-empleado">
-        <header className="detalles-header">
-          <div className="detalles-header-izquierda">
-            <h1 className="detalles-header-titulo">Empleados</h1>
-          </div>
-        </header>
+      <EncabezadoModulo
+        titulo="Empleados"
+        subtitulo="Información detallada del colaborador"
+        mostrarBoton={false}
+      />
 
+      <div className="detalles-empleado">
         <div className="detalles-acciones">
           <button className="btn-volver" onClick={() => navegar('/empleados')}>
             ← Volver

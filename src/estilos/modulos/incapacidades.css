@@ -317,6 +317,326 @@
   font-weight: 600;
 }
 
+/* ============================
+   Detalle de Incapacidad
+   ============================ */
+
+.detalle-incapacidad {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.detalle-incapacidad-barra {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.btn-volver-detalle {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--color-borde);
+  background: #f9fafb;
+  color: var(--color-texto);
+  font-size: var(--texto-sm);
+  cursor: pointer;
+  transition: all var(--transicion-rapida);
+}
+
+.btn-volver-detalle:hover {
+  background: #e5e7eb;
+}
+
+.detalle-incapacidad-encabezado {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #ff6a3a, #ffb347);
+  color: #fff;
+}
+
+.detalle-incapacidad-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.detalle-incapacidad-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: var(--texto-lg);
+}
+
+.detalle-incapacidad-datos h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: -0.02em;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
+.detalle-incapacidad-datos p {
+  margin: 4px 0 12px 0;
+  font-size: 0.875rem;
+  opacity: 0.85;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 400;
+}
+
+.detalle-incapacidad-empleado {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--texto-sm);
+}
+
+.detalle-incapacidad-nombre {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.detalle-incapacidad-documento,
+.detalle-incapacidad-codigo {
+  opacity: 0.95;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.detalle-incapacidad-estado {
+  display: flex;
+  align-items: flex-start;
+}
+
+.detalle-incapacidad-resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.detalle-incapacidad-tarjeta {
+  background: var(--color-fondo-tarjeta);
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: var(--sombra-sm);
+}
+
+.detalle-tarjeta-etiqueta {
+  font-size: var(--texto-xs);
+  color: var(--color-texto-claro);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detalle-tarjeta-titulo {
+  margin: 6px 0;
+  font-size: var(--texto-lg);
+  font-weight: 700;
+  color: var(--color-texto-oscuro);
+}
+
+.detalle-tarjeta-subtexto {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-texto-claro);
+}
+
+.detalle-incapacidad-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--color-fondo-tarjeta);
+  border-radius: 20px;
+  padding: 18px 20px 20px;
+  box-shadow: var(--sombra-sm);
+}
+
+.detalle-seccion-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.detalle-seccion-header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+  letter-spacing: -0.01em;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
+.detalle-seccion-punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.detalle-seccion-punto.azul {
+  background: #2563eb;
+}
+
+.detalle-seccion-punto.verde {
+  background: #16a34a;
+}
+
+.detalle-seccion-punto.celeste {
+  background: #38bdf8;
+}
+
+.detalle-seccion-punto.gris {
+  background: #6b7280;
+}
+
+.detalle-incapacidad-card {
+  background: transparent;
+  border-radius: 18px;
+  padding: 6px 0 0 0;
+}
+
+.detalle-incapacidad-descripcion {
+  margin: 0 0 12px 0;
+  font-size: var(--texto-sm);
+  color: var(--color-texto);
+  line-height: 1.6;
+}
+
+.detalle-incapacidad-codigo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detalle-incapacidad-distribucion {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.bloque-pago {
+  border-radius: 18px;
+  padding: 16px 18px;
+  background: var(--color-fondo-tarjeta);
+  box-shadow: var(--sombra-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+  align-items: center;
+}
+
+.bloque-pago.empresa {
+  background: #ecfdf3;
+}
+
+.bloque-pago.eps {
+  background: #dcfce7;
+}
+
+.bloque-pago.arl {
+  background: #fef9c3;
+}
+
+.bloque-pago-etiqueta {
+  font-size: var(--texto-xs);
+  color: var(--color-texto-claro);
+  text-transform: uppercase;
+}
+
+.bloque-pago-valor {
+  font-size: var(--texto-base);
+  font-weight: 700;
+  color: var(--color-texto-oscuro);
+}
+
+.bloque-pago-monto {
+  font-size: var(--texto-sm);
+  color: var(--color-texto-claro);
+}
+
+.bloque-pago.total {
+  background: #fce7f3;
+}
+
+.bloque-pago.total .bloque-pago-valor {
+  color: #be185d;
+}
+
+.detalle-incapacidad-salario {
+  background: #dbeafe;
+  border-radius: 18px;
+  padding: 18px 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.detalle-incapacidad-salario > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detalle-incapacidad-salario .detalle-valor {
+  font-weight: 700;
+  color: #111827;
+}
+
+.detalle-incapacidad-seccion.acciones {
+  margin-top: 8px;
+}
+
+.detalle-seccion-titulo {
+  margin: 0 0 12px 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+  letter-spacing: -0.01em;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
+.detalle-incapacidad-acciones {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-detalle {
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: none;
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transicion-rapida);
+}
+
+.btn-detalle-primario {
+  background: #22c55e;
+  color: #fff;
+}
+
+.btn-detalle-primario:hover {
+  background: #16a34a;
+}
+
+.btn-detalle-secundario {
+  background: #e5e7eb;
+  color: var(--color-texto);
+}
+
+.btn-detalle-secundario:hover {
+  background: #d1d5db;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .bloque-filtros-incapacidades {

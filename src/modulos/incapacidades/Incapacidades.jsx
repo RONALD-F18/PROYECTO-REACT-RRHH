@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ContenedorPrincipal, EncabezadoModulo } from '../../componentes';
 
 function Incapacidades() {
-  const [mostrarModal, setMostrarModal] = useState(false);
+  const navegar = useNavigate();
 
   const incapacidades = [
     {
@@ -20,15 +20,15 @@ function Incapacidades() {
 
 
   const manejarNuevaIncapacidad = () => {
-    setMostrarModal(true);
+    console.log('Nueva incapacidad');
   };
 
   const manejarEditar = (id) => {
-    console.log('Editar incapacidad:', id);
+    navegar(`/incapacidades/${id}/editar`);
   };
 
   const manejarVer = (id) => {
-    console.log('Ver incapacidad:', id);
+    navegar(`/incapacidades/${id}`);
   };
 
   const manejarEliminar = (id) => {

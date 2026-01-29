@@ -10,6 +10,7 @@ import {
   PrestacionesSociales,
   DetallesPrestaciones,
   Incapacidades,
+  DetallesIncapacidad,
 } from "../modulos";
 
 // Rutas públicas
@@ -28,6 +29,8 @@ export const rutasPrivadas = [
   { ruta: "/prestaciones", componente: PrestacionesSociales },
   { ruta: "/prestaciones/:id", componente: DetallesPrestaciones },
   { ruta: "/incapacidades", componente: Incapacidades },
+  { ruta: "/incapacidades/:id", componente: DetallesIncapacidad },
+  { ruta: "/incapacidades/:id/editar", componente: DetallesIncapacidad },
 ];
 
 function EnrutadorPrincipal() {

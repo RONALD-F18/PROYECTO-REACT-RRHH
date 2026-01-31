@@ -37,9 +37,6 @@ function DetallesIncapacidad() {
     navegar(`/incapacidades/${id}/editar`);
   };
 
-  const manejarEliminar = () => {
-    console.log('Eliminar incapacidad');
-  };
 
   return (
     <ContenedorPrincipal>
@@ -82,7 +79,7 @@ function DetallesIncapacidad() {
             <button
               type="button"
               className="btn-accion btn-accion-eliminar"
-              onClick={manejarEliminar}
+              onClick={() => console.log('Eliminar incapacidad:', id)}
               title="Eliminar"
             >
               <svg

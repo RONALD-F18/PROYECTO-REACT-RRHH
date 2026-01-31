@@ -22,6 +22,11 @@
 @import './componentes/encabezado-modulo.css';
 @import './componentes/boton-menu.css';
 @import './componentes/modal.css';
+@import './componentes/formulario-secciones.css';
+@import './componentes/tarjetas-resumen.css';
+@import './componentes/tabs.css';
+@import './componentes/sin-datos.css';
+@import './componentes/tarjeta-informacion.css';
 
 /* Módulos */
 @import './modulos/autenticacion.css';
@@ -31,3 +36,4 @@
 @import './modulos/prestaciones.css';
 @import './modulos/empleados.css';
 @import './modulos/incapacidades.css';
+@import './modulos/afiliaciones.css';

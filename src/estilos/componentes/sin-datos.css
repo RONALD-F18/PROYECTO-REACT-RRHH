@@ -1,0 +1,16 @@
+/* Componente SinDatos - Estado vacío reutilizable */
+.sin-datos {
+  background: var(--color-fondo-tarjeta);
+  border-radius: var(--radio-xl);
+  padding: 48px;
+  text-align: center;
+  box-shadow: var(--sombra-sm);
+}
+
+.sin-datos p {
+  font-size: var(--texto-lg);
+  color: var(--color-texto-claro);
+  margin: 0;
+  font-weight: 500;
+}
+

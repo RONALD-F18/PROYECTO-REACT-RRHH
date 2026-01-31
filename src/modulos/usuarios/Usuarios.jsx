@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ContenedorPrincipal, EncabezadoModulo } from '../../componentes';
+import { ContenedorPrincipal, EncabezadoModulo, FiltrosBusqueda, TablaDatos } from '../../componentes';
 import { ModalUsuario } from './componentes';
 
 function Usuarios() {
@@ -51,85 +51,73 @@ function Usuarios() {
           </div>
         </div>
 
-        <div className="bloque-filtros">
-          <div className="fila-filtros-grid">
-            <div className="caja-busqueda">
-              <span className="icono-busqueda"></span>
-              <input
-                type="text"
-                placeholder="Buscar por nombre o documento..."
-              />
-            </div>
-            <select className="filtro-select">
-              <option value="">Todos los estados</option>
-              <option value="Activo">Activo</option>
-              <option value="Inactivo">Inactivo</option>
-            </select>
-            <select className="filtro-select">
-              <option value="">Todos los roles</option>
-              <option value="Administrador">Administrador</option>
-              <option value="Funcionario">Funcionario</option>
-            </select>
-            <button className="btn-filtrar btn-filtrar-usuarios" type="button">
-              <span className="icono-busqueda"></span>
-              Filtrar
-            </button>
-          </div>
-        </div>
+        <FiltrosBusqueda
+          placeholderBusqueda="Buscar por nombre o documento..."
+          filtrosSelect={[
+            {
+              nombre: 'estado',
+              placeholder: 'Todos los estados',
+              opciones: ['Activo', 'Inactivo']
+            },
+            {
+              nombre: 'rol',
+              placeholder: 'Todos los roles',
+              opciones: ['Administrador', 'Funcionario']
+            }
+          ]}
+          onFiltrar={(filtros) => console.log('Filtrar usuarios:', filtros)}
+        />
 
-        <div className="contenedor-tabla">
-          <table className="tabla-datos">
-            <thead>
-              <tr>
-                <th>Usuario</th>
-                <th>Contacto</th>
-                <th>Rol</th>
-                <th>Estado</th>
-                <th>Último Acceso</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {listaUsuarios.map((usuario) => (
-                <tr key={usuario.id}>
-                  <td>
-                    <div className="usuario-info">
-                      <span className="usuario-nombre">{usuario.nombre}</span>
-                      <span className="usuario-documento">C.C {usuario.documento}</span>
-                    </div>
-                  </td>
-                  <td>{usuario.telefono}</td>
-                  <td>
-                    <span className={`etiqueta etiqueta-${usuario.rol === 'Administrador' ? 'admin' : 'funcionario'}`}>
-                      {usuario.rol}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`etiqueta etiqueta-${usuario.estado === 'Activo' ? 'activo' : 'inactivo'}`}>
-                      {usuario.estado}
-                    </span>
-                  </td>
-                  <td className="fecha-acceso">{usuario.ultimoAcceso}</td>
-                  <td>
-                    <div className="tabla-acciones">
-                      <button
-                        className="btn-accion-tabla"
-                        title="Editar"
-                        onClick={() => {
-                          setUsuarioEditar(usuario);
-                          setMostrarModal(true);
-                        }}
-                      >
-                        ✎
-                      </button>
-                      <button className="btn-accion-tabla" title="Eliminar">🗑</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <TablaDatos
+          columnas={[
+            {
+              campo: 'nombre',
+              encabezado: 'Usuario',
+              renderizar: (nombre, usuario) => (
+                <div className="usuario-info">
+                  <span className="usuario-nombre">{nombre}</span>
+                  <span className="usuario-documento">C.C {usuario.documento}</span>
+                </div>
+              )
+            },
+            { campo: 'telefono', encabezado: 'Contacto' },
+            {
+              campo: 'rol',
+              encabezado: 'Rol',
+              renderizar: (rol) => (
+                <span className={`etiqueta etiqueta-${rol === 'Administrador' ? 'admin' : 'funcionario'}`}>
+                  {rol}
+                </span>
+              )
+            },
+            {
+              campo: 'estado',
+              encabezado: 'Estado',
+              renderizar: (estado) => (
+                <span className={`etiqueta etiqueta-${estado === 'Activo' ? 'activo' : 'inactivo'}`}>
+                  {estado}
+                </span>
+              )
+            },
+            { campo: 'ultimoAcceso', encabezado: 'Último Acceso' }
+          ]}
+          datos={listaUsuarios}
+          renderAcciones={(usuario) => (
+            <>
+              <button
+                className="btn-accion-tabla btn-accion-editar"
+                title="Editar"
+                onClick={() => {
+                  setUsuarioEditar(usuario);
+                  setMostrarModal(true);
+                }}
+              >
+                ✎
+              </button>
+              <button className="btn-accion-tabla btn-accion-eliminar" title="Eliminar">🗑</button>
+            </>
+          )}
+        />
 
         <ModalUsuario
           mostrar={mostrarModal}

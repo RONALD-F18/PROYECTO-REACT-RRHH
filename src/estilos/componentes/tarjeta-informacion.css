@@ -1,0 +1,86 @@
+/* Tarjeta de Información con Header de Color */
+.tarjeta-informacion {
+  background: var(--color-fondo-tarjeta);
+  border-radius: var(--radio-lg);
+  overflow: hidden;
+  box-shadow: var(--sombra-sm);
+  transition: all var(--transicion-normal);
+}
+
+.tarjeta-informacion:hover {
+  box-shadow: var(--sombra-md);
+  transform: translateY(-1px);
+}
+
+.tarjeta-informacion-header {
+  padding: 16px 20px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.tarjeta-informacion-header-azul {
+  background: #3b82f6;
+}
+
+.tarjeta-informacion-header-verde {
+  background: #10b981;
+}
+
+.tarjeta-informacion-header-morado {
+  background: #9333ea;
+}
+
+.tarjeta-informacion-header-rojo {
+  background: #ef4444;
+}
+
+.tarjeta-informacion-header-amarillo {
+  background: #f59e0b;
+}
+
+.tarjeta-informacion-titulo {
+  margin: 0;
+  font-size: var(--texto-base);
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.01em;
+}
+
+.tarjeta-informacion-contenido {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tarjeta-informacion-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tarjeta-informacion-etiqueta {
+  font-size: var(--texto-xs);
+  color: var(--color-texto-claro);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tarjeta-informacion-valor {
+  font-size: var(--texto-sm);
+  color: var(--color-texto-oscuro);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .tarjeta-informacion-header {
+    padding: 14px 16px;
+  }
+
+  .tarjeta-informacion-contenido {
+    padding: 16px;
+    gap: 12px;
+  }
+}
+

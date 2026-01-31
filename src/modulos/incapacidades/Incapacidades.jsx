@@ -1,38 +1,71 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ContenedorPrincipal, EncabezadoModulo } from '../../componentes';
+import { ContenedorPrincipal, EncabezadoModulo, FiltrosBusqueda, SinDatos } from '../../componentes';
+import { ModalIncapacidad } from './componentes';
 
 function Incapacidades() {
   const navegar = useNavigate();
-
-  const incapacidades = [
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [incapacidadEditar, setIncapacidadEditar] = useState(null);
+  const [incapacidades] = useState([
     {
       id: 1,
       codigo: 1654499,
       empleado: 'Carlos Andrés Martinez',
       documento: '1001234567',
+      nombre: 'Carlos Andrés Martinez',
+      codigoContrato: 'CT-2024-001',
+      codigoAfiliacion: '1654499',
       tipo: 'Accidente Laboral',
+      tipoIncapacidad: 'Accidente Laboral',
       periodo: '11-11-2025 al 24-11-2025',
+      fechaInicio: '2025-11-11',
+      fechaFin: '2025-11-24',
       dias: 14,
+      diasCalculados: 14,
       entidad: 'ARL',
-      activa: true
+      activa: true,
+      diagnostico: 'Se detectaron cálculos renales con signos obstructivos. Se recomienda reposo y seguimiento médico.',
+      descripcionDiagnostico: 'Se detectaron cálculos renales con signos obstructivos. Se recomienda reposo y seguimiento médico.',
+      codigoClasificacion: 'J00, S82',
+      codigoEnfermedad: '545656',
+      observaciones: 'Que tal como se encuentra.',
+      descripcion: 'Que tal como se encuentra.'
     }
-  ];
-
+  ]);
 
   const manejarNuevaIncapacidad = () => {
-    console.log('Nueva incapacidad');
+    setIncapacidadEditar(null);
+    setMostrarModal(true);
   };
 
   const manejarEditar = (id) => {
-    navegar(`/incapacidades/${id}/editar`);
+    const incapacidad = incapacidades.find(inc => inc.id === id);
+    if (incapacidad) {
+      setIncapacidadEditar(incapacidad);
+      setMostrarModal(true);
+    }
+  };
+
+  const manejarGuardarIncapacidad = (datos) => {
+    // Solo registrar en consola - el backend manejará la persistencia
+    if (incapacidadEditar) {
+      console.log('Actualizar incapacidad:', { id: incapacidadEditar.id, ...datos });
+    } else {
+      console.log('Registrar nueva incapacidad:', datos);
+    }
+    setMostrarModal(false);
+    setIncapacidadEditar(null);
   };
 
   const manejarVer = (id) => {
     navegar(`/incapacidades/${id}`);
   };
 
-  const manejarEliminar = (id) => {
-    console.log('Eliminar incapacidad:', id);
+
+  const manejarFiltrar = (filtros) => {
+    console.log('Filtrar incapacidades:', filtros);
+    // Aquí se implementaría la lógica de filtrado
   };
 
   return (
@@ -84,41 +117,27 @@ function Incapacidades() {
         </div>
 
         {/* Filtros */}
-        <div className="bloque-filtros-incapacidades">
-          <input
-            type="text"
-            className="input-busqueda"
-            placeholder="Buscar documento o código..."
-          />
-          <div className="filtro-grupo">
-            <label>Estado</label>
-            <select className="filtro-select">
-              <option value="">Todo los Estados</option>
-              <option value="Activa">Activa</option>
-              <option value="Inactiva">Inactiva</option>
-            </select>
-          </div>
-          <div className="filtro-grupo">
-            <label>Tipo</label>
-            <select className="filtro-select">
-              <option value="">Todo los Tipos</option>
-              <option value="Accidente Laboral">Accidente Laboral</option>
-              <option value="Enfermedad General">Enfermedad General</option>
-              <option value="Licencia">Licencia</option>
-            </select>
-          </div>
-          <button className="btn-filtrar-incapacidades" type="button">
-            <span className="icono-busqueda"></span>
-            Filtrar
-          </button>
-        </div>
+        <FiltrosBusqueda
+          placeholderBusqueda="Buscar documento o código..."
+          filtrosSelect={[
+            {
+              nombre: 'estado',
+              placeholder: 'Todos los Estados',
+              opciones: ['Activa', 'Inactiva']
+            },
+            {
+              nombre: 'tipo',
+              placeholder: 'Todos los Tipos',
+              opciones: ['Accidente Laboral', 'Enfermedad General', 'Licencia']
+            }
+          ]}
+          onFiltrar={manejarFiltrar}
+        />
 
         {/* Lista de incapacidades */}
         <div className="lista-incapacidades">
           {incapacidades.length === 0 ? (
-            <div className="sin-incapacidades">
-              <p>No se encontraron incapacidades</p>
-            </div>
+            <SinDatos mensaje="No se encontraron incapacidades" />
           ) : (
             incapacidades.map((incapacidad) => (
               <div key={incapacidad.id} className="tarjeta-incapacidad">
@@ -145,7 +164,7 @@ function Incapacidades() {
                     <button
                       className="btn-accion-incapacidad btn-accion-eliminar"
                       title="Eliminar"
-                      onClick={() => manejarEliminar(incapacidad.id)}
+                      onClick={() => console.log('Eliminar incapacidad:', incapacidad.id)}
                     >
                       🗑
                     </button>
@@ -182,6 +201,16 @@ function Incapacidades() {
           )}
         </div>
       </div>
+
+      <ModalIncapacidad
+        mostrar={mostrarModal}
+        cerrar={() => {
+          setMostrarModal(false);
+          setIncapacidadEditar(null);
+        }}
+        datosIncapacidad={incapacidadEditar}
+        onGuardar={manejarGuardarIncapacidad}
+      />
     </ContenedorPrincipal>
   );
 }

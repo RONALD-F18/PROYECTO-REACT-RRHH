@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ContenedorPrincipal, EncabezadoModulo, TablaDatos } from '../../componentes';
+import { ContenedorPrincipal, EncabezadoModulo, TablaDatos, FiltrosBusqueda } from '../../componentes';
 
 function PrestacionesSociales() {
   const navegar = useNavigate();
@@ -26,21 +26,42 @@ function PrestacionesSociales() {
         mostrarBoton={false}
       />
 
-      <h2 style={{ marginBottom: '24px', color: '#1e293b' }}>Gestión de Prestaciones Sociales</h2>
+      <div className="prestaciones-contenido">
+        <h2 style={{ marginBottom: '24px', color: '#1e293b' }}>Gestión de Prestaciones Sociales</h2>
 
-      <div className="tarjetas-prestaciones" style={{ marginBottom: '24px' }}>
-        {tarjetasPrestaciones.map((tarjeta, indice) => (
-          <div key={indice} className={`tarjeta-prestacion ${tarjeta.color}`}>
-            <div className="tarjeta-prestacion-info">
-              <h3>{tarjeta.titulo}</h3>
-              <p className="tarjeta-prestacion-valor">{tarjeta.valor}</p>
+        <div className="tarjetas-prestaciones" style={{ marginBottom: '24px' }}>
+          {tarjetasPrestaciones.map((tarjeta, indice) => (
+            <div key={indice} className={`tarjeta-prestacion ${tarjeta.color}`}>
+              <div className="tarjeta-prestacion-info">
+                <h3>{tarjeta.titulo}</h3>
+                <p className="tarjeta-prestacion-valor">{tarjeta.valor}</p>
+              </div>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.6)' }}></div>
             </div>
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.6)' }}></div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      <TablaDatos
+        <FiltrosBusqueda
+          placeholderBusqueda="Buscar por empleado, documento o contrato..."
+          filtrosSelect={[
+            {
+              nombre: 'cargo',
+              placeholder: 'Todos los Cargos',
+              opciones: ['Desarrollador', 'Aux Contable', 'RRHH', 'Diseñador']
+            },
+            {
+              nombre: 'estado',
+              placeholder: 'Todos los Estados',
+              opciones: ['Activo', 'Inactivo']
+            }
+          ]}
+          onFiltrar={(filtros) => console.log('Filtrar prestaciones:', filtros)}
+        />
+
+        <div className="prestaciones-contenedor-principal">
+          <h2 className="prestaciones-titulo-seccion">Empleados con Prestaciones</h2>
+
+          <TablaDatos
         columnas={[
           {
             campo: 'nombre',
@@ -74,7 +95,9 @@ function PrestacionesSociales() {
             Ver detalles
           </button>
         )}
-      />
+          />
+        </div>
+      </div>
     </ContenedorPrincipal>
   );
 }

@@ -1,3 +1,16 @@
+.prestaciones-contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.detalles-acciones {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
 .btn-volver {
   background: transparent;
   border: 1px solid var(--gris-300);
@@ -7,14 +20,52 @@
   font-size: var(--texto-sm);
   cursor: pointer;
   transition: all var(--transicion-rapida);
-  margin-bottom: 20px;
-  align-self: flex-start;
 }
 
 .btn-volver:hover {
   background: var(--gris-50);
   border-color: var(--gris-400);
   color: var(--gris-700);
+}
+
+.detalles-botones-accion {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-accion {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--radio-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transicion-rapida);
+  background: var(--color-fondo-tarjeta);
+  box-shadow: var(--sombra-sm);
+}
+
+.btn-accion:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sombra-md);
+}
+
+.btn-accion-editar {
+  background: #dbeafe;
+}
+
+.btn-accion-editar:hover {
+  background: #bfdbfe;
+}
+
+.btn-accion-eliminar {
+  background: #fee2e2;
+}
+
+.btn-accion-eliminar:hover {
+  background: #fecaca;
 }
 
 .detalles-prestaciones {
@@ -113,5 +164,22 @@
   flex-direction: column;
   gap: 6px;
   align-items: flex-start;
+}
+
+/* Contenedor principal para filtros y tabla */
+.prestaciones-contenedor-principal {
+  background: var(--color-fondo-tarjeta);
+  border-radius: var(--radio-xl);
+  padding: 24px;
+  box-shadow: var(--sombra-sm);
+}
+
+.prestaciones-titulo-seccion {
+  font-size: var(--texto-xl);
+  font-weight: 700;
+  color: var(--color-texto-oscuro);
+  margin: 24px 0;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--color-borde);
 }
 

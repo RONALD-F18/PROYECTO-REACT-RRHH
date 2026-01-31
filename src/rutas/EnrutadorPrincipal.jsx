@@ -11,6 +11,8 @@ import {
   DetallesPrestaciones,
   Incapacidades,
   DetallesIncapacidad,
+  Afiliaciones,
+  DetallesAfiliacion,
 } from "../modulos";
 
 // Rutas públicas
@@ -31,6 +33,8 @@ export const rutasPrivadas = [
   { ruta: "/incapacidades", componente: Incapacidades },
   { ruta: "/incapacidades/:id", componente: DetallesIncapacidad },
   { ruta: "/incapacidades/:id/editar", componente: DetallesIncapacidad },
+  { ruta: "/afiliaciones", componente: Afiliaciones },
+  { ruta: "/afiliaciones/:id", componente: DetallesAfiliacion },
 ];
 
 function EnrutadorPrincipal() {

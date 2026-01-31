@@ -5,4 +5,5 @@ export * from './empleados';
 export * from './usuarios';
 export * from './prestaciones';
 export * from './incapacidades';
+export * from './afiliaciones';
 export * from './inicio';

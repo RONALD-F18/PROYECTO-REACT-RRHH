@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ContenedorPrincipal, EncabezadoModulo, TablaDatos } from '../../componentes';
+import { ContenedorPrincipal, EncabezadoModulo, TablaDatos, FiltrosBusqueda } from '../../componentes';
 import { ModalEmpleado } from './componentes';
 
 function Empleados() {
@@ -62,32 +62,23 @@ function Empleados() {
         }}
       />
 
-      <div className="bloque-filtros">
-        <h2>Empleados Registrados</h2>
-        <div className="fila-filtros-grid">
-          <div className="caja-busqueda">
-            <span className="icono-busqueda"></span>
-            <input
-              type="text"
-              placeholder="Buscar por nombre o documento..."
-            />
-          </div>
-          <select className="filtro-select">
-            <option value="">Todos los estados</option>
-            <option value="Activo">Activo</option>
-            <option value="Inactivo">Inactivo</option>
-          </select>
-          <select className="filtro-select">
-            <option value="">Todos los cargos</option>
-            <option value="Programador">Programador</option>
-            <option value="Analista">Analista</option>
-          </select>
-          <button className="btn-filtrar" type="button">
-            <span className="icono-busqueda"></span>
-            Filtrar
-          </button>
-        </div>
-      </div>
+      <FiltrosBusqueda
+        titulo="Empleados Registrados"
+        placeholderBusqueda="Buscar por nombre o documento..."
+        filtrosSelect={[
+          {
+            nombre: 'estado',
+            placeholder: 'Todos los estados',
+            opciones: ['Activo', 'Inactivo']
+          },
+          {
+            nombre: 'cargo',
+            placeholder: 'Todos los cargos',
+            opciones: ['Programador', 'Analista']
+          }
+        ]}
+        onFiltrar={(filtros) => console.log('Filtrar empleados:', filtros)}
+      />
 
       <div style={{ marginTop: '20px' }}>
         <TablaDatos

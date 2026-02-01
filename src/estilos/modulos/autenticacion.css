@@ -71,6 +71,26 @@
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.login-campo input.campo-error {
+  border-color: var(--color-error);
+  background-color: var(--color-error-claro);
+}
+
+.login-campo input.campo-error:focus {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.login-campo input.campo-valido {
+  border-color: var(--color-exito);
+  background-color: var(--color-exito-claro);
+}
+
+.login-campo input.campo-valido:focus {
+  border-color: var(--color-exito);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
 .login-opciones {
   display: flex;
   justify-content: space-between;

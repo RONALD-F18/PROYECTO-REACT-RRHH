@@ -7,12 +7,13 @@ function DetallesEmpleado() {
   const { id } = useParams();
   const navegar = useNavigate();
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [estado, setEstado] = useState('Activo');
 
   const empleado = {
     id: 1,
     nombre: 'Willi G',
     cargo: 'Ingeniero de Software',
-    estado: 'Activo',
+    estado: estado,
     iniciales: 'WG',
     tipoDocumento: 'Cédula de Ciudadanía',
     documento: '1129255781',
@@ -34,6 +35,13 @@ function DetallesEmpleado() {
   const manejarEditar = () => {
     setMostrarModal(true);
   };
+
+  const manejarCambioEstado = (nuevoEstado) => {
+    setEstado(nuevoEstado);
+    console.log('Cambiar estado de empleado:', { id, nuevoEstado });
+  };
+
+  const estadosDisponibles = ['Activo', 'Inactivo', 'Vacaciones', 'Licencia', 'Suspendido'];
 
 
   return (
@@ -76,7 +84,17 @@ function DetallesEmpleado() {
             <p className="perfil-cargo">{empleado.cargo}</p>
           </div>
           <div className="perfil-estado">
-            <span className="etiqueta etiqueta-verde">{empleado.estado}</span>
+            <select
+              value={estado}
+              onChange={(e) => manejarCambioEstado(e.target.value)}
+              className="select-estado-empleado"
+            >
+              {estadosDisponibles.map((est) => (
+                <option key={est} value={est}>
+                  {est}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

@@ -48,6 +48,11 @@
   color: #2563eb;
 }
 
+.etiqueta-visualizador {
+  background: #f0fdf4;
+  color: #059669;
+}
+
 /* Prioridades */
 .prioridad {
   padding: 3px 10px;

@@ -1,52 +1,113 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
-import { validarNombres, validarNumeroDocumento, validarCorreo, validarTelefono } from '../../../utils/validaciones';
+import * as validaciones from '../../../utils/validaciones';
 
 function ModalUsuario({ mostrar, cerrar, datosUsuario = null }) {
     const esEdicion = !!datosUsuario;
+    
     const [formulario, setFormulario] = useState({
-        nombre: datosUsuario?.nombre || '',
-        documento: datosUsuario?.documento || '',
-        email: datosUsuario?.email || '',
-        telefono: datosUsuario?.telefono || '',
-        rol: datosUsuario?.rol || '',
+        nombres: '',
+        apellidos: '',
+        nombreUsuario: '',
+        tipoDocumento: '',
+        numeroDocumento: '',
+        correo: '',
+        contrasena: '',
+        confirmarContrasena: '',
+        telefono: '',
+        fechaNacimiento: '',
+        rol: '',
+        estado: 'Activo',
     });
 
     const [errores, setErrores] = useState({});
     const [camposTocados, setCamposTocados] = useState({});
 
+    useEffect(() => {
+        if (datosUsuario) {
+            // Pre-llenar formulario con datos del usuario para edición
+            setFormulario({
+                nombres: datosUsuario.nombres || datosUsuario.nombre?.split(' ')[0] || '',
+                apellidos: datosUsuario.apellidos || datosUsuario.nombre?.split(' ').slice(1).join(' ') || '',
+                nombreUsuario: datosUsuario.nombreUsuario || '',
+                tipoDocumento: datosUsuario.tipoDocumento || '',
+                numeroDocumento: datosUsuario.numeroDocumento || datosUsuario.documento || '',
+                correo: datosUsuario.correo || datosUsuario.email || '',
+                contrasena: '',
+                confirmarContrasena: '',
+                telefono: datosUsuario.telefono || '',
+                fechaNacimiento: datosUsuario.fechaNacimiento || '',
+                rol: datosUsuario.rol || '',
+                estado: datosUsuario.estado || 'Activo',
+            });
+        } else {
+            // Limpiar formulario para nuevo usuario
+            setFormulario({
+                nombres: '',
+                apellidos: '',
+                nombreUsuario: '',
+                tipoDocumento: '',
+                numeroDocumento: '',
+                correo: '',
+                contrasena: '',
+                confirmarContrasena: '',
+                telefono: '',
+                fechaNacimiento: '',
+                rol: '',
+                estado: 'Activo',
+            });
+        }
+        setErrores({});
+        setCamposTocados({});
+    }, [datosUsuario, mostrar]);
+
+    const validadores = {
+        nombres: validaciones.validarNombres,
+        apellidos: validaciones.validarApellidos,
+        nombreUsuario: validaciones.validarNombreUsuario,
+        tipoDocumento: validaciones.validarTipoDocumento,
+        numeroDocumento: validaciones.validarNumeroDocumento,
+        correo: validaciones.validarCorreo,
+        contrasena: esEdicion ? (valor) => valor ? validaciones.validarContrasena(valor) : null : validaciones.validarContrasena,
+        confirmarContrasena: (valor) => validaciones.validarConfirmarContrasena(valor, formulario.contrasena),
+        telefono: validaciones.validarTelefono,
+        fechaNacimiento: validaciones.validarFechaNacimiento,
+        rol: (valor) => !valor ? 'Debes seleccionar un rol' : null,
+        estado: (valor) => !valor ? 'Debes seleccionar un estado' : null,
+    };
+
+    const validarCampo = (nombre, valor) => {
+        const validador = validadores[nombre];
+        return validador ? validador(valor) : null;
+    };
+
     const manejarCambio = (e) => {
-        const { name, value } = e.target;
-        setFormulario((prev) => ({ ...prev, [name]: value }));
+        const { name, value, type, checked } = e.target;
+        const valorFinal = type === 'checkbox' ? checked : value;
+
+        setFormulario((prev) => ({
+            ...prev,
+            [name]: valorFinal,
+        }));
 
         if (camposTocados[name]) {
-            const error = validarCampo(name, value);
+            const error = validarCampo(name, valorFinal);
             setErrores((prev) => ({ ...prev, [name]: error }));
+        }
+
+        if (name === 'contrasena' && camposTocados.confirmarContrasena) {
+            const errorConfirmar = validarCampo('confirmarContrasena', formulario.confirmarContrasena);
+            setErrores((prev) => ({ ...prev, confirmarContrasena: errorConfirmar }));
         }
     };
 
     const manejarBlur = (e) => {
-        const { name, value } = e.target;
-        setCamposTocados((prev) => ({ ...prev, [name]: true }));
-        const error = validarCampo(name, value);
-        setErrores((prev) => ({ ...prev, [name]: error }));
-    };
+        const { name, value, type, checked } = e.target;
+        const valorFinal = type === 'checkbox' ? checked : value;
 
-    const validarCampo = (nombre, valor) => {
-        switch (nombre) {
-            case 'nombre':
-                return validarNombres(valor);
-            case 'documento':
-                return validarNumeroDocumento(valor);
-            case 'email':
-                return validarCorreo(valor);
-            case 'telefono':
-                return validarTelefono(valor);
-            case 'rol':
-                return !valor ? 'Debes seleccionar un rol' : null;
-            default:
-                return null;
-        }
+        setCamposTocados((prev) => ({ ...prev, [name]: true }));
+        const error = validarCampo(name, valorFinal);
+        setErrores((prev) => ({ ...prev, [name]: error }));
     };
 
     const validarFormulario = () => {
@@ -58,6 +119,12 @@ function ModalUsuario({ mostrar, cerrar, datosUsuario = null }) {
             const error = validarCampo(campo, formulario[campo]);
             if (error) nuevosErrores[campo] = error;
         });
+
+        // En edición, la contraseña es opcional
+        if (esEdicion && !formulario.contrasena) {
+            delete nuevosErrores.contrasena;
+            delete nuevosErrores.confirmarContrasena;
+        }
 
         setCamposTocados(todosTocados);
         setErrores(nuevosErrores);
@@ -91,10 +158,16 @@ function ModalUsuario({ mostrar, cerrar, datosUsuario = null }) {
         return null;
     };
 
+    const tiposDocumento = [
+        { valor: 'CC', texto: 'Cédula de Ciudadanía' },
+        { valor: 'CE', texto: 'Cédula de Extranjería' },
+        { valor: 'TI', texto: 'Tarjeta de Identidad' },
+    ];
+
     const roles = [
-        { valor: 'Administrador', texto: 'Administrador - Acceso total al sistema' },
-        { valor: 'Editor', texto: 'Editor - Puede crear y modificar' },
-        { valor: 'Visualizador', texto: 'Visualizador - Solo lectura' },
+        { valor: 'Visualizador', texto: 'Solo lectura' },
+        { valor: 'Administrador', texto: 'Acceso total al sistema' },
+        { valor: 'Funcionario', texto: 'Puede crear y modificar' },
     ];
 
     return (
@@ -104,56 +177,138 @@ function ModalUsuario({ mostrar, cerrar, datosUsuario = null }) {
                     <h3>Información Personal</h3>
                     <div className="formulario-grid">
                         <div className="campo-formulario">
-                            <label>Nombre Completo*</label>
+                            <label>Nombre(s)*</label>
                             <input
                                 type="text"
-                                name="nombre"
-                                value={formulario.nombre}
+                                name="nombres"
+                                value={formulario.nombres}
                                 onChange={manejarCambio}
                                 onBlur={manejarBlur}
-                                placeholder="Ingrese el nombre completo"
-                                className={obtenerClaseCampo('nombre')}
+                                placeholder="Ingresa tu nombre"
+                                className={obtenerClaseCampo('nombres')}
                             />
-                            {mostrarMensaje('nombre')}
+                            {mostrarMensaje('nombres')}
                         </div>
                         <div className="campo-formulario">
-                            <label>Documento*</label>
+                            <label>Apellido(s)*</label>
                             <input
                                 type="text"
-                                name="documento"
-                                value={formulario.documento}
+                                name="apellidos"
+                                value={formulario.apellidos}
                                 onChange={manejarCambio}
                                 onBlur={manejarBlur}
-                                placeholder="Número de documento"
-                                className={obtenerClaseCampo('documento')}
+                                placeholder="Ingresa tus apellidos"
+                                className={obtenerClaseCampo('apellidos')}
                             />
-                            {mostrarMensaje('documento')}
+                            {mostrarMensaje('apellidos')}
                         </div>
                         <div className="campo-formulario">
-                            <label>Email*</label>
+                            <label>Nombre de Usuario*</label>
+                            <input
+                                type="text"
+                                name="nombreUsuario"
+                                value={formulario.nombreUsuario}
+                                onChange={manejarCambio}
+                                onBlur={manejarBlur}
+                                placeholder="Usuario único"
+                                className={obtenerClaseCampo('nombreUsuario')}
+                            />
+                            {mostrarMensaje('nombreUsuario')}
+                        </div>
+                        <div className="campo-formulario">
+                            <label>Tipo de Documento*</label>
+                            <select
+                                name="tipoDocumento"
+                                value={formulario.tipoDocumento}
+                                onChange={manejarCambio}
+                                onBlur={manejarBlur}
+                                className={obtenerClaseCampo('tipoDocumento')}
+                            >
+                                <option value="">Seleccionar...</option>
+                                {tiposDocumento.map((tipo) => (
+                                    <option key={tipo.valor} value={tipo.valor}>
+                                        {tipo.texto}
+                                    </option>
+                                ))}
+                            </select>
+                            {mostrarMensaje('tipoDocumento')}
+                        </div>
+                        <div className="campo-formulario">
+                            <label>Número de Documento*</label>
+                            <input
+                                type="text"
+                                name="numeroDocumento"
+                                value={formulario.numeroDocumento}
+                                onChange={manejarCambio}
+                                onBlur={manejarBlur}
+                                placeholder="Número de identificación"
+                                className={obtenerClaseCampo('numeroDocumento')}
+                            />
+                            {mostrarMensaje('numeroDocumento')}
+                        </div>
+                        <div className="campo-formulario">
+                            <label>Correo Electrónico*</label>
                             <input
                                 type="email"
-                                name="email"
-                                value={formulario.email}
+                                name="correo"
+                                value={formulario.correo}
                                 onChange={manejarCambio}
                                 onBlur={manejarBlur}
                                 placeholder="correo@ejemplo.com"
-                                className={obtenerClaseCampo('email')}
+                                className={obtenerClaseCampo('correo')}
                             />
-                            {mostrarMensaje('email')}
+                            {mostrarMensaje('correo')}
                         </div>
                         <div className="campo-formulario">
-                            <label>Teléfono*</label>
+                            <label>Contraseña{esEdicion ? ' (Opcional)' : '*'}</label>
+                            <input
+                                type="password"
+                                name="contrasena"
+                                value={formulario.contrasena}
+                                onChange={manejarCambio}
+                                onBlur={manejarBlur}
+                                placeholder="••••••••••••"
+                                className={obtenerClaseCampo('contrasena')}
+                            />
+                            {mostrarMensaje('contrasena')}
+                        </div>
+                        <div className="campo-formulario">
+                            <label>Confirmar Contraseña{esEdicion ? ' (Opcional)' : '*'}</label>
+                            <input
+                                type="password"
+                                name="confirmarContrasena"
+                                value={formulario.confirmarContrasena}
+                                onChange={manejarCambio}
+                                onBlur={manejarBlur}
+                                placeholder="••••••••••••"
+                                className={obtenerClaseCampo('confirmarContrasena')}
+                            />
+                            {mostrarMensaje('confirmarContrasena')}
+                        </div>
+                        <div className="campo-formulario">
+                            <label>Teléfono (Opcional)</label>
                             <input
                                 type="tel"
                                 name="telefono"
                                 value={formulario.telefono}
                                 onChange={manejarCambio}
                                 onBlur={manejarBlur}
-                                placeholder="+57 300 123 4567"
+                                placeholder="3001234567"
                                 className={obtenerClaseCampo('telefono')}
                             />
                             {mostrarMensaje('telefono')}
+                        </div>
+                        <div className="campo-formulario">
+                            <label>Fecha de Nacimiento*</label>
+                            <input
+                                type="date"
+                                name="fechaNacimiento"
+                                value={formulario.fechaNacimiento}
+                                onChange={manejarCambio}
+                                onBlur={manejarBlur}
+                                className={obtenerClaseCampo('fechaNacimiento')}
+                            />
+                            {mostrarMensaje('fechaNacimiento')}
                         </div>
                     </div>
                 </div>
@@ -173,7 +328,7 @@ function ModalUsuario({ mostrar, cerrar, datosUsuario = null }) {
                                 />
                                 <div className="rol-contenido">
                                     <span className="rol-titulo">{rol.valor}</span>
-                                    <span className="rol-descripcion">{rol.texto.split(' - ')[1]}</span>
+                                    <span className="rol-descripcion">{rol.texto}</span>
                                 </div>
                             </label>
                         ))}
@@ -186,12 +341,32 @@ function ModalUsuario({ mostrar, cerrar, datosUsuario = null }) {
                     )}
                 </div>
 
+                {esEdicion && (
+                    <div className="formulario-seccion">
+                        <h3>Estado del Usuario</h3>
+                        <div className="campo-formulario">
+                            <label>Estado*</label>
+                            <select
+                                name="estado"
+                                value={formulario.estado}
+                                onChange={manejarCambio}
+                                onBlur={manejarBlur}
+                                className={obtenerClaseCampo('estado')}
+                            >
+                                <option value="Activo">Activo</option>
+                                <option value="Inactivo">Inactivo</option>
+                            </select>
+                            {mostrarMensaje('estado')}
+                        </div>
+                    </div>
+                )}
+
                 <div className="modal-acciones">
                     <button type="button" className="btn-cancelar" onClick={cerrar}>
                         Cancelar
                     </button>
                     <button type="submit" className="btn-guardar">
-                        Guardar Cambios
+                        {esEdicion ? 'Actualizar Usuario' : 'Crear Usuario'}
                     </button>
                 </div>
             </form>
@@ -200,4 +375,3 @@ function ModalUsuario({ mostrar, cerrar, datosUsuario = null }) {
 }
 
 export default ModalUsuario;
-

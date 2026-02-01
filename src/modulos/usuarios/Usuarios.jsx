@@ -6,10 +6,10 @@ function Usuarios() {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [usuarioEditar, setUsuarioEditar] = useState(null);
   const listaUsuarios = [
-    { id: 1, nombre: 'Carlos Andrés Gomez', documento: '1015432198', telefono: '+57 310 555 1234', rol: 'Administrador', estado: 'Activo', ultimoAcceso: 'Hoy 10:30 AM' },
-    { id: 2, nombre: 'María Fernanda López', documento: '1020567834', telefono: '+57 320 555 7890', rol: 'Funcionario', estado: 'Activo', ultimoAcceso: 'Hoy 09:15 AM' },
-    { id: 3, nombre: 'Juan Pablo Martínez', documento: '1025678901', telefono: '+57 315 555 9876', rol: 'Funcionario', estado: 'Activo', ultimoAcceso: 'Ayer 04:45 PM' },
-    { id: 4, nombre: 'Andrea Carolina Silva', documento: '1033705584', telefono: '+57 318 555 4321', rol: 'Funcionario', estado: 'Inactivo', ultimoAcceso: '15/11/2025' },
+    { id: 1, nombres: 'Carlos Andrés', apellidos: 'Gomez', nombreUsuario: 'carlos.gomez', tipoDocumento: 'CC', numeroDocumento: '1015432198', correo: 'carlos.gomez@empresa.com', telefono: '+57 310 555 1234', rol: 'Administrador', estado: 'Activo', ultimoAcceso: 'Hoy 10:30 AM' },
+    { id: 2, nombres: 'María Fernanda', apellidos: 'López', nombreUsuario: 'maria.lopez', tipoDocumento: 'CC', numeroDocumento: '1020567834', correo: 'maria.lopez@empresa.com', telefono: '+57 320 555 7890', rol: 'Funcionario', estado: 'Activo', ultimoAcceso: 'Hoy 09:15 AM' },
+    { id: 3, nombres: 'Juan Pablo', apellidos: 'Martínez', nombreUsuario: 'juan.martinez', tipoDocumento: 'CC', numeroDocumento: '1025678901', correo: 'juan.martinez@empresa.com', telefono: '+57 315 555 9876', rol: 'Funcionario', estado: 'Activo', ultimoAcceso: 'Ayer 04:45 PM' },
+    { id: 4, nombres: 'Andrea Carolina', apellidos: 'Silva', nombreUsuario: 'andrea.silva', tipoDocumento: 'CC', numeroDocumento: '1033705584', correo: 'andrea.silva@empresa.com', telefono: '+57 318 555 4321', rol: 'Visualizador', estado: 'Inactivo', ultimoAcceso: '15/11/2025' },
   ];
 
   const estadisticas = {
@@ -62,7 +62,7 @@ function Usuarios() {
             {
               nombre: 'rol',
               placeholder: 'Todos los roles',
-              opciones: ['Administrador', 'Funcionario']
+              opciones: ['Visualizador', 'Administrador', 'Funcionario']
             }
           ]}
           onFiltrar={(filtros) => console.log('Filtrar usuarios:', filtros)}
@@ -75,8 +75,8 @@ function Usuarios() {
               encabezado: 'Usuario',
               renderizar: (nombre, usuario) => (
                 <div className="usuario-info">
-                  <span className="usuario-nombre">{nombre}</span>
-                  <span className="usuario-documento">C.C {usuario.documento}</span>
+                  <span className="usuario-nombre">{usuario.nombres} {usuario.apellidos}</span>
+                  <span className="usuario-documento">{usuario.tipoDocumento} {usuario.numeroDocumento}</span>
                 </div>
               )
             },
@@ -84,11 +84,16 @@ function Usuarios() {
             {
               campo: 'rol',
               encabezado: 'Rol',
-              renderizar: (rol) => (
-                <span className={`etiqueta etiqueta-${rol === 'Administrador' ? 'admin' : 'funcionario'}`}>
-                  {rol}
-                </span>
-              )
+              renderizar: (rol) => {
+                let claseRol = 'funcionario';
+                if (rol === 'Administrador') claseRol = 'admin';
+                else if (rol === 'Visualizador') claseRol = 'visualizador';
+                return (
+                  <span className={`etiqueta etiqueta-${claseRol}`}>
+                    {rol}
+                  </span>
+                );
+              }
             },
             {
               campo: 'estado',

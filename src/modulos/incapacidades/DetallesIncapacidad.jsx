@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ContenedorPrincipal, EncabezadoModulo } from '../../componentes';
 
 function DetallesIncapacidad() {
   const { id } = useParams();
   const navegar = useNavigate();
+  const [estado, setEstado] = useState('Activa');
 
   const incapacidad = {
     id,
@@ -30,12 +32,19 @@ function DetallesIncapacidad() {
     salarioBase: '$3.633.333',
     salarioDiario: '$116.667',
     observaciones: 'Que tal como se encuentra.',
-    estado: 'Activa',
+    estado: estado,
   };
 
   const manejarEditar = () => {
     navegar(`/incapacidades/${id}/editar`);
   };
+
+  const manejarCambioEstado = (nuevoEstado) => {
+    setEstado(nuevoEstado);
+    console.log('Cambiar estado de incapacidad:', { id, nuevoEstado });
+  };
+
+  const estadosDisponibles = ['Activa', 'Finalizada', 'Cancelada', 'En Revisión'];
 
 
   return (
@@ -123,7 +132,17 @@ function DetallesIncapacidad() {
             </div>
           </div>
           <div className="detalle-incapacidad-estado">
-            <span className="etiqueta etiqueta-verde">{incapacidad.estado}</span>
+            <select
+              value={estado}
+              onChange={(e) => manejarCambioEstado(e.target.value)}
+              className="select-estado-incapacidad"
+            >
+              {estadosDisponibles.map((est) => (
+                <option key={est} value={est}>
+                  {est}
+                </option>
+              ))}
+            </select>
           </div>
         </section>
 

@@ -140,6 +140,35 @@
 
 .perfil-estado {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.select-estado-empleado {
+  padding: 8px 16px;
+  border: 2px solid var(--color-primario);
+  border-radius: var(--radio-lg);
+  background: var(--color-fondo-tarjeta);
+  color: var(--color-texto-oscuro);
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transicion-rapida);
+  min-width: 150px;
+}
+
+.select-estado-empleado:hover {
+  background: var(--gris-50);
+}
+
+.select-estado-empleado:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.select-estado-empleado option {
+  background: var(--color-fondo-tarjeta);
+  color: var(--color-texto-oscuro);
 }
 
 .seccion-informacion {

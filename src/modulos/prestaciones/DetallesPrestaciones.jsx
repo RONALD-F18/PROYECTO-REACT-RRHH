@@ -8,6 +8,9 @@ function DetallesPrestaciones() {
     const navegar = useNavigate();
     const [mostrarModal, setMostrarModal] = useState(false);
     const [periodoEditar, setPeriodoEditar] = useState(null);
+    const [estadosCalculos, setEstadosCalculos] = useState({
+        0: 'Pendiente'
+    });
 
     const empleado = {
         nombre: 'Tatiana Cruz',
@@ -17,13 +20,14 @@ function DetallesPrestaciones() {
 
     const calculos = [
         {
+            id: 0,
             periodo: '02/02/2025 al 04/11/2025',
             dias: 365,
             cesantias: '$1.789.243',
             intereses: '$578.947',
             prima: '$3.578.947',
             vacaciones: '$2.578.947',
-            estado: 'Pendiente',
+            estado: estadosCalculos[0] || 'Pendiente',
             accion: 'Pagar'
         }
     ];
@@ -42,6 +46,16 @@ function DetallesPrestaciones() {
         setMostrarModal(false);
         setPeriodoEditar(null);
     };
+
+    const manejarCambioEstado = (calculoId, nuevoEstado) => {
+        setEstadosCalculos((prev) => ({
+            ...prev,
+            [calculoId]: nuevoEstado
+        }));
+        console.log('Cambiar estado de cálculo:', { calculoId, nuevoEstado });
+    };
+
+    const estadosDisponibles = ['Pendiente', 'Pagado', 'Cancelado', 'En Proceso'];
 
     return (
         <ContenedorPrincipal>
@@ -93,8 +107,17 @@ function DetallesPrestaciones() {
                             encabezado: 'Estado',
                             renderizar: (_, calculo) => (
                                 <div className="estados-container">
-                                    <span className="etiqueta etiqueta-amarilla">{calculo.estado}</span>
-                                    <span className="etiqueta etiqueta-verde">{calculo.accion}</span>
+                                    <select
+                                        value={estadosCalculos[calculo.id] || calculo.estado}
+                                        onChange={(e) => manejarCambioEstado(calculo.id, e.target.value)}
+                                        className="select-estado-prestacion"
+                                    >
+                                        {estadosDisponibles.map((est) => (
+                                            <option key={est} value={est}>
+                                                {est}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                             )
                         }

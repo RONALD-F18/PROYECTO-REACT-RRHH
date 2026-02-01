@@ -1,15 +1,102 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { expresionesRegulares, validarContrasena } from '../../utils/validaciones';
 
 function InicioSesion() {
   const navegar = useNavigate();
-  const [correo, setCorreo] = useState('');
+  const [usuarioCorreo, setUsuarioCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
-  const [recordarme, setRecordarme] = useState(false);
+  const [errores, setErrores] = useState({});
+  const [camposTocados, setCamposTocados] = useState({});
+
+  const validarUsuarioCorreo = (valor) => {
+    if (!valor.trim()) return "El usuario o correo es requerido";
+    // Validar si es correo electrónico
+    if (expresionesRegulares.correo.test(valor)) {
+      return null; // Es un correo válido
+    }
+    // Validar si es nombre de usuario (letras, números, guión bajo, mínimo 3 caracteres)
+    if (expresionesRegulares.nombreUsuario.test(valor) && valor.trim().length >= 3) {
+      return null; // Es un nombre de usuario válido
+    }
+    return "Debe ser un correo electrónico válido o un nombre de usuario (mínimo 3 caracteres, solo letras, números y guión bajo)";
+  };
+
+  const validarCampo = (nombre, valor) => {
+    switch (nombre) {
+      case 'usuarioCorreo':
+        return validarUsuarioCorreo(valor);
+      case 'contrasena':
+        return validarContrasena(valor);
+      default:
+        return null;
+    }
+  };
+
+  const manejarCambio = (e) => {
+    const { name, value } = e.target;
+    
+    if (name === 'usuarioCorreo') {
+      setUsuarioCorreo(value);
+    } else if (name === 'contrasena') {
+      setContrasena(value);
+    }
+
+    if (camposTocados[name]) {
+      const error = validarCampo(name, value);
+      setErrores((prev) => ({ ...prev, [name]: error }));
+    }
+  };
+
+  const manejarBlur = (e) => {
+    const { name, value } = e.target;
+    setCamposTocados((prev) => ({ ...prev, [name]: true }));
+    const error = validarCampo(name, value);
+    setErrores((prev) => ({ ...prev, [name]: error }));
+  };
+
+  const validarFormulario = () => {
+    const nuevosErrores = {};
+    const todosTocados = {};
+
+    todosTocados.usuarioCorreo = true;
+    todosTocados.contrasena = true;
+
+    const errorUsuario = validarCampo('usuarioCorreo', usuarioCorreo);
+    const errorContrasena = validarCampo('contrasena', contrasena);
+
+    if (errorUsuario) nuevosErrores.usuarioCorreo = errorUsuario;
+    if (errorContrasena) nuevosErrores.contrasena = errorContrasena;
+
+    setCamposTocados(todosTocados);
+    setErrores(nuevosErrores);
+    return Object.keys(nuevosErrores).length === 0;
+  };
 
   const manejarEnvio = (evento) => {
     evento.preventDefault();
-    navegar('/dashboard');
+    if (validarFormulario()) {
+      navegar('/dashboard');
+    }
+  };
+
+  const obtenerClaseCampo = (nombreCampo) => {
+    if (errores[nombreCampo]) return 'campo-error';
+    if (camposTocados[nombreCampo] && !errores[nombreCampo] && (nombreCampo === 'usuarioCorreo' ? usuarioCorreo : contrasena)) {
+      return 'campo-valido';
+    }
+    return '';
+  };
+
+  const mostrarMensaje = (nombreCampo) => {
+    if (!camposTocados[nombreCampo]) return null;
+    if (errores[nombreCampo]) {
+      return <span className="mensaje-error">{errores[nombreCampo]}</span>;
+    }
+    if (nombreCampo === 'usuarioCorreo' ? usuarioCorreo : contrasena) {
+      return <span className="mensaje-exito">✓ Correcto</span>;
+    }
+    return null;
   };
 
   return (
@@ -21,52 +108,45 @@ function InicioSesion() {
         </div>
 
         <div className="login-cuerpo">
-          <div className="login-campo">
-            <label>Usuario o Correo</label>
-            <input
-              type="text"
-              value={correo}
-              onChange={(e) => setCorreo(e.target.value)}
-              placeholder="ejemplo@correo.com"
-            />
-          </div>
-
-          <div className="login-campo">
-            <label>Contraseña</label>
-            <input
-              type="password"
-              value={contrasena}
-              onChange={(e) => setContrasena(e.target.value)}
-              placeholder="••••••••••••••••••••"
-            />
-          </div>
-
-          <div className="login-opciones">
-            <label className="login-recordar">
+          <form onSubmit={manejarEnvio}>
+            <div className="login-campo">
+              <label>Usuario o Correo</label>
               <input
-                type="checkbox"
-                checked={recordarme}
-                onChange={(e) => setRecordarme(e.target.checked)}
+                type="text"
+                name="usuarioCorreo"
+                value={usuarioCorreo}
+                onChange={manejarCambio}
+                onBlur={manejarBlur}
+                placeholder="ejemplo@correo.com"
+                className={obtenerClaseCampo('usuarioCorreo')}
               />
-              <span>Recuérdame</span>
-            </label>
-            <a href="#" className="login-olvido">
-              ¿Olvidaste tu Contraseña?
-            </a>
-          </div>
+              {mostrarMensaje('usuarioCorreo')}
+            </div>
 
-          <button className="login-btn" onClick={manejarEnvio}>
-            Iniciar Sesión
-          </button>
+            <div className="login-campo">
+              <label>Contraseña</label>
+              <input
+                type="password"
+                name="contrasena"
+                value={contrasena}
+                onChange={manejarCambio}
+                onBlur={manejarBlur}
+                placeholder="••••••••••••••••••••"
+                className={obtenerClaseCampo('contrasena')}
+              />
+              {mostrarMensaje('contrasena')}
+            </div>
 
-          <div className="login-separador">
-            <span>O Continúa Con</span>
-          </div>
+            <div className="login-opciones">
+              <a href="#" className="login-olvido">
+                ¿Olvidaste tu Contraseña?
+              </a>
+            </div>
 
-          <div className="login-social">
-            <button className="login-social-btn">Google</button>
-            <button className="login-social-btn">Facebook</button>
-          </div>
+            <button type="submit" className="login-btn">
+              Iniciar Sesión
+            </button>
+          </form>
 
           <p className="login-registro">
             ¿No tienes cuenta? <Link to="/registro">Crear una cuenta</Link>

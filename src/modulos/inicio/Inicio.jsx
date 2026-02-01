@@ -1,6 +1,30 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 function Inicio() {
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const [esMobile, setEsMobile] = useState(false);
+
+  useEffect(() => {
+    const verificarTamaño = () => {
+      setEsMobile(window.innerWidth <= 900);
+      if (window.innerWidth > 900) {
+        setMenuAbierto(false);
+      }
+    };
+
+    verificarTamaño();
+    window.addEventListener('resize', verificarTamaño);
+    return () => window.removeEventListener('resize', verificarTamaño);
+  }, []);
+
+  const toggleMenu = () => {
+    setMenuAbierto(!menuAbierto);
+  };
+
+  const cerrarMenu = () => {
+    setMenuAbierto(false);
+  };
   const servicios = [
     {
       titulo: "Empleados",
@@ -86,11 +110,21 @@ function Inicio() {
             </svg>
             <span className="inicio-marca-nombre">Talent Sphere</span>
           </div>
-          <nav className="inicio-nav">
-            <a href="#inicio">Inicio</a>
-            <a href="#servicios">Servicios</a>
-            <a href="#nosotros">Nosotros</a>
-            <a href="#contacto">Contacto</a>
+          <nav className={`inicio-nav ${menuAbierto ? 'inicio-nav-abierto' : ''}`}>
+            <a href="#inicio" onClick={cerrarMenu}>Inicio</a>
+            <a href="#servicios" onClick={cerrarMenu}>Servicios</a>
+            <a href="#nosotros" onClick={cerrarMenu}>Nosotros</a>
+            <a href="#contacto" onClick={cerrarMenu}>Contacto</a>
+            {esMobile && (
+              <div className="inicio-nav-acciones-mobile">
+                <Link to="/login" className="inicio-btn-contorno" onClick={cerrarMenu}>
+                  Iniciar sesión
+                </Link>
+                <Link to="/registro" className="inicio-btn-relleno" onClick={cerrarMenu}>
+                  Registrarse
+                </Link>
+              </div>
+            )}
           </nav>
           <div className="inicio-header-acciones">
             <Link to="/login" className="inicio-btn-contorno">
@@ -100,6 +134,18 @@ function Inicio() {
               Registrarse
             </Link>
           </div>
+          <button 
+            className={`inicio-menu-hamburguesa ${menuAbierto ? 'inicio-menu-hamburguesa-abierto' : ''}`}
+            onClick={toggleMenu}
+            aria-label="Menú"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          {menuAbierto && esMobile && (
+            <div className="inicio-menu-overlay" onClick={cerrarMenu}></div>
+          )}
         </div>
       </header>
 

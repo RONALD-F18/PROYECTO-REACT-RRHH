@@ -1,377 +1,331 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
-import * as validaciones from '../../../utils/validaciones';
+import { createUsuario, updateUsuario } from '../../../services/usuario';
+import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
+import { validarContrasenaUsuarioApi, REGEX_CONTRASENA_USUARIO_API } from '../../../utils/validaciones';
 
-function ModalUsuario({ mostrar, cerrar, datosUsuario = null }) {
-    const esEdicion = !!datosUsuario;
-    
-    const [formulario, setFormulario] = useState({
-        nombres: '',
-        apellidos: '',
-        nombreUsuario: '',
-        tipoDocumento: '',
-        numeroDocumento: '',
-        correo: '',
-        contrasena: '',
-        confirmarContrasena: '',
-        telefono: '',
-        fechaNacimiento: '',
-        rol: '',
-        estado: 'Activo',
-    });
+const formularioVacio = () => ({
+  nombre_usuario: '',
+  email_usuario: '',
+  contrasena_usuario: '',
+  cod_rol: '',
+  estado_usuario: true,
+});
 
-    const [errores, setErrores] = useState({});
-    const [camposTocados, setCamposTocados] = useState({});
+function IconoUsuario() {
+  return (
+    <span className="usuario-modal-icono-seccion" aria-hidden>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+        <path
+          d="M3.5 22C3.5 17.3056 7.30558 13.5 12 13.5C16.6944 13.5 20.5 17.3056 20.5 22"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    </span>
+  );
+}
 
-    useEffect(() => {
-        if (datosUsuario) {
-            // Pre-llenar formulario con datos del usuario para edición
-            setFormulario({
-                nombres: datosUsuario.nombres || datosUsuario.nombre?.split(' ')[0] || '',
-                apellidos: datosUsuario.apellidos || datosUsuario.nombre?.split(' ').slice(1).join(' ') || '',
-                nombreUsuario: datosUsuario.nombreUsuario || '',
-                tipoDocumento: datosUsuario.tipoDocumento || '',
-                numeroDocumento: datosUsuario.numeroDocumento || datosUsuario.documento || '',
-                correo: datosUsuario.correo || datosUsuario.email || '',
-                contrasena: '',
-                confirmarContrasena: '',
-                telefono: datosUsuario.telefono || '',
-                fechaNacimiento: datosUsuario.fechaNacimiento || '',
-                rol: datosUsuario.rol || '',
-                estado: datosUsuario.estado || 'Activo',
-            });
-        } else {
-            // Limpiar formulario para nuevo usuario
-            setFormulario({
-                nombres: '',
-                apellidos: '',
-                nombreUsuario: '',
-                tipoDocumento: '',
-                numeroDocumento: '',
-                correo: '',
-                contrasena: '',
-                confirmarContrasena: '',
-                telefono: '',
-                fechaNacimiento: '',
-                rol: '',
-                estado: 'Activo',
-            });
+function ModalUsuario({
+  mostrar,
+  cerrar,
+  datosUsuario = null,
+  alExito,
+  rolesCatalogo = [],
+  rolesPendientes = false,
+  rolesFallo = false,
+}) {
+  const esEdicion = !!(datosUsuario && datosUsuario.cod_usuario != null);
+  const [formulario, setFormulario] = useState(formularioVacio);
+  const rolesLista = useMemo(
+    () =>
+      (Array.isArray(rolesCatalogo) ? rolesCatalogo : []).filter(
+        (r) => r != null && typeof r === 'object' && r.cod_rol != null && r.cod_rol !== '',
+      ),
+    [rolesCatalogo],
+  );
+  const rolesCargando = mostrar && rolesPendientes;
+  const rolesError = rolesFallo;
+  const [guardando, setGuardando] = useState(false);
+  const [errorApi, setErrorApi] = useState('');
+  const [errorContrasena, setErrorContrasena] = useState('');
+
+  useEffect(() => {
+    if (!mostrar) return;
+    setErrorApi('');
+    setErrorContrasena('');
+  }, [mostrar]);
+
+  useEffect(() => {
+    if (!mostrar) return;
+    if (datosUsuario) {
+      setFormulario({
+        nombre_usuario: datosUsuario.nombre_usuario ?? datosUsuario.nombre ?? '',
+        email_usuario: datosUsuario.email_usuario ?? '',
+        contrasena_usuario: '',
+        cod_rol: datosUsuario.cod_rol != null ? String(datosUsuario.cod_rol) : '',
+        estado_usuario:
+          datosUsuario.estado_usuario !== undefined ? Boolean(datosUsuario.estado_usuario) : true,
+      });
+    } else {
+      setFormulario(formularioVacio());
+    }
+  }, [datosUsuario, mostrar]);
+
+  const manejarCambio = (e) => {
+    const { name, value, type, checked } = e.target;
+    if (name === 'contrasena_usuario') setErrorContrasena('');
+    if (type === 'checkbox') {
+      setFormulario((p) => ({ ...p, [name]: checked }));
+    } else {
+      setFormulario((p) => ({ ...p, [name]: value }));
+    }
+  };
+
+  const manejarBlurContrasena = () => {
+    const msg = validarContrasenaUsuarioApi(formulario.contrasena_usuario, { permitirVacio: esEdicion });
+    setErrorContrasena(msg || '');
+  };
+
+  const manejarEnviar = async (e) => {
+    e.preventDefault();
+    setErrorApi('');
+    setErrorContrasena('');
+    const codRol = Number(formulario.cod_rol);
+    if (!formulario.nombre_usuario.trim()) {
+      setErrorApi('El nombre es obligatorio.');
+      return;
+    }
+    if (!formulario.email_usuario.trim()) {
+      setErrorApi('El correo es obligatorio.');
+      return;
+    }
+    if (!Number.isFinite(codRol)) {
+      setErrorApi('Elige un rol.');
+      return;
+    }
+    const errorPass = validarContrasenaUsuarioApi(formulario.contrasena_usuario, { permitirVacio: esEdicion });
+    if (errorPass) {
+      setErrorContrasena(errorPass);
+      return;
+    }
+
+    setGuardando(true);
+    try {
+      if (esEdicion) {
+        const cuerpo = {
+          nombre_usuario: formulario.nombre_usuario.trim(),
+          email_usuario: formulario.email_usuario.trim(),
+          cod_rol: codRol,
+          estado_usuario: formulario.estado_usuario,
+        };
+        if (formulario.contrasena_usuario.trim()) {
+          cuerpo.contrasena_usuario = formulario.contrasena_usuario;
         }
-        setErrores({});
-        setCamposTocados({});
-    }, [datosUsuario, mostrar]);
-
-    const validadores = {
-        nombres: validaciones.validarNombres,
-        apellidos: validaciones.validarApellidos,
-        nombreUsuario: validaciones.validarNombreUsuario,
-        tipoDocumento: validaciones.validarTipoDocumento,
-        numeroDocumento: validaciones.validarNumeroDocumento,
-        correo: validaciones.validarCorreo,
-        contrasena: esEdicion ? (valor) => valor ? validaciones.validarContrasena(valor) : null : validaciones.validarContrasena,
-        confirmarContrasena: (valor) => validaciones.validarConfirmarContrasena(valor, formulario.contrasena),
-        telefono: validaciones.validarTelefono,
-        fechaNacimiento: validaciones.validarFechaNacimiento,
-        rol: (valor) => !valor ? 'Debes seleccionar un rol' : null,
-        estado: (valor) => !valor ? 'Debes seleccionar un estado' : null,
-    };
-
-    const validarCampo = (nombre, valor) => {
-        const validador = validadores[nombre];
-        return validador ? validador(valor) : null;
-    };
-
-    const manejarCambio = (e) => {
-        const { name, value, type, checked } = e.target;
-        const valorFinal = type === 'checkbox' ? checked : value;
-
-        setFormulario((prev) => ({
-            ...prev,
-            [name]: valorFinal,
-        }));
-
-        if (camposTocados[name]) {
-            const error = validarCampo(name, valorFinal);
-            setErrores((prev) => ({ ...prev, [name]: error }));
-        }
-
-        if (name === 'contrasena' && camposTocados.confirmarContrasena) {
-            const errorConfirmar = validarCampo('confirmarContrasena', formulario.confirmarContrasena);
-            setErrores((prev) => ({ ...prev, confirmarContrasena: errorConfirmar }));
-        }
-    };
-
-    const manejarBlur = (e) => {
-        const { name, value, type, checked } = e.target;
-        const valorFinal = type === 'checkbox' ? checked : value;
-
-        setCamposTocados((prev) => ({ ...prev, [name]: true }));
-        const error = validarCampo(name, valorFinal);
-        setErrores((prev) => ({ ...prev, [name]: error }));
-    };
-
-    const validarFormulario = () => {
-        const nuevosErrores = {};
-        const todosTocados = {};
-
-        Object.keys(formulario).forEach((campo) => {
-            todosTocados[campo] = true;
-            const error = validarCampo(campo, formulario[campo]);
-            if (error) nuevosErrores[campo] = error;
+        await updateUsuario(datosUsuario.cod_usuario, cuerpo);
+      } else {
+        await createUsuario({
+          nombre_usuario: formulario.nombre_usuario.trim(),
+          email_usuario: formulario.email_usuario.trim(),
+          contrasena_usuario: formulario.contrasena_usuario,
+          cod_rol: codRol,
+          estado_usuario: formulario.estado_usuario,
         });
+      }
+      cerrar();
+      alExito?.();
+    } catch (err) {
+      setErrorApi(mensajeErrorApi(err));
+    } finally {
+      setGuardando(false);
+    }
+  };
 
-        // En edición, la contraseña es opcional
-        if (esEdicion && !formulario.contrasena) {
-            delete nuevosErrores.contrasena;
-            delete nuevosErrores.confirmarContrasena;
-        }
+  const textoRol = (r) =>
+    r && r.descripcion && String(r.descripcion).trim() ? String(r.descripcion).trim() : 'Sin descripción.';
 
-        setCamposTocados(todosTocados);
-        setErrores(nuevosErrores);
-        return Object.keys(nuevosErrores).length === 0;
-    };
+  if (!mostrar) return null;
 
-    const manejarGuardar = (e) => {
-        e.preventDefault();
-        if (validarFormulario()) {
-            console.log('Guardar usuario:', formulario);
-            cerrar();
-        }
-    };
+  return (
+    <Modal
+      mostrar
+      cerrar={cerrar}
+      titulo={esEdicion ? 'Editar usuario' : 'Nuevo usuario'}
+      classNameContenedor="modal-contenido--usuario-form"
+    >
+      <form onSubmit={manejarEnviar} className="formulario-usuario-api">
+        {errorApi ? (
+          <div className="usuario-modal-alerta usuario-modal-alerta--error" role="alert">
+            <strong>No se pudo guardar</strong>
+            <p>{errorApi}</p>
+          </div>
+        ) : null}
 
-    const obtenerClaseCampo = (nombreCampo) => {
-        if (errores[nombreCampo]) return 'campo-error';
-        if (camposTocados[nombreCampo] && !errores[nombreCampo] && formulario[nombreCampo]) {
-            return 'campo-valido';
-        }
-        return '';
-    };
+        {rolesError ? (
+          <div className="usuario-modal-alerta usuario-modal-alerta--advertencia" role="status">
+            <strong>No se cargaron los roles</strong>
+            <p>Revisa sesión y el endpoint de roles en el servidor.</p>
+          </div>
+        ) : null}
 
-    const mostrarMensaje = (nombreCampo) => {
-        if (!camposTocados[nombreCampo]) return null;
-        if (errores[nombreCampo]) {
-            return <span className="mensaje-error">{errores[nombreCampo]}</span>;
-        }
-        if (formulario[nombreCampo]) {
-            return <span className="mensaje-exito">✓ Correcto</span>;
-        }
-        return null;
-    };
+        {rolesCargando ? (
+          <p className="usuario-modal-texto-carga">Cargando roles…</p>
+        ) : null}
 
-    const tiposDocumento = [
-        { valor: 'CC', texto: 'Cédula de Ciudadanía' },
-        { valor: 'CE', texto: 'Cédula de Extranjería' },
-        { valor: 'TI', texto: 'Tarjeta de Identidad' },
-    ];
+        {!rolesCargando && !rolesError && rolesLista.length === 0 ? (
+          <div className="usuario-modal-alerta usuario-modal-alerta--info" role="status">
+            <strong>No hay roles</strong>
+            <p>Crea roles activos en el backend.</p>
+          </div>
+        ) : null}
 
-    const roles = [
-        { valor: 'Visualizador', texto: 'Solo lectura' },
-        { valor: 'Administrador', texto: 'Acceso total al sistema' },
-        { valor: 'Funcionario', texto: 'Puede crear y modificar' },
-    ];
+        <section className="usuario-modal-seccion">
+          <h3 className="usuario-modal-seccion-titulo">
+            <IconoUsuario />
+            Información personal
+          </h3>
+          <div className="usuario-modal-grid">
+            <div className="usuario-modal-campo">
+              <label htmlFor="nombre_usuario">
+                Nombre completo <span className="usuario-modal-requerido">*</span>
+              </label>
+              <input
+                id="nombre_usuario"
+                name="nombre_usuario"
+                value={formulario.nombre_usuario}
+                onChange={manejarCambio}
+                placeholder="Nombre y apellido"
+                autoComplete="name"
+              />
+            </div>
+            <div className="usuario-modal-campo">
+              <label htmlFor="email_usuario">
+                Correo <span className="usuario-modal-requerido">*</span>
+              </label>
+              <input
+                id="email_usuario"
+                name="email_usuario"
+                type="email"
+                value={formulario.email_usuario}
+                onChange={manejarCambio}
+                placeholder="correo@empresa.com"
+                autoComplete="email"
+              />
+            </div>
+            <div
+              className={`usuario-modal-campo usuario-modal-campo--ancho-completo${errorContrasena ? ' usuario-modal-campo--invalido' : ''}`}
+            >
+              <label htmlFor="contrasena_usuario">
+                Contraseña
+                {!esEdicion ? <span className="usuario-modal-requerido"> *</span> : null}
+              </label>
+              {esEdicion ? (
+                <p className="usuario-modal-reglas-contrasena">
+                  <strong>Sin cambios:</strong> no escribas nada y se mantiene la contraseña que ya tiene el usuario en el sistema.
+                  <br />
+                  <strong>Nueva clave:</strong> entonces sí aplica {REGEX_CONTRASENA_USUARIO_API.longitudMin}–
+                  {REGEX_CONTRASENA_USUARIO_API.longitudMax} caracteres, una mayúscula y un número.
+                </p>
+              ) : (
+                <p className="usuario-modal-reglas-contrasena">
+                  Obligatoria al crear: {REGEX_CONTRASENA_USUARIO_API.longitudMin}–
+                  {REGEX_CONTRASENA_USUARIO_API.longitudMax} caracteres, una mayúscula y un número.
+                </p>
+              )}
+              <input
+                id="contrasena_usuario"
+                name="contrasena_usuario"
+                type="password"
+                value={formulario.contrasena_usuario}
+                onChange={manejarCambio}
+                onBlur={manejarBlurContrasena}
+                placeholder={esEdicion ? 'Vacío = conservar contraseña actual' : 'Ej: MiClave2025'}
+                autoComplete="new-password"
+                aria-invalid={errorContrasena ? 'true' : 'false'}
+                aria-describedby={errorContrasena ? 'contrasena_usuario-error' : 'contrasena_usuario-ayuda'}
+              />
+              {errorContrasena ? (
+                <span id="contrasena_usuario-error" className="usuario-modal-error-campo" role="alert">
+                  {errorContrasena}
+                </span>
+              ) : (
+                <span id="contrasena_usuario-ayuda" className="usuario-modal-sr-only">
+                  Validación de contraseña
+                </span>
+              )}
+            </div>
+          </div>
+        </section>
 
-    return (
-        <Modal mostrar={mostrar} cerrar={cerrar} titulo={esEdicion ? 'Editar Usuario' : 'Nuevo Usuario'}>
-            <form onSubmit={manejarGuardar}>
-                <div className="formulario-seccion">
-                    <h3>Información Personal</h3>
-                    <div className="formulario-grid">
-                        <div className="campo-formulario">
-                            <label>Nombre(s)*</label>
-                            <input
-                                type="text"
-                                name="nombres"
-                                value={formulario.nombres}
-                                onChange={manejarCambio}
-                                onBlur={manejarBlur}
-                                placeholder="Ingresa tu nombre"
-                                className={obtenerClaseCampo('nombres')}
-                            />
-                            {mostrarMensaje('nombres')}
-                        </div>
-                        <div className="campo-formulario">
-                            <label>Apellido(s)*</label>
-                            <input
-                                type="text"
-                                name="apellidos"
-                                value={formulario.apellidos}
-                                onChange={manejarCambio}
-                                onBlur={manejarBlur}
-                                placeholder="Ingresa tus apellidos"
-                                className={obtenerClaseCampo('apellidos')}
-                            />
-                            {mostrarMensaje('apellidos')}
-                        </div>
-                        <div className="campo-formulario">
-                            <label>Nombre de Usuario*</label>
-                            <input
-                                type="text"
-                                name="nombreUsuario"
-                                value={formulario.nombreUsuario}
-                                onChange={manejarCambio}
-                                onBlur={manejarBlur}
-                                placeholder="Usuario único"
-                                className={obtenerClaseCampo('nombreUsuario')}
-                            />
-                            {mostrarMensaje('nombreUsuario')}
-                        </div>
-                        <div className="campo-formulario">
-                            <label>Tipo de Documento*</label>
-                            <select
-                                name="tipoDocumento"
-                                value={formulario.tipoDocumento}
-                                onChange={manejarCambio}
-                                onBlur={manejarBlur}
-                                className={obtenerClaseCampo('tipoDocumento')}
-                            >
-                                <option value="">Seleccionar...</option>
-                                {tiposDocumento.map((tipo) => (
-                                    <option key={tipo.valor} value={tipo.valor}>
-                                        {tipo.texto}
-                                    </option>
-                                ))}
-                            </select>
-                            {mostrarMensaje('tipoDocumento')}
-                        </div>
-                        <div className="campo-formulario">
-                            <label>Número de Documento*</label>
-                            <input
-                                type="text"
-                                name="numeroDocumento"
-                                value={formulario.numeroDocumento}
-                                onChange={manejarCambio}
-                                onBlur={manejarBlur}
-                                placeholder="Número de identificación"
-                                className={obtenerClaseCampo('numeroDocumento')}
-                            />
-                            {mostrarMensaje('numeroDocumento')}
-                        </div>
-                        <div className="campo-formulario">
-                            <label>Correo Electrónico*</label>
-                            <input
-                                type="email"
-                                name="correo"
-                                value={formulario.correo}
-                                onChange={manejarCambio}
-                                onBlur={manejarBlur}
-                                placeholder="correo@ejemplo.com"
-                                className={obtenerClaseCampo('correo')}
-                            />
-                            {mostrarMensaje('correo')}
-                        </div>
-                        <div className="campo-formulario">
-                            <label>Contraseña{esEdicion ? ' (Opcional)' : '*'}</label>
-                            <input
-                                type="password"
-                                name="contrasena"
-                                value={formulario.contrasena}
-                                onChange={manejarCambio}
-                                onBlur={manejarBlur}
-                                placeholder="••••••••••••"
-                                className={obtenerClaseCampo('contrasena')}
-                            />
-                            {mostrarMensaje('contrasena')}
-                        </div>
-                        <div className="campo-formulario">
-                            <label>Confirmar Contraseña{esEdicion ? ' (Opcional)' : '*'}</label>
-                            <input
-                                type="password"
-                                name="confirmarContrasena"
-                                value={formulario.confirmarContrasena}
-                                onChange={manejarCambio}
-                                onBlur={manejarBlur}
-                                placeholder="••••••••••••"
-                                className={obtenerClaseCampo('confirmarContrasena')}
-                            />
-                            {mostrarMensaje('confirmarContrasena')}
-                        </div>
-                        <div className="campo-formulario">
-                            <label>Teléfono (Opcional)</label>
-                            <input
-                                type="tel"
-                                name="telefono"
-                                value={formulario.telefono}
-                                onChange={manejarCambio}
-                                onBlur={manejarBlur}
-                                placeholder="3001234567"
-                                className={obtenerClaseCampo('telefono')}
-                            />
-                            {mostrarMensaje('telefono')}
-                        </div>
-                        <div className="campo-formulario">
-                            <label>Fecha de Nacimiento*</label>
-                            <input
-                                type="date"
-                                name="fechaNacimiento"
-                                value={formulario.fechaNacimiento}
-                                onChange={manejarCambio}
-                                onBlur={manejarBlur}
-                                className={obtenerClaseCampo('fechaNacimiento')}
-                            />
-                            {mostrarMensaje('fechaNacimiento')}
-                        </div>
-                    </div>
-                </div>
+        <section className="usuario-modal-seccion">
+          <h3 className="usuario-modal-seccion-titulo usuario-modal-seccion-titulo--sin-icono">
+            Rol
+          </h3>
+          <p className="usuario-modal-seccion-subtitulo">
+            Elige uno <span className="usuario-modal-requerido">*</span>
+          </p>
+          <div className="roles-opciones usuario-modal-roles">
+            {rolesLista.map((r) => {
+              const valor = String(r.cod_rol);
+              const seleccionado = formulario.cod_rol === valor;
+              const tituloRol =
+                r.nombre_rol != null && String(r.nombre_rol).trim() ? String(r.nombre_rol) : `Rol ${valor}`;
+              return (
+                <label
+                  key={valor}
+                  className={`rol-opcion usuario-modal-rol-tarjeta${seleccionado ? ' activo' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="cod_rol"
+                    value={valor}
+                    checked={seleccionado}
+                    onChange={manejarCambio}
+                  />
+                  <div className="rol-contenido">
+                    <span className="rol-titulo">{tituloRol}</span>
+                    <span className="rol-descripcion">{textoRol(r)}</span>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </section>
 
-                <div className="formulario-seccion">
-                    <h3>Permisos y Acceso</h3>
-                    <div className="roles-opciones">
-                        {roles.map((rol) => (
-                            <label key={rol.valor} className={`rol-opcion ${formulario.rol === rol.valor ? 'activo' : ''}`}>
-                                <input
-                                    type="radio"
-                                    name="rol"
-                                    value={rol.valor}
-                                    checked={formulario.rol === rol.valor}
-                                    onChange={manejarCambio}
-                                    onBlur={manejarBlur}
-                                />
-                                <div className="rol-contenido">
-                                    <span className="rol-titulo">{rol.valor}</span>
-                                    <span className="rol-descripcion">{rol.texto}</span>
-                                </div>
-                            </label>
-                        ))}
-                    </div>
-                    {camposTocados.rol && errores.rol && (
-                        <span className="mensaje-error">{errores.rol}</span>
-                    )}
-                    {camposTocados.rol && !errores.rol && formulario.rol && (
-                        <span className="mensaje-exito">✓ Correcto</span>
-                    )}
-                </div>
+        <section className="usuario-modal-seccion usuario-modal-seccion--estado">
+          <h3 className="usuario-modal-seccion-titulo usuario-modal-seccion-titulo--sin-icono">
+            Estado
+          </h3>
+          <label className="usuario-modal-toggle">
+            <input
+              type="checkbox"
+              name="estado_usuario"
+              checked={formulario.estado_usuario}
+              onChange={manejarCambio}
+            />
+            <span className="usuario-modal-toggle-texto">
+              <strong>Usuario activo</strong>
+            </span>
+          </label>
+        </section>
 
-                {esEdicion && (
-                    <div className="formulario-seccion">
-                        <h3>Estado del Usuario</h3>
-                        <div className="campo-formulario">
-                            <label>Estado*</label>
-                            <select
-                                name="estado"
-                                value={formulario.estado}
-                                onChange={manejarCambio}
-                                onBlur={manejarBlur}
-                                className={obtenerClaseCampo('estado')}
-                            >
-                                <option value="Activo">Activo</option>
-                                <option value="Inactivo">Inactivo</option>
-                            </select>
-                            {mostrarMensaje('estado')}
-                        </div>
-                    </div>
-                )}
-
-                <div className="modal-acciones">
-                    <button type="button" className="btn-cancelar" onClick={cerrar}>
-                        Cancelar
-                    </button>
-                    <button type="submit" className="btn-guardar">
-                        {esEdicion ? 'Actualizar Usuario' : 'Crear Usuario'}
-                    </button>
-                </div>
-            </form>
-        </Modal>
-    );
+        <div className="modal-acciones usuario-modal-acciones">
+          <button type="submit" className="btn-guardar usuario-modal-btn-principal" disabled={guardando}>
+            {guardando ? 'Guardando…' : esEdicion ? 'Guardar' : 'Crear'}
+          </button>
+          <button type="button" className="btn-cancelar" onClick={cerrar} disabled={guardando}>
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
 }
 
 export default ModalUsuario;

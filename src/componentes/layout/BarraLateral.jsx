@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { cerrarSesion } from '../../services/autenticacion';
 
 /**
  * Componente de barra lateral de navegación
@@ -28,6 +29,16 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
     if (cerrarMenu) {
       cerrarMenu();
     }
+  };
+
+  const manejarCerrarSesion = async () => {
+    cerrarMenu?.();
+    try {
+      await cerrarSesion();
+    } catch {
+      /* el backend puede fallar; igual salimos al login */
+    }
+    navegar('/login');
   };
 
   return (
@@ -69,11 +80,9 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
             <span className="barra-lateral-correo">admin@talentsphere.com</span>
           </div>
           <button
+            type="button"
             className="barra-lateral-cerrar-sesion"
-            onClick={() => {
-              cerrarMenu?.();
-              navegar('/');
-            }}
+            onClick={manejarCerrarSesion}
             title="Cerrar sesión"
           >
             <span className="barra-lateral-cerrar-sesion-icono">→</span>
@@ -81,13 +90,9 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
         </div>
 
         <button
+          type="button"
           className="barra-lateral-cerrar-sesion-mobile"
-          onClick={() => {
-            if (cerrarMenu) {
-              cerrarMenu();
-            }
-            navegar('/');
-          }}
+          onClick={manejarCerrarSesion}
         >
           <span className="barra-lateral-opcion-icono"></span>
           <span>Cerrar sesión</span>

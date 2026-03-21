@@ -1,9 +1,11 @@
-function Modal({ mostrar, cerrar, titulo, children }) {
+function Modal({ mostrar, cerrar, titulo, children, classNameContenedor = '' }) {
   if (!mostrar) return null;
+
+  const clasesContenedor = ['modal-contenido', classNameContenedor].filter(Boolean).join(' ');
 
   return (
     <div className="modal-overlay" onClick={cerrar}>
-      <div className="modal-contenido" onClick={(e) => e.stopPropagation()}>
+      <div className={clasesContenedor} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{titulo}</h2>
           <button className="modal-cerrar" onClick={cerrar}>×</button>

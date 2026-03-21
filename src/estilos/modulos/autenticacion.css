@@ -44,6 +44,71 @@
   padding: 30px 28px;
 }
 
+/* Aviso de error del API (login) */
+.login-alerta {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  margin-bottom: 22px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  text-align: left;
+}
+
+.login-alerta--error {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: rgba(239, 68, 68, 0.35);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.08);
+}
+
+.login-alerta--exito {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);
+}
+
+.login-alerta-titulo--exito {
+  color: #047857;
+}
+
+.login-alerta-mensaje--exito {
+  color: #065f46;
+}
+
+.login-alerta-icono {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+.login-alerta-cuerpo {
+  min-width: 0;
+  flex: 1;
+}
+
+.login-alerta-titulo {
+  display: block;
+  font-size: var(--texto-sm);
+  font-weight: 700;
+  color: #991b1b;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.01em;
+}
+
+.login-alerta-mensaje {
+  margin: 0;
+  font-size: var(--texto-sm);
+  line-height: 1.5;
+  color: #7f1d1d;
+}
+
 .login-campo {
   margin-bottom: 20px;
 }

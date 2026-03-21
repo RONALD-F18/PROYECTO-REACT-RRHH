@@ -9,6 +9,40 @@ export const expresionesRegulares = {
   numero: /\d/,
 };
 
+/** Política front alineada al API (Laravel: min 8, max 64) + reglas con regex */
+export const REGEX_CONTRASENA_USUARIO_API = {
+  longitudMin: 8,
+  longitudMax: 64,
+  tieneMayuscula: /[A-ZÁÉÍÓÚÑ]/,
+  tieneDigito: /\d/,
+};
+
+/**
+ * Valida contraseña para crear/editar usuario (contrasena_usuario).
+ * @param {string} valor
+ * @param {{ permitirVacio?: boolean }} opciones — en edición, vacío = no cambiar clave
+ * @returns {string|null} mensaje de error o null si es válida
+ */
+export function validarContrasenaUsuarioApi(valor, { permitirVacio = false } = {}) {
+  const v = typeof valor === 'string' ? valor : '';
+  if (!v.trim()) {
+    return permitirVacio ? null : 'La contraseña es obligatoria';
+  }
+  if (v.length < REGEX_CONTRASENA_USUARIO_API.longitudMin) {
+    return `Mínimo ${REGEX_CONTRASENA_USUARIO_API.longitudMin} caracteres`;
+  }
+  if (v.length > REGEX_CONTRASENA_USUARIO_API.longitudMax) {
+    return `Máximo ${REGEX_CONTRASENA_USUARIO_API.longitudMax} caracteres`;
+  }
+  if (!REGEX_CONTRASENA_USUARIO_API.tieneMayuscula.test(v)) {
+    return 'Debe incluir al menos una letra mayúscula (A-Z, Ñ, vocales con tilde mayúscula)';
+  }
+  if (!REGEX_CONTRASENA_USUARIO_API.tieneDigito.test(v)) {
+    return 'Debe incluir al menos un número';
+  }
+  return null;
+}
+
 // Funciones de validación
 export const validarNombres = (valor) => {
   if (!valor.trim()) return "El nombre es requerido";
@@ -49,13 +83,7 @@ export const validarCorreo = (valor) => {
   return null;
 };
 
-export const validarContrasena = (valor) => {
-  if (!valor) return "La contraseña es requerida";
-  if (valor.length < 8) return "Debe tener al menos 8 caracteres";
-  if (!expresionesRegulares.mayuscula.test(valor)) return "Debe tener al menos una mayúscula";
-  if (!expresionesRegulares.numero.test(valor)) return "Debe tener al menos un número";
-  return null;
-};
+export const validarContrasena = (valor) => validarContrasenaUsuarioApi(valor, { permitirVacio: false });
 
 export const validarConfirmarContrasena = (valor, contrasena) => {
   if (!valor) return "Debes confirmar la contraseña";

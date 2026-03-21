@@ -2,7 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import {
   Inicio,
   InicioSesion,
-  Registro,
+  RecuperarContrasena,
   Panel,
   Empleados,
   DetallesEmpleado,
@@ -19,7 +19,7 @@ import {
 export const rutasPublicas = [
   { ruta: "/", componente: Inicio },
   { ruta: "/login", componente: InicioSesion },
-  { ruta: "/registro", componente: Registro },
+  { ruta: "/recuperar-contrasena", componente: RecuperarContrasena },
 ];
 
 // Rutas privadas

@@ -1,25 +1,24 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { expresionesRegulares, validarContrasena } from '../../utils/validaciones';
+import { iniciarSesion } from '../../services/autenticacion';
+import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { getUrlRecuperacionContrasenaWeb } from '../../config/authWeb';
 
 function InicioSesion() {
   const navegar = useNavigate();
+  const urlRecuperarWeb = getUrlRecuperacionContrasenaWeb();
   const [usuarioCorreo, setUsuarioCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [errores, setErrores] = useState({});
   const [camposTocados, setCamposTocados] = useState({});
+  const [errorServidor, setErrorServidor] = useState('');
+  const [enviando, setEnviando] = useState(false);
 
   const validarUsuarioCorreo = (valor) => {
-    if (!valor.trim()) return "El usuario o correo es requerido";
-    // Validar si es correo electrónico
-    if (expresionesRegulares.correo.test(valor)) {
-      return null; // Es un correo válido
-    }
-    // Validar si es nombre de usuario (letras, números, guión bajo, mínimo 3 caracteres)
-    if (expresionesRegulares.nombreUsuario.test(valor) && valor.trim().length >= 3) {
-      return null; // Es un nombre de usuario válido
-    }
-    return "Debe ser un correo electrónico válido o un nombre de usuario (mínimo 3 caracteres, solo letras, números y guión bajo)";
+    if (!valor.trim()) return 'El correo es requerido';
+    if (expresionesRegulares.correo.test(valor)) return null;
+    return 'Ingresa un correo electrónico válido';
   };
 
   const validarCampo = (nombre, valor) => {
@@ -35,7 +34,8 @@ function InicioSesion() {
 
   const manejarCambio = (e) => {
     const { name, value } = e.target;
-    
+    setErrorServidor('');
+
     if (name === 'usuarioCorreo') {
       setUsuarioCorreo(value);
     } else if (name === 'contrasena') {
@@ -73,10 +73,21 @@ function InicioSesion() {
     return Object.keys(nuevosErrores).length === 0;
   };
 
-  const manejarEnvio = (evento) => {
+  const manejarEnvio = async (evento) => {
     evento.preventDefault();
-    if (validarFormulario()) {
+    setErrorServidor('');
+    if (!validarFormulario()) return;
+    setEnviando(true);
+    try {
+      await iniciarSesion({
+        email_usuario: usuarioCorreo.trim(),
+        contrasena_usuario: contrasena,
+      });
       navegar('/dashboard');
+    } catch (e) {
+      setErrorServidor(mensajeErrorApi(e));
+    } finally {
+      setEnviando(false);
     }
   };
 
@@ -109,16 +120,32 @@ function InicioSesion() {
 
         <div className="login-cuerpo">
           <form onSubmit={manejarEnvio}>
+            {errorServidor ? (
+              <div className="login-alerta login-alerta--error" role="alert">
+                <span className="login-alerta-icono" aria-hidden>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                    <path d="M12 8v5M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </span>
+                <div className="login-alerta-cuerpo">
+                  <strong className="login-alerta-titulo">No pudimos iniciar sesión</strong>
+                  <p className="login-alerta-mensaje">{errorServidor}</p>
+                </div>
+              </div>
+            ) : null}
+
             <div className="login-campo">
-              <label>Usuario o Correo</label>
+              <label>Correo</label>
               <input
-                type="text"
+                type="email"
                 name="usuarioCorreo"
                 value={usuarioCorreo}
                 onChange={manejarCambio}
                 onBlur={manejarBlur}
                 placeholder="ejemplo@correo.com"
                 className={obtenerClaseCampo('usuarioCorreo')}
+                autoComplete="username"
               />
               {mostrarMensaje('usuarioCorreo')}
             </div>
@@ -133,24 +160,27 @@ function InicioSesion() {
                 onBlur={manejarBlur}
                 placeholder="••••••••••••••••••••"
                 className={obtenerClaseCampo('contrasena')}
+                autoComplete="current-password"
               />
               {mostrarMensaje('contrasena')}
             </div>
 
             <div className="login-opciones">
-              <a href="#" className="login-olvido">
-                ¿Olvidaste tu Contraseña?
-              </a>
+              {urlRecuperarWeb ? (
+                <a href={urlRecuperarWeb} className="login-olvido">
+                  ¿Olvidaste tu contraseña?
+                </a>
+              ) : (
+                <Link to="/recuperar-contrasena" className="login-olvido">
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              )}
             </div>
 
-            <button type="submit" className="login-btn">
-              Iniciar Sesión
+            <button type="submit" className="login-btn" disabled={enviando}>
+              {enviando ? 'Entrando…' : 'Iniciar Sesión'}
             </button>
           </form>
-
-          <p className="login-registro">
-            ¿No tienes cuenta? <Link to="/registro">Crear una cuenta</Link>
-          </p>
         </div>
       </div>
     </div>

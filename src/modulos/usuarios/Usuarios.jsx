@@ -1,22 +1,195 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ContenedorPrincipal, EncabezadoModulo, FiltrosBusqueda, TablaDatos } from '../../componentes';
 import { ModalUsuario } from './componentes';
+import { getUsuarios, getUsuarioById, deleteUsuario, extraerFilasUsuarios } from '../../services/usuario';
+import { getRolesActivos } from '../../services/rol';
+import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+
+function esRegistroUsuario(u) {
+  return u != null && typeof u === 'object' && !Array.isArray(u);
+}
+
+function nombreFila(u) {
+  if (!esRegistroUsuario(u)) return '—';
+  const v = u.nombre_usuario ?? u.nombre;
+  if (v == null || v === '') return '—';
+  return String(v);
+}
+
+function correoFila(u) {
+  if (!esRegistroUsuario(u)) return '—';
+  if (typeof u.email_usuario === 'string' && u.email_usuario.trim()) return u.email_usuario.trim();
+  if (typeof u.detalle === 'string' && u.detalle.trim()) return u.detalle.trim();
+  return '—';
+}
+
+function rolFila(u) {
+  if (!esRegistroUsuario(u)) return '—';
+  let r;
+  if (typeof u.rol === 'string') r = u.rol;
+  else if (u.rol && typeof u.rol === 'object' && u.rol.nombre_rol != null) r = u.rol.nombre_rol;
+  else r = u.roles?.nombre_rol;
+  if (r == null || r === '') return '—';
+  return String(r);
+}
+
+/** true / false / null si el API envía otro tipo (1, "1", "true", etc.) */
+function estadoNormalizado(u) {
+  const v = u?.estado_usuario;
+  if (v === true || v === 1 || v === '1') return true;
+  if (v === false || v === 0 || v === '0') return false;
+  if (typeof v === 'string') {
+    const s = v.trim().toLowerCase();
+    if (s === 'true' || s === 'activo') return true;
+    if (s === 'false' || s === 'inactivo') return false;
+  }
+  return null;
+}
+
+function estadoTexto(u) {
+  const n = estadoNormalizado(u);
+  if (n === true) return 'Activo';
+  if (n === false) return 'Inactivo';
+  return '—';
+}
+
+function esAdminFila(u) {
+  const nombreRol = rolFila(u);
+  if (nombreRol === '—') return false;
+  return String(nombreRol).toLowerCase().includes('admin');
+}
+
+function formatearFechaRegistro(valor) {
+  if (!valor) return '—';
+  const d = new Date(valor);
+  return Number.isNaN(d.getTime()) ? String(valor) : d.toLocaleString();
+}
 
 function Usuarios() {
+  const [listaUsuarios, setListaUsuarios] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [mensajeLista, setMensajeLista] = useState('');
   const [mostrarModal, setMostrarModal] = useState(false);
   const [usuarioEditar, setUsuarioEditar] = useState(null);
-  const listaUsuarios = [
-    { id: 1, nombres: 'Carlos Andrés', apellidos: 'Gomez', nombreUsuario: 'carlos.gomez', tipoDocumento: 'CC', numeroDocumento: '1015432198', correo: 'carlos.gomez@empresa.com', telefono: '+57 310 555 1234', rol: 'Administrador', estado: 'Activo', ultimoAcceso: 'Hoy 10:30 AM' },
-    { id: 2, nombres: 'María Fernanda', apellidos: 'López', nombreUsuario: 'maria.lopez', tipoDocumento: 'CC', numeroDocumento: '1020567834', correo: 'maria.lopez@empresa.com', telefono: '+57 320 555 7890', rol: 'Funcionario', estado: 'Activo', ultimoAcceso: 'Hoy 09:15 AM' },
-    { id: 3, nombres: 'Juan Pablo', apellidos: 'Martínez', nombreUsuario: 'juan.martinez', tipoDocumento: 'CC', numeroDocumento: '1025678901', correo: 'juan.martinez@empresa.com', telefono: '+57 315 555 9876', rol: 'Funcionario', estado: 'Activo', ultimoAcceso: 'Ayer 04:45 PM' },
-    { id: 4, nombres: 'Andrea Carolina', apellidos: 'Silva', nombreUsuario: 'andrea.silva', tipoDocumento: 'CC', numeroDocumento: '1033705584', correo: 'andrea.silva@empresa.com', telefono: '+57 318 555 4321', rol: 'Visualizador', estado: 'Inactivo', ultimoAcceso: '15/11/2025' },
-  ];
+  const [rolesCatalogo, setRolesCatalogo] = useState([]);
+  const [rolesPendientes, setRolesPendientes] = useState(true);
+  const [rolesFallo, setRolesFallo] = useState(false);
+  const [nombresRolCatalogo, setNombresRolCatalogo] = useState([]);
+  const [criteriosFiltro, setCriteriosFiltro] = useState({
+    busqueda: '',
+    estado: '',
+    rol: '',
+  });
+
+  const recargarLista = useCallback(async () => {
+    setMensajeLista('');
+    setCargando(true);
+    try {
+      const json = await getUsuarios();
+      setListaUsuarios(extraerFilasUsuarios(json));
+    } catch (e) {
+      setListaUsuarios([]);
+      setMensajeLista(mensajeErrorApi(e));
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  const cargarPagina = useCallback(async () => {
+    setMensajeLista('');
+    setCargando(true);
+    setRolesPendientes(true);
+    const [resUsuarios, resRoles] = await Promise.allSettled([getUsuarios(), getRolesActivos()]);
+    if (resUsuarios.status === 'fulfilled') {
+      const json = resUsuarios.value;
+      setListaUsuarios(extraerFilasUsuarios(json));
+    } else {
+      setListaUsuarios([]);
+      setMensajeLista(mensajeErrorApi(resUsuarios.reason));
+    }
+    if (resRoles.status === 'fulfilled') {
+      const lista = Array.isArray(resRoles.value) ? resRoles.value : [];
+      setRolesCatalogo(lista);
+      setNombresRolCatalogo(
+        lista
+          .filter((r) => r && typeof r === 'object' && r.nombre_rol != null && String(r.nombre_rol).trim())
+          .map((r) => String(r.nombre_rol).trim()),
+      );
+      setRolesFallo(false);
+    } else {
+      setRolesCatalogo([]);
+      setNombresRolCatalogo([]);
+      setRolesFallo(true);
+    }
+    setCargando(false);
+    setRolesPendientes(false);
+  }, []);
+
+  useEffect(() => {
+    cargarPagina();
+  }, [cargarPagina]);
+
+  const listaVisible = useMemo(() => {
+    const q = (criteriosFiltro.busqueda || '').trim().toLowerCase();
+    return listaUsuarios.filter((u) => {
+      const nombre = nombreFila(u).toLowerCase();
+      const correo = String(correoFila(u)).toLowerCase();
+      if (q && !nombre.includes(q) && !correo.includes(q)) return false;
+      if (criteriosFiltro.estado === 'Activo' && estadoNormalizado(u) !== true) return false;
+      if (criteriosFiltro.estado === 'Inactivo' && estadoNormalizado(u) !== false) return false;
+      if (criteriosFiltro.rol && rolFila(u) !== criteriosFiltro.rol) return false;
+      return true;
+    });
+  }, [listaUsuarios, criteriosFiltro]);
 
   const estadisticas = {
-    total: listaUsuarios.length,
-    activos: listaUsuarios.filter((u) => u.estado === 'Activo').length,
-    inactivos: listaUsuarios.filter((u) => u.estado === 'Inactivo').length,
-    admins: listaUsuarios.filter((u) => u.rol === 'Administrador').length,
+    total: listaUsuarios.filter(esRegistroUsuario).length,
+    activos: listaUsuarios.filter((u) => esRegistroUsuario(u) && estadoNormalizado(u) === true).length,
+    inactivos: listaUsuarios.filter((u) => esRegistroUsuario(u) && estadoNormalizado(u) === false).length,
+    admins: listaUsuarios.filter((u) => esRegistroUsuario(u) && esAdminFila(u)).length,
+  };
+
+  const abrirNuevo = () => {
+    setUsuarioEditar(null);
+    setMostrarModal(true);
+  };
+
+  const abrirEditar = async (fila) => {
+    const cod = fila.cod_usuario;
+    if (cod == null) return;
+
+    const correoOk =
+      typeof fila.email_usuario === 'string' && fila.email_usuario.trim().length > 0;
+    const nombreOk =
+      (typeof fila.nombre_usuario === 'string' && fila.nombre_usuario.trim()) ||
+      (typeof fila.nombre === 'string' && fila.nombre.trim());
+    const rolOk = fila.cod_rol != null && fila.cod_rol !== '';
+
+    if (correoOk && nombreOk && rolOk) {
+      setUsuarioEditar(fila);
+      setMostrarModal(true);
+      return;
+    }
+
+    try {
+      const json = await getUsuarioById(cod);
+      setUsuarioEditar(json.data ?? fila);
+      setMostrarModal(true);
+    } catch (e) {
+      window.alert(mensajeErrorApi(e));
+    }
+  };
+
+  const confirmarEliminar = async (fila) => {
+    const cod = fila.cod_usuario;
+    if (cod == null) return;
+    if (!window.confirm('¿Eliminar este usuario?')) return;
+    try {
+      await deleteUsuario(cod);
+      await recargarLista();
+    } catch (e) {
+      window.alert(mensajeErrorApi(e));
+    }
   };
 
   return (
@@ -26,11 +199,16 @@ function Usuarios() {
           titulo="Gestión de Usuarios"
           subtitulo="Administración de acceso y permisos"
           textoBoton="Nuevo Usuario"
-          alHacerClic={() => {
-            setUsuarioEditar(null);
-            setMostrarModal(true);
-          }}
+          alHacerClic={abrirNuevo}
         />
+
+        {mensajeLista ? (
+          <div className="usuario-pagina-alerta usuario-pagina-alerta--error" role="alert">
+            <strong>Error al cargar usuarios</strong>
+            <p>{mensajeLista}</p>
+          </div>
+        ) : null}
+        {cargando ? <p className="usuario-pagina-cargando">Cargando usuarios…</p> : null}
 
         <div className="tarjetas-resumen">
           <div className="tarjeta-resumen">
@@ -52,74 +230,96 @@ function Usuarios() {
         </div>
 
         <FiltrosBusqueda
-          placeholderBusqueda="Buscar por nombre o documento..."
+          placeholderBusqueda="Buscar por nombre o correo…"
           filtrosSelect={[
             {
               nombre: 'estado',
+              etiqueta: 'Estado',
               placeholder: 'Todos los estados',
-              opciones: ['Activo', 'Inactivo']
+              opciones: ['Activo', 'Inactivo'],
             },
             {
               nombre: 'rol',
+              etiqueta: 'Rol',
               placeholder: 'Todos los roles',
-              opciones: ['Visualizador', 'Administrador', 'Funcionario']
-            }
+              opciones: nombresRolCatalogo,
+            },
           ]}
-          onFiltrar={(filtros) => console.log('Filtrar usuarios:', filtros)}
+          onFiltrar={(filtros) =>
+            setCriteriosFiltro({
+              busqueda: filtros.busqueda || '',
+              estado: filtros.estado || '',
+              rol: filtros.rol || '',
+            })
+          }
         />
 
         <TablaDatos
           columnas={[
             {
-              campo: 'nombre',
-              encabezado: 'Usuario',
-              renderizar: (nombre, usuario) => (
-                <div className="usuario-info">
-                  <span className="usuario-nombre">{usuario.nombres} {usuario.apellidos}</span>
-                  <span className="usuario-documento">{usuario.tipoDocumento} {usuario.numeroDocumento}</span>
-                </div>
-              )
+              campo: 'cod_usuario',
+              encabezado: 'Código',
+              renderizar: (v) => (v != null ? String(v) : '—'),
             },
-            { campo: 'telefono', encabezado: 'Contacto' },
             {
-              campo: 'rol',
+              campo: '_nombre',
+              encabezado: 'Nombre',
+              renderizar: (_, u) => nombreFila(u),
+            },
+            {
+              campo: '_correo',
+              encabezado: 'Correo',
+              renderizar: (_, u) => correoFila(u),
+            },
+            {
+              campo: '_rol',
               encabezado: 'Rol',
-              renderizar: (rol) => {
+              renderizar: (_, u) => {
+                const rol = rolFila(u);
                 let claseRol = 'funcionario';
                 if (rol === 'Administrador') claseRol = 'admin';
                 else if (rol === 'Visualizador') claseRol = 'visualizador';
-                return (
-                  <span className={`etiqueta etiqueta-${claseRol}`}>
-                    {rol}
-                  </span>
-                );
-              }
+                return <span className={`etiqueta etiqueta-${claseRol}`}>{rol}</span>;
+              },
             },
             {
-              campo: 'estado',
+              campo: '_estado',
               encabezado: 'Estado',
-              renderizar: (estado) => (
-                <span className={`etiqueta etiqueta-${estado === 'Activo' ? 'activo' : 'inactivo'}`}>
-                  {estado}
-                </span>
-              )
+              renderizar: (_, u) => {
+                const estado = estadoTexto(u);
+                const activo = estadoNormalizado(u) === true;
+                return (
+                  <span className={`etiqueta etiqueta-${activo ? 'activo' : 'inactivo'}`}>
+                    {estado}
+                  </span>
+                );
+              },
             },
-            { campo: 'ultimoAcceso', encabezado: 'Último Acceso' }
+            {
+              campo: 'fecha_registro',
+              encabezado: 'Registro',
+              renderizar: (v) => formatearFechaRegistro(v),
+            },
           ]}
-          datos={listaUsuarios}
+          datos={listaVisible}
           renderAcciones={(usuario) => (
             <>
               <button
+                type="button"
                 className="btn-accion-tabla btn-accion-editar"
                 title="Editar"
-                onClick={() => {
-                  setUsuarioEditar(usuario);
-                  setMostrarModal(true);
-                }}
+                onClick={() => abrirEditar(usuario)}
               >
                 ✎
               </button>
-              <button className="btn-accion-tabla btn-accion-eliminar" title="Eliminar">🗑</button>
+              <button
+                type="button"
+                className="btn-accion-tabla btn-accion-eliminar"
+                title="Eliminar"
+                onClick={() => confirmarEliminar(usuario)}
+              >
+                🗑
+              </button>
             </>
           )}
         />
@@ -131,6 +331,10 @@ function Usuarios() {
             setUsuarioEditar(null);
           }}
           datosUsuario={usuarioEditar}
+          alExito={recargarLista}
+          rolesCatalogo={rolesCatalogo}
+          rolesPendientes={rolesPendientes}
+          rolesFallo={rolesFallo}
         />
       </div>
     </ContenedorPrincipal>

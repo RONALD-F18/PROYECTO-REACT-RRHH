@@ -4,7 +4,7 @@ import '../../estilos/componentes/filtros.css';
 /**
  * Componente reutilizable de filtros de búsqueda
  * @param {string} placeholderBusqueda - Placeholder para el campo de búsqueda
- * @param {Array} filtrosSelect - Array de objetos {nombre, opciones, placeholder}
+ * @param {Array} filtrosSelect - Array de objetos { nombre, opciones, placeholder?, etiqueta? }
  * @param {function} onFiltrar - Función callback cuando se hace clic en filtrar
  * @param {string} titulo - Título opcional del bloque de filtros
  */
@@ -59,19 +59,27 @@ function FiltrosBusqueda({
           />
         </div>
         {filtrosSelect.map((filtro, indice) => (
-          <select
-            key={indice}
-            className="filtro-select"
-            value={filtros[filtro.nombre] || ''}
-            onChange={(e) => manejarCambioFiltro(filtro.nombre, e.target.value)}
-          >
-            <option value="">{filtro.placeholder || `Todos los ${filtro.nombre}`}</option>
-            {filtro.opciones.map((opcion, idx) => (
-              <option key={idx} value={typeof opcion === 'string' ? opcion : opcion.valor}>
-                {typeof opcion === 'string' ? opcion : opcion.texto}
-              </option>
-            ))}
-          </select>
+          <div key={indice} className="filtro-select-grupo">
+            {filtro.etiqueta ? (
+              <label className="filtro-select-etiqueta" htmlFor={`filtro-select-${indice}`}>
+                {filtro.etiqueta}
+              </label>
+            ) : null}
+            <select
+              id={filtro.etiqueta ? `filtro-select-${indice}` : undefined}
+              className="filtro-select"
+              value={filtros[filtro.nombre] || ''}
+              onChange={(e) => manejarCambioFiltro(filtro.nombre, e.target.value)}
+              title={filtro.placeholder || undefined}
+            >
+              <option value="">{filtro.placeholder || 'Todos'}</option>
+              {(filtro.opciones ?? []).map((opcion, idx) => (
+                <option key={idx} value={typeof opcion === 'string' ? opcion : opcion.valor}>
+                  {typeof opcion === 'string' ? opcion : opcion.texto}
+                </option>
+              ))}
+            </select>
+          </div>
         ))}
         <button className="btn-filtrar" type="button" onClick={manejarFiltrar}>
           <span className="icono-busqueda"></span>

@@ -21,9 +21,28 @@
 
 .fila-filtros-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 12px;
-  align-items: center;
+  align-items: end;
+}
+
+.fila-filtros-grid > .caja-busqueda {
+  min-width: 0;
+  align-self: end;
+}
+
+.filtro-select-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filtro-select-etiqueta {
+  font-size: var(--texto-xs);
+  font-weight: 600;
+  color: var(--color-texto-claro);
+  line-height: 1.2;
 }
 
 .btn-filtrar {
@@ -41,6 +60,7 @@
   transition: all var(--transicion-normal);
   white-space: nowrap;
   height: fit-content;
+  align-self: end;
 }
 
 .btn-filtrar:hover {
@@ -95,6 +115,9 @@
 
 /* Select de filtros */
 .filtro-select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   padding: 12px 14px;
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-lg);
@@ -103,7 +126,6 @@
   color: var(--color-texto);
   cursor: pointer;
   transition: border-color var(--transicion-rapida);
-  min-width: 160px;
 }
 
 .filtro-select:focus {
@@ -113,7 +135,7 @@
 
 @media (max-width: 1024px) {
   .fila-filtros-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 12px;
   }
 
@@ -139,7 +161,7 @@
   }
 
   .fila-filtros-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
   }
   

@@ -29,7 +29,8 @@ function Registro() {
     numeroDocumento: validaciones.validarNumeroDocumento,
     correo: validaciones.validarCorreo,
     contrasena: validaciones.validarContrasena,
-    confirmarContrasena: (valor) => validaciones.validarConfirmarContrasena(valor, datosFormulario.contrasena),
+    confirmarContrasena: (valor) =>
+      validaciones.validarConfirmarContrasena(valor, datosFormulario.contrasena),
     telefono: validaciones.validarTelefono,
     fechaNacimiento: validaciones.validarFechaNacimiento,
     aceptaTerminos: validaciones.validarTerminos,
@@ -120,7 +121,7 @@ function Registro() {
     <div className="registro-contenedor">
       <div className="registro-caja">
         <div className="registro-encabezado">
-          <div className="registro-icono"></div>
+          <div className="registro-icono" />
           <h2>Registro de Usuario</h2>
           <p>Sistema de Recursos Humanos</p>
         </div>
@@ -305,7 +306,7 @@ function Registro() {
             <Link to="/" className="registro-btn-cancelar">
               Cancelar
             </Link>
-            <button className="registro-btn-crear" onClick={manejarEnvio}>
+            <button type="button" className="registro-btn-crear" onClick={manejarEnvio}>
               Crear Cuenta
             </button>
           </div>

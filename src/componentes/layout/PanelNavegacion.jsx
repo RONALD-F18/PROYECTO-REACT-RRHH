@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useMenu } from '../../contextos/MenuContext';
 import { useState, useEffect } from 'react';
+import { cerrarSesion } from '../../services/autenticacion';
 
 function PanelNavegacion() {
   const ubicacion = useLocation();
@@ -36,6 +37,16 @@ function PanelNavegacion() {
 
   const manejarClick = () => {
     cerrarMenu();
+  };
+
+  const manejarCerrarSesion = async () => {
+    cerrarMenu();
+    try {
+      await cerrarSesion();
+    } catch {
+      /* igual redirigimos */
+    }
+    navegar('/login');
   };
 
   if (!menuAbierto || !esMobile) return null;
@@ -84,11 +95,9 @@ function PanelNavegacion() {
               <span className="panel-navegacion-correo">admin@talentsphere.com</span>
             </div>
             <button
+              type="button"
               className="panel-navegacion-cerrar-sesion"
-              onClick={() => {
-                cerrarMenu();
-                navegar('/');
-              }}
+              onClick={manejarCerrarSesion}
               title="Cerrar sesión"
             >
               <span className="panel-navegacion-cerrar-sesion-icono">→</span>

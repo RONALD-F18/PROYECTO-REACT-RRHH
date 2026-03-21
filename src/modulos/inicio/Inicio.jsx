@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 
 function Inicio() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [esMobile, setEsMobile] = useState(false);
+  const [revelado, setRevelado] = useState(() => new Set());
+  const paginaRef = useRef(null);
 
   useEffect(() => {
     const verificarTamaño = () => {
@@ -14,9 +16,37 @@ function Inicio() {
     };
 
     verificarTamaño();
-    window.addEventListener('resize', verificarTamaño);
-    return () => window.removeEventListener('resize', verificarTamaño);
+    window.addEventListener("resize", verificarTamaño);
+    return () => window.removeEventListener("resize", verificarTamaño);
   }, []);
+
+  const registrarRevelado = useCallback((id) => {
+    setRevelado((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const root = paginaRef.current;
+    if (!root) return undefined;
+    const nodos = root.querySelectorAll("[data-inicio-reveal]");
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const id = entry.target.getAttribute("data-inicio-reveal");
+            if (id) registrarRevelado(id);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -20px 0px" }
+    );
+    nodos.forEach((n) => io.observe(n));
+    return () => io.disconnect();
+  }, [registrarRevelado]);
 
   const toggleMenu = () => {
     setMenuAbierto(!menuAbierto);
@@ -25,14 +55,18 @@ function Inicio() {
   const cerrarMenu = () => {
     setMenuAbierto(false);
   };
+
+  const claseRev = (id) =>
+    `inicio-reveal ${revelado.has(id) ? "inicio-reveal-vis" : ""}`;
+
   const servicios = [
     {
       titulo: "Empleados",
       descripcion:
-        "Administra perfiles completos y expedientes digitales de todo tu personal en un solo lugar.",
+        "Perfiles, expediente laboral y datos bancarios para nómina, todo en un solo lugar.",
     },
     {
-      titulo: "Prestaciones Sociales",
+      titulo: "Prestaciones sociales",
       descripcion:
         "Calcula y gestiona prestaciones sociales, cesantías, primas e intereses automáticamente.",
       destacado: true,
@@ -41,6 +75,43 @@ function Inicio() {
       titulo: "Afiliaciones",
       descripcion:
         "Controla afiliaciones a entidades de seguridad social y mantén actualizada la información.",
+      destacado: true,
+    },
+    {
+      titulo: "Autenticación y usuarios",
+      descripcion: "Inicio de sesión y perfil. Usuarios y roles para administradores.",
+    },
+    {
+      titulo: "Contrato y cargo",
+      descripcion: "Historial contractual y cargos para saber quién hace qué y desde cuándo.",
+    },
+    {
+      titulo: "Inasistencias",
+      descripcion: "Registro de faltas y ausencias alineado con nómina y disciplinario.",
+    },
+    {
+      titulo: "Incapacidades",
+      descripcion: "Tipos, clasificación e historial de incapacidades por empleado.",
+    },
+    {
+      titulo: "Calendario de actividades",
+      descripcion: "Actividades y fechas importantes del área de personas.",
+    },
+    {
+      titulo: "Empresa",
+      descripcion: "Datos de la organización, sedes y parametrización del sistema.",
+    },
+    {
+      titulo: "Certificaciones",
+      descripcion: "Certificados laborales y documentos para empleados o terceros.",
+    },
+    {
+      titulo: "Comunicaciones disciplinarias",
+      descripcion: "Registro de comunicados y actuaciones disciplinarias.",
+    },
+    {
+      titulo: "Reportes",
+      descripcion: "Listados y exportación según la información de cada módulo.",
     },
   ];
 
@@ -65,7 +136,7 @@ function Inicio() {
   ];
 
   return (
-    <div className="inicio-pagina">
+    <div className="inicio-pagina" ref={paginaRef}>
       <header className="inicio-header">
         <div className="inicio-header-contenido">
           <div className="inicio-marca">
@@ -110,18 +181,23 @@ function Inicio() {
             </svg>
             <span className="inicio-marca-nombre">Talent Sphere</span>
           </div>
-          <nav className={`inicio-nav ${menuAbierto ? 'inicio-nav-abierto' : ''}`}>
-            <a href="#inicio" onClick={cerrarMenu}>Inicio</a>
-            <a href="#servicios" onClick={cerrarMenu}>Servicios</a>
-            <a href="#nosotros" onClick={cerrarMenu}>Nosotros</a>
-            <a href="#contacto" onClick={cerrarMenu}>Contacto</a>
+          <nav className={`inicio-nav ${menuAbierto ? "inicio-nav-abierto" : ""}`}>
+            <a href="#inicio" onClick={cerrarMenu}>
+              Inicio
+            </a>
+            <a href="#servicios" onClick={cerrarMenu}>
+              Servicios
+            </a>
+            <a href="#nosotros" onClick={cerrarMenu}>
+              Nosotros
+            </a>
+            <a href="#contacto" onClick={cerrarMenu}>
+              Contacto
+            </a>
             {esMobile && (
               <div className="inicio-nav-acciones-mobile">
                 <Link to="/login" className="inicio-btn-contorno" onClick={cerrarMenu}>
                   Iniciar sesión
-                </Link>
-                <Link to="/registro" className="inicio-btn-relleno" onClick={cerrarMenu}>
-                  Registrarse
                 </Link>
               </div>
             )}
@@ -130,21 +206,19 @@ function Inicio() {
             <Link to="/login" className="inicio-btn-contorno">
               Iniciar sesión
             </Link>
-            <Link to="/registro" className="inicio-btn-relleno">
-              Registrarse
-            </Link>
           </div>
-          <button 
-            className={`inicio-menu-hamburguesa ${menuAbierto ? 'inicio-menu-hamburguesa-abierto' : ''}`}
+          <button
+            type="button"
+            className={`inicio-menu-hamburguesa ${menuAbierto ? "inicio-menu-hamburguesa-abierto" : ""}`}
             onClick={toggleMenu}
             aria-label="Menú"
           >
-            <span></span>
-            <span></span>
-            <span></span>
+            <span />
+            <span />
+            <span />
           </button>
           {menuAbierto && esMobile && (
-            <div className="inicio-menu-overlay" onClick={cerrarMenu}></div>
+            <div className="inicio-menu-overlay" onClick={cerrarMenu} />
           )}
         </div>
       </header>
@@ -154,12 +228,11 @@ function Inicio() {
           <div className="inicio-hero-texto">
             <h1>Bienvenido a Talent Sphere</h1>
             <p>
-              Simplifica la administración de tu equipo con nuestra plataforma
-              todo en uno. Gestión integral de recursos humanos para empresas
-              modernas.
+              Simplifica la administración de tu equipo con nuestra plataforma todo en uno. Gestión integral de
+              recursos humanos para empresas modernas.
             </p>
           </div>
-          <div className="inicio-hero-logo">
+          <div className="inicio-hero-logo inicio-hero-logo-in">
             <svg width="60" height="60" viewBox="0 0 32 32">
               <circle cx="16" cy="16" r="14" fill="url(#grad2)" />
               <ellipse
@@ -207,23 +280,47 @@ function Inicio() {
         </div>
       </section>
 
-      <section id="servicios" className="inicio-servicios">
+      <section
+        id="servicios"
+        className={`inicio-servicios ${claseRev("sec-servicios")}`}
+        data-inicio-reveal="sec-servicios"
+      >
         <h2>Nuestros Servicios</h2>
-        <p className="inicio-subtitulo">
+        <p className="inicio-subtitulo inicio-servicios-subtitulo">
           Soluciones integrales para la gestión de tu talento humano
         </p>
-       
-       
+        <div className="inicio-servicios-scroll-area">
+          <div className="inicio-servicios-carril" tabIndex={0} aria-label="Carrusel de módulos del sistema">
+          {servicios.map((s, i) => (
+            <div
+              key={s.titulo}
+              className={`inicio-servicio ${s.destacado ? "destacado" : ""} ${claseRev(`srv-${i}`)}`}
+              data-inicio-reveal={`srv-${i}`}
+              style={{ "--inicio-stagger": `${Math.min(i, 8) * 0.04}s` }}
+            >
+              <h3>{s.titulo}</h3>
+              <p>{s.descripcion}</p>
+            </div>
+          ))}
+          </div>
+        </div>
       </section>
 
       <section id="nosotros" className="inicio-caracteristicas">
-        <h2>¿Por qué elegir Talent Sphere?</h2>
-        <p className="inicio-subtitulo">
+        <h2 className={claseRev("car-h2")} data-inicio-reveal="car-h2">
+          ¿Por qué elegir Talent Sphere?
+        </h2>
+        <p className={`inicio-subtitulo ${claseRev("car-sub")}`} data-inicio-reveal="car-sub">
           Características que nos hacen diferentes
         </p>
         <div className="inicio-caracteristicas-grid">
           {caracteristicas.map((c, i) => (
-            <div key={i} className="inicio-caracteristica">
+            <div
+              key={c.titulo}
+              className={`inicio-caracteristica ${claseRev(`car-${i}`)}`}
+              data-inicio-reveal={`car-${i}`}
+              style={{ "--inicio-stagger": `${i * 0.06}s` }}
+            >
               <h4>{c.titulo}</h4>
               <p>{c.descripcion}</p>
             </div>
@@ -232,9 +329,15 @@ function Inicio() {
       </section>
 
       <section className="inicio-cta">
-        <h2>¿Listo para transformar tu gestión de RRHH?</h2>
-        <p>Únete a cientos de empresas que ya confían en Talent Sphere</p>
-        <button className="inicio-cta-btn">Solicita una demo gratuita</button>
+        <h2 className={claseRev("cta-h2")} data-inicio-reveal="cta-h2">
+          ¿Listo para transformar tu gestión de RRHH?
+        </h2>
+        <p className={claseRev("cta-p")} data-inicio-reveal="cta-p">
+          Únete a cientos de empresas que ya confían en Talent Sphere
+        </p>
+        <button type="button" className="inicio-cta-btn">
+          Solicita una demo gratuita
+        </button>
       </section>
 
       <section id="contacto" className="inicio-contacto">
@@ -256,10 +359,7 @@ function Inicio() {
             </div>
             <div className="inicio-formulario-campo">
               <label>Mensaje</label>
-              <textarea
-                rows="4"
-                placeholder="¿En qué podemos ayudarte?"
-              ></textarea>
+              <textarea rows="4" placeholder="¿En qué podemos ayudarte?" />
             </div>
             <button type="submit" className="inicio-formulario-btn">
               Enviar Mensaje
@@ -280,9 +380,7 @@ function Inicio() {
             </div>
             <div className="inicio-info-bloque">
               <span className="inicio-info-titulo">Horario</span>
-              <span className="inicio-info-valor">
-                Lunes a Viernes: 8:00 AM - 6:00 PM
-              </span>
+              <span className="inicio-info-valor">Lunes a Viernes: 8:00 AM - 6:00 PM</span>
             </div>
           </div>
         </div>
@@ -297,23 +395,23 @@ function Inicio() {
             <p>Soluciones inteligentes para la gestión de recursos humanos.</p>
           </div>
           <div className="inicio-footer-columna">
-            <h4>Servicios</h4>
-            <a href="#">Empleados</a>
-            <a href="#">Prestaciones Sociales</a>
-            <a href="#">Afiliaciones</a>
+            <h4>Módulos</h4>
+            <a href="#servicios">Ver todos los módulos</a>
+            <a href="#servicios">Reportes y certificaciones</a>
+            <a href="#contacto">Soporte</a>
           </div>
           <div className="inicio-footer-columna">
             <h4>Empresa</h4>
-            <a href="#">Sobre Nosotros</a>
-            <a href="#">Blog</a>
-            <a href="#">Carreras</a>
-            <a href="#">Contacto</a>
+            <a href="#nosotros">Sobre Nosotros</a>
+            <a href="#contacto">Blog</a>
+            <a href="#contacto">Carreras</a>
+            <a href="#contacto">Contacto</a>
           </div>
           <div className="inicio-footer-columna">
             <h4>Legal</h4>
-            <a href="#">Términos y Condiciones</a>
-            <a href="#">Política de Privacidad</a>
-            <a href="#">Cookies</a>
+            <a href="#contacto">Términos y Condiciones</a>
+            <a href="#contacto">Política de Privacidad</a>
+            <a href="#contacto">Cookies</a>
           </div>
         </div>
         <div className="inicio-footer-inferior">

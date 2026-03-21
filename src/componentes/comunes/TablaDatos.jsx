@@ -19,13 +19,26 @@ function TablaDatos({ columnas, datos, acciones = true, renderAcciones }) {
         </thead>
         <tbody>
           {datos.length > 0 ? (
-            datos.map((fila, indiceFila) => (
-              <tr key={indiceFila}>
+            datos.map((fila, indiceFila) => {
+              if (fila == null || typeof fila !== 'object') {
+                return (
+                  <tr key={`invalid-${indiceFila}`}>
+                    <td colSpan={columnas.length + (acciones ? 1 : 0)}>—</td>
+                  </tr>
+                );
+              }
+              return (
+              <tr key={fila.cod_usuario ?? fila.id ?? indiceFila}>
                 {columnas.map((col, indiceCol) => (
                   <td key={indiceCol}>
                     {col.renderizar
                       ? col.renderizar(fila[col.campo], fila)
-                      : fila[col.campo]}
+                      : (() => {
+                          const raw = fila[col.campo];
+                          if (raw == null) return '—';
+                          if (typeof raw === 'object') return JSON.stringify(raw);
+                          return raw;
+                        })()}
                   </td>
                 ))}
                 {acciones && (
@@ -44,7 +57,8 @@ function TablaDatos({ columnas, datos, acciones = true, renderAcciones }) {
                   </td>
                 )}
               </tr>
-            ))
+              );
+            })
           ) : (
             <tr>
               <td colSpan={columnas.length + (acciones ? 1 : 0)}>

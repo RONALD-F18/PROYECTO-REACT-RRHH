@@ -15,7 +15,7 @@ export function mensajeErrorApi(error) {
       return 'No hay conexión con el servidor. Comprueba que Laravel esté en marcha, la variable VITE_API_URL en .env y que CORS permita tu origen con credenciales.';
     }
     if (codigo === 'ECONNABORTED') {
-      return 'La petición tardó demasiado (tiempo agotado).';
+      return 'La petición tardó demasiado (tiempo agotado). Comprueba que el API esté en marcha, VITE_API_URL (…/api/v1), CORS con credenciales y que la cookie de sesión llegue al servidor.';
     }
     return error.message?.trim() || 'No se pudo conectar con el servidor.';
   }
@@ -35,6 +35,17 @@ export function mensajeErrorApi(error) {
   }
 
   if (raw && typeof raw === 'object') {
+    if (status === 401) {
+      const m = String(raw.message ?? raw.error ?? '').toLowerCase();
+      if (
+        m.includes('unauthenticated') ||
+        m.includes('no autenticado') ||
+        m.includes('not authenticated') ||
+        m.includes('debe autenticarse')
+      ) {
+        return 'Tu sesión expiró o el servidor no recibió la autenticación (cookie o token). Cierra sesión e inicia de nuevo.';
+      }
+    }
     const candidato = raw.message ?? raw.error ?? raw.mensaje;
     if (typeof candidato === 'string' && candidato.trim()) {
       return candidato.trim();

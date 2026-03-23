@@ -2,12 +2,17 @@ import { useState, useEffect, useMemo } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
 import { createUsuario, updateUsuario } from '../../../services/usuario';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
-import { validarContrasenaUsuarioApi, REGEX_CONTRASENA_USUARIO_API } from '../../../utils/validaciones';
+import {
+  validarContrasenaUsuarioApi,
+  REGEX_CONTRASENA_USUARIO_API,
+  validarConfirmarContrasena,
+} from '../../../utils/validaciones';
 
 const formularioVacio = () => ({
   nombre_usuario: '',
   email_usuario: '',
   contrasena_usuario: '',
+  confirmar_contrasena_usuario: '',
   cod_rol: '',
   estado_usuario: true,
 });
@@ -30,6 +35,36 @@ function IconoUsuario() {
       </svg>
     </span>
   );
+}
+
+function construirPayloadBase(formulario, codRol) {
+  return {
+    nombre_usuario: formulario.nombre_usuario.trim(),
+    email_usuario: formulario.email_usuario.trim(),
+    cod_rol: codRol,
+    estado_usuario: formulario.estado_usuario,
+  };
+}
+
+// Create: contrasena_usuario siempre obligatoria
+function construirPayloadCrear(formulario, codRol) {
+  const contrasena = formulario.contrasena_usuario;
+  return {
+    ...construirPayloadBase(formulario, codRol),
+    contrasena_usuario: contrasena,
+    contrasena_usuario_confirmation: formulario.confirmar_contrasena_usuario,
+  };
+}
+
+// Update: contrasena_usuario solo si el campo trae valor
+function construirPayloadActualizar(formulario, codRol) {
+  const payload = construirPayloadBase(formulario, codRol);
+  const contrasenaRaw = formulario.contrasena_usuario;
+  if (contrasenaRaw.trim().length > 0) {
+    payload.contrasena_usuario = contrasenaRaw;
+    payload.contrasena_usuario_confirmation = formulario.confirmar_contrasena_usuario;
+  }
+  return payload;
 }
 
 function ModalUsuario({
@@ -55,11 +90,13 @@ function ModalUsuario({
   const [guardando, setGuardando] = useState(false);
   const [errorApi, setErrorApi] = useState('');
   const [errorContrasena, setErrorContrasena] = useState('');
+  const [errorConfirmacionContrasena, setErrorConfirmacionContrasena] = useState('');
 
   useEffect(() => {
     if (!mostrar) return;
     setErrorApi('');
     setErrorContrasena('');
+    setErrorConfirmacionContrasena('');
   }, [mostrar]);
 
   useEffect(() => {
@@ -69,6 +106,7 @@ function ModalUsuario({
         nombre_usuario: datosUsuario.nombre_usuario ?? datosUsuario.nombre ?? '',
         email_usuario: datosUsuario.email_usuario ?? '',
         contrasena_usuario: '',
+        confirmar_contrasena_usuario: '',
         cod_rol: datosUsuario.cod_rol != null ? String(datosUsuario.cod_rol) : '',
         estado_usuario:
           datosUsuario.estado_usuario !== undefined ? Boolean(datosUsuario.estado_usuario) : true,
@@ -80,17 +118,71 @@ function ModalUsuario({
 
   const manejarCambio = (e) => {
     const { name, value, type, checked } = e.target;
-    if (name === 'contrasena_usuario') setErrorContrasena('');
     if (type === 'checkbox') {
       setFormulario((p) => ({ ...p, [name]: checked }));
-    } else {
-      setFormulario((p) => ({ ...p, [name]: value }));
+      return;
     }
+
+    if (name === 'contrasena_usuario') {
+      setFormulario((p) => {
+        const siguiente = { ...p, contrasena_usuario: value };
+        const msgPass = validarContrasenaUsuarioApi(siguiente.contrasena_usuario, {
+          permitirVacio: esEdicion,
+        });
+        setErrorContrasena(msgPass || '');
+
+        const necesitaConfirmacion = !esEdicion || siguiente.contrasena_usuario.trim().length > 0;
+        if (!necesitaConfirmacion) {
+          setErrorConfirmacionContrasena('');
+        } else {
+          const msgConfirm = validarConfirmarContrasena(
+            siguiente.confirmar_contrasena_usuario,
+            siguiente.contrasena_usuario,
+          );
+          setErrorConfirmacionContrasena(msgConfirm || '');
+        }
+        return siguiente;
+      });
+      return;
+    }
+
+    if (name === 'confirmar_contrasena_usuario') {
+      setFormulario((p) => {
+        const siguiente = { ...p, confirmar_contrasena_usuario: value };
+        const necesitaConfirmacion = !esEdicion || siguiente.contrasena_usuario.trim().length > 0;
+        if (!necesitaConfirmacion) {
+          setErrorConfirmacionContrasena('');
+        } else {
+          const msgConfirm = validarConfirmarContrasena(
+            siguiente.confirmar_contrasena_usuario,
+            siguiente.contrasena_usuario,
+          );
+          setErrorConfirmacionContrasena(msgConfirm || '');
+        }
+        return siguiente;
+      });
+      return;
+    }
+
+    setFormulario((p) => ({ ...p, [name]: value }));
   };
 
   const manejarBlurContrasena = () => {
     const msg = validarContrasenaUsuarioApi(formulario.contrasena_usuario, { permitirVacio: esEdicion });
     setErrorContrasena(msg || '');
+  };
+
+  const manejarBlurConfirmacionContrasena = () => {
+    const necesitaConfirmacion = !esEdicion || formulario.contrasena_usuario.trim().length > 0;
+    if (!necesitaConfirmacion) {
+      setErrorConfirmacionContrasena('');
+      return;
+    }
+    const msg = validarConfirmarContrasena(
+      formulario.confirmar_contrasena_usuario,
+      formulario.contrasena_usuario,
+    );
+    setErrorConfirmacionContrasena(msg || '');
   };
 
   const manejarEnviar = async (e) => {
@@ -115,31 +207,30 @@ function ModalUsuario({
       setErrorContrasena(errorPass);
       return;
     }
+    const necesitaConfirmacion = !esEdicion || formulario.contrasena_usuario.trim().length > 0;
+    if (necesitaConfirmacion) {
+      const errorConfirmacion = validarConfirmarContrasena(
+        formulario.confirmar_contrasena_usuario,
+        formulario.contrasena_usuario,
+      );
+      if (errorConfirmacion) {
+        setErrorConfirmacionContrasena(errorConfirmacion);
+        return;
+      }
+    }
 
     setGuardando(true);
     try {
       if (esEdicion) {
-        const cuerpo = {
-          nombre_usuario: formulario.nombre_usuario.trim(),
-          email_usuario: formulario.email_usuario.trim(),
-          cod_rol: codRol,
-          estado_usuario: formulario.estado_usuario,
-        };
-        if (formulario.contrasena_usuario.trim()) {
-          cuerpo.contrasena_usuario = formulario.contrasena_usuario;
-        }
+        const cuerpo = construirPayloadActualizar(formulario, codRol);
         await updateUsuario(datosUsuario.cod_usuario, cuerpo);
+        alExito?.('actualizado');
       } else {
-        await createUsuario({
-          nombre_usuario: formulario.nombre_usuario.trim(),
-          email_usuario: formulario.email_usuario.trim(),
-          contrasena_usuario: formulario.contrasena_usuario,
-          cod_rol: codRol,
-          estado_usuario: formulario.estado_usuario,
-        });
+        const cuerpo = construirPayloadCrear(formulario, codRol);
+        await createUsuario(cuerpo);
+        alExito?.('creado');
       }
       cerrar();
-      alExito?.();
     } catch (err) {
       setErrorApi(mensajeErrorApi(err));
     } finally {
@@ -227,7 +318,7 @@ function ModalUsuario({
               </label>
               {esEdicion ? (
                 <p className="usuario-modal-reglas-contrasena">
-                  <strong>Sin cambios:</strong> no escribas nada y se mantiene la contraseña que ya tiene el usuario en el sistema.
+                  <strong>Deja en blanco:</strong> para conservar la contraseña actual del usuario.
                   <br />
                   <strong>Nueva clave:</strong> entonces sí aplica {REGEX_CONTRASENA_USUARIO_API.longitudMin}–
                   {REGEX_CONTRASENA_USUARIO_API.longitudMax} caracteres, una mayúscula y un número.
@@ -257,6 +348,45 @@ function ModalUsuario({
               ) : (
                 <span id="contrasena_usuario-ayuda" className="usuario-modal-sr-only">
                   Validación de contraseña
+                </span>
+              )}
+            </div>
+            <div
+              className={`usuario-modal-campo usuario-modal-campo--ancho-completo${errorConfirmacionContrasena ? ' usuario-modal-campo--invalido' : ''}`}
+            >
+              <label htmlFor="confirmar_contrasena_usuario">
+                Confirmar contraseña
+                {!esEdicion || formulario.contrasena_usuario.trim().length > 0 ? (
+                  <span className="usuario-modal-requerido"> *</span>
+                ) : null}
+              </label>
+              <input
+                id="confirmar_contrasena_usuario"
+                name="confirmar_contrasena_usuario"
+                type="password"
+                value={formulario.confirmar_contrasena_usuario}
+                onChange={manejarCambio}
+                onBlur={manejarBlurConfirmacionContrasena}
+                placeholder="Repite la contraseña"
+                autoComplete="new-password"
+                aria-invalid={errorConfirmacionContrasena ? 'true' : 'false'}
+                aria-describedby={
+                  errorConfirmacionContrasena
+                    ? 'confirmar_contrasena_usuario-error'
+                    : 'confirmar_contrasena_usuario-ayuda'
+                }
+              />
+              {errorConfirmacionContrasena ? (
+                <span
+                  id="confirmar_contrasena_usuario-error"
+                  className="usuario-modal-error-campo"
+                  role="alert"
+                >
+                  {errorConfirmacionContrasena}
+                </span>
+              ) : (
+                <span id="confirmar_contrasena_usuario-ayuda" className="usuario-modal-sr-only">
+                  Confirmación de contraseña
                 </span>
               )}
             </div>

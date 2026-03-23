@@ -26,23 +26,32 @@
   align-items: end;
 }
 
-.fila-filtros-grid > .caja-busqueda {
+.filtro-select-grupo {
+  display: grid;
+  grid-template-rows: 18px minmax(0, 1fr);
+  row-gap: 6px;
   min-width: 0;
-  align-self: end;
 }
 
-.filtro-select-grupo {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.filtro-select-grupo--busqueda .caja-busqueda {
   min-width: 0;
+  margin: 0;
 }
 
 .filtro-select-etiqueta {
+  display: flex;
+  align-items: center;
+  height: 18px;
+  margin: 0;
   font-size: var(--texto-xs);
   font-weight: 600;
   color: var(--color-texto-claro);
   line-height: 1.2;
+}
+
+.filtro-select-etiqueta--placeholder {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .btn-filtrar {

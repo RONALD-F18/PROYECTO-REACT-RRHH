@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { expresionesRegulares, validarContrasena } from '../../utils/validaciones';
-import { iniciarSesion } from '../../services/autenticacion';
+import { haySesionLocalActiva, iniciarSesion } from '../../services/autenticacion';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { getUrlRecuperacionContrasenaWeb } from '../../config/authWeb';
 
@@ -14,6 +14,12 @@ function InicioSesion() {
   const [camposTocados, setCamposTocados] = useState({});
   const [errorServidor, setErrorServidor] = useState('');
   const [enviando, setEnviando] = useState(false);
+
+  useEffect(() => {
+    if (haySesionLocalActiva()) {
+      navegar('/dashboard', { replace: true });
+    }
+  }, [navegar]);
 
   const validarUsuarioCorreo = (valor) => {
     if (!valor.trim()) return 'El correo es requerido';
@@ -180,6 +186,11 @@ function InicioSesion() {
             <button type="submit" className="login-btn" disabled={enviando}>
               {enviando ? 'Entrando…' : 'Iniciar Sesión'}
             </button>
+
+            <Link to="/" className="login-volver-inicio">
+              <span aria-hidden>←</span>
+              Volver al inicio
+            </Link>
           </form>
         </div>
       </div>

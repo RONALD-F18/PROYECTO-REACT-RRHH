@@ -10,6 +10,7 @@ import '../../estilos/componentes/filtros.css';
  */
 function FiltrosBusqueda({ 
   placeholderBusqueda = "Buscar...",
+  etiquetaBusqueda = '',
   filtrosSelect = [],
   onFiltrar,
   titulo = null,
@@ -48,15 +49,23 @@ function FiltrosBusqueda({
     <div className={`bloque-filtros ${className}`}>
       {titulo && <h2>{titulo}</h2>}
       <div className="fila-filtros-grid">
-        <div className="caja-busqueda">
-          <span className="icono-busqueda"></span>
-          <input
-            type="text"
-            placeholder={placeholderBusqueda}
-            value={busqueda}
-            onChange={manejarCambioBusqueda}
-            onKeyPress={manejarKeyPress}
-          />
+        <div className="filtro-select-grupo filtro-select-grupo--busqueda">
+          <label
+            className={`filtro-select-etiqueta${etiquetaBusqueda ? '' : ' filtro-select-etiqueta--placeholder'}`}
+            aria-hidden={!etiquetaBusqueda}
+          >
+            {etiquetaBusqueda || 'Búsqueda'}
+          </label>
+          <div className="caja-busqueda">
+            <span className="icono-busqueda"></span>
+            <input
+              type="text"
+              placeholder={placeholderBusqueda}
+              value={busqueda}
+              onChange={manejarCambioBusqueda}
+              onKeyPress={manejarKeyPress}
+            />
+          </div>
         </div>
         {filtrosSelect.map((filtro, indice) => (
           <div key={indice} className="filtro-select-grupo">

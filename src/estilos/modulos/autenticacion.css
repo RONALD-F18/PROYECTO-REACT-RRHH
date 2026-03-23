@@ -163,6 +163,26 @@
   margin-bottom: 25px;
 }
 
+.login-volver-inicio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: var(--texto-sm);
+  color: var(--gris-400);
+  text-decoration: none;
+  font-weight: 500;
+  margin-top: -8px;
+  margin-bottom: 8px;
+  transition: color var(--transicion-rapida), opacity var(--transicion-rapida);
+  opacity: 0.9;
+}
+
+.login-volver-inicio:hover {
+  color: var(--gris-500);
+  opacity: 1;
+}
+
 .login-recordar {
   display: flex;
   align-items: center;

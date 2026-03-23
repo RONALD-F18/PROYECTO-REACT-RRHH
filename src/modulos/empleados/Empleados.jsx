@@ -1,125 +1,261 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ContenedorPrincipal, EncabezadoModulo, TablaDatos, FiltrosBusqueda } from '../../componentes';
 import { ModalEmpleado } from './componentes';
+import {
+  getEmpleados,
+  getEmpleadoById,
+  deleteEmpleado,
+  extraerFilasEmpleados,
+  nombreCompletoEmpleado,
+  normalizarRegistroEmpleado,
+  codigoEmpleadoDesde,
+} from '../../services/empleados';
+import { getBancos, extraerFilasBancos } from '../../services/bancos';
+import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+
+function estadoEmpActivo(valor) {
+  return String(valor || '').toUpperCase() === 'ACTIVO';
+}
+
+/** fecha_nac del API (YYYY-MM-DD) → dd/mm/yyyy sin cambiar zona horaria */
+function formatearFechaNacimientoLista(valor) {
+  if (valor == null || valor === '') return '—';
+  const t = String(valor).trim().slice(0, 10);
+  const m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  const d = new Date(valor);
+  return Number.isNaN(d.getTime()) ? String(valor) : d.toLocaleDateString('es-CO');
+}
 
 function Empleados() {
   const navegar = useNavigate();
+  const [lista, setLista] = useState([]);
+  const [bancos, setBancos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [mensajeLista, setMensajeLista] = useState('');
+  const [mensajeExito, setMensajeExito] = useState('');
   const [mostrarModal, setMostrarModal] = useState(false);
   const [empleadoEditar, setEmpleadoEditar] = useState(null);
+  const [criteriosFiltro, setCriteriosFiltro] = useState({
+    busqueda: '',
+    estado: '',
+  });
 
-  const empleados = [
-    {
-      id: 1,
-      documento: '1129244160',
-      nombre: 'Ronaldo Stiven Franco Duran',
-      cargo: 'Programador',
-      estado: 'Activo',
-      numeroCuenta: '123456789',
-      tipoCuenta: 'Ahorros',
-      banco: '007',
-      direccion: 'Calle 100 #50-30 Bogotá',
-      nacionalidad: 'Colombiana',
-      estadoCivil: 'Soltero',
-      profesion: 'Programador',
-      discapacidad: 'Ninguna',
-      rh: 'Positivo',
-      grupoSanguineo: 'O+',
-      fechaExpedicion: '2015-03-20',
-      descripcion: 'Desarrollador con experiencia en múltiples tecnologías.'
-    },
-    {
-      id: 2,
-      documento: '100458799',
-      nombre: 'Lina Marcela Torres',
-      cargo: 'Analista',
-      estado: 'Activo',
-      numeroCuenta: '987654321',
-      tipoCuenta: 'Corriente',
-      banco: '007',
-      direccion: 'Carrera 15 #80-45 Medellín',
-      nacionalidad: 'Colombiana',
-      estadoCivil: 'Casado',
-      profesion: 'Analista',
-      discapacidad: 'Ninguna',
-      rh: 'Negativo',
-      grupoSanguineo: 'A-',
-      fechaExpedicion: '2018-07-10',
-      descripcion: 'Analista especializada en procesos de negocio.'
-    },
-  ];
+  const recargarLista = useCallback(async () => {
+    setMensajeLista('');
+    setCargando(true);
+    try {
+      const jsonEmp = await getEmpleados();
+      setLista(extraerFilasEmpleados(jsonEmp));
+    } catch (e) {
+      setLista([]);
+      setMensajeLista(mensajeErrorApi(e));
+    } finally {
+      setCargando(false);
+    }
+  }, []);
 
+  useEffect(() => {
+    let activo = true;
+    (async () => {
+      setMensajeLista('');
+      setCargando(true);
+      try {
+        const jsonEmp = await getEmpleados();
+        if (!activo) return;
+        setLista(extraerFilasEmpleados(jsonEmp));
+      } catch (e) {
+        if (!activo) return;
+        setLista([]);
+        setMensajeLista(mensajeErrorApi(e));
+      } finally {
+        if (activo) setCargando(false);
+      }
+      try {
+        const jsonBan = await getBancos();
+        if (activo) setBancos(extraerFilasBancos(jsonBan));
+      } catch {
+        if (activo) setBancos([]);
+      }
+    })();
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  const filasFiltradas = useMemo(() => {
+    const q = (criteriosFiltro.busqueda || '').trim().toLowerCase();
+    const est = (criteriosFiltro.estado || '').toUpperCase();
+
+    return lista.filter((e) => {
+      if (!e || typeof e !== 'object') return false;
+      if (est && String(e.estado_emp || '').toUpperCase() !== est) return false;
+      if (q) {
+        const nombre = nombreCompletoEmpleado(e).toLowerCase();
+        const doc = String(e.doc_iden ?? '').toLowerCase();
+        if (!nombre.includes(q) && !doc.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [lista, criteriosFiltro]);
+
+  const abrirNuevo = () => {
+    setEmpleadoEditar(null);
+    setMostrarModal(true);
+  };
+
+  const abrirEditar = async (fila) => {
+    const cod = codigoEmpleadoDesde(fila);
+    if (cod == null) return;
+    try {
+      const json = await getEmpleadoById(cod);
+      const emp = normalizarRegistroEmpleado(json) ?? json?.data ?? json;
+      setEmpleadoEditar(emp && typeof emp === 'object' ? emp : fila);
+      setMostrarModal(true);
+    } catch (err) {
+      window.alert(mensajeErrorApi(err));
+    }
+  };
+
+  const confirmarEliminar = async (fila) => {
+    const cod = codigoEmpleadoDesde(fila);
+    if (cod == null) return;
+    if (!window.confirm('¿Eliminar este empleado?')) return;
+    try {
+      await deleteEmpleado(cod);
+      await recargarLista();
+      setMensajeExito('Empleado eliminado correctamente.');
+      window.setTimeout(() => setMensajeExito(''), 3000);
+    } catch (e) {
+      window.alert(mensajeErrorApi(e));
+    }
+  };
+
+  const alExitoGuardado = async (tipo) => {
+    await recargarLista();
+    setMensajeExito(
+      tipo === 'creado' ? 'Empleado registrado correctamente.' : 'Empleado actualizado correctamente.',
+    );
+    window.setTimeout(() => setMensajeExito(''), 3000);
+    setEmpleadoEditar(null);
+  };
 
   return (
     <ContenedorPrincipal>
-      <EncabezadoModulo
-        titulo="Módulo de Empleados"
-        subtitulo="Sistema de Gestión de Recursos Humanos"
-        textoBoton="Nuevo Empleado"
-        alHacerClic={() => {
-          setEmpleadoEditar(null);
-          setMostrarModal(true);
-        }}
-      />
-
-      <FiltrosBusqueda
-        titulo="Empleados Registrados"
-        placeholderBusqueda="Buscar por nombre o documento..."
-        filtrosSelect={[
-          {
-            nombre: 'estado',
-            placeholder: 'Todos los estados',
-            opciones: ['Activo', 'Inactivo']
-          },
-          {
-            nombre: 'cargo',
-            placeholder: 'Todos los cargos',
-            opciones: ['Programador', 'Analista']
-          }
-        ]}
-        onFiltrar={(filtros) => console.log('Filtrar empleados:', filtros)}
-      />
-
-      <div style={{ marginTop: '20px' }}>
-        <TablaDatos
-          columnas={[
-            { campo: 'documento', encabezado: 'Documento' },
-            { campo: 'nombre', encabezado: 'Nombre' },
-            { campo: 'cargo', encabezado: 'Cargo' },
-            {
-              campo: 'estado',
-              encabezado: 'Estado',
-              renderizar: (estado) => (
-                <span className={`etiqueta etiqueta-${estado === 'Activo' ? 'activo' : 'inactivo'}`}>
-                  {estado}
-                </span>
-              )
-            }
-          ]}
-          datos={empleados}
-          renderAcciones={(empleado) => (
-            <>
-              <button
-                className="btn-accion-tabla btn-accion-editar"
-                title="Editar"
-                onClick={() => {
-                  setEmpleadoEditar(empleado);
-                  setMostrarModal(true);
-                }}
-              >
-                ✎
-              </button>
-              <button
-                className="btn-accion-tabla btn-accion-ver"
-                title="Ver"
-                onClick={() => navegar(`/empleados/${empleado.id}`)}
-              >
-                👁
-              </button>
-              <button className="btn-accion-tabla btn-accion-eliminar" title="Eliminar">🗑</button>
-            </>
-          )}
+      <div className="modulo-empleados">
+        <EncabezadoModulo
+          titulo="Módulo de Empleados"
+          subtitulo="Gestión del directorio de empleados y su información"
+          textoBoton="Nuevo Empleado"
+          alHacerClic={abrirNuevo}
         />
+
+        {mensajeLista ? (
+          <div className="empleado-pagina-alerta empleado-pagina-alerta--error" role="alert">
+            <strong>Error al cargar empleados</strong>
+            <p>{mensajeLista}</p>
+          </div>
+        ) : null}
+        {mensajeExito ? (
+          <div className="empleado-pagina-alerta empleado-pagina-alerta--info" role="status">
+            <strong>Listo</strong>
+            <p>{mensajeExito}</p>
+          </div>
+        ) : null}
+        {cargando ? <p className="empleado-pagina-cargando">Cargando empleados…</p> : null}
+
+        <FiltrosBusqueda
+          titulo="Empleados registrados"
+          placeholderBusqueda="Buscar por nombre o documento…"
+          filtrosSelect={[
+            {
+              nombre: 'estado',
+              etiqueta: 'Estado',
+              placeholder: 'Todos los estados',
+              opciones: [
+                { valor: 'ACTIVO', texto: 'Activo' },
+                { valor: 'INACTIVO', texto: 'Inactivo' },
+              ],
+            },
+          ]}
+          onFiltrar={(filtros) =>
+            setCriteriosFiltro({
+              busqueda: filtros.busqueda || '',
+              estado: filtros.estado || '',
+            })
+          }
+        />
+
+        <div style={{ marginTop: '20px' }}>
+          <TablaDatos
+            columnas={[
+              { campo: 'doc_iden', encabezado: 'Documento' },
+              {
+                campo: 'nombre_completo',
+                encabezado: 'Nombre',
+                renderizar: (_, fila) => nombreCompletoEmpleado(fila),
+              },
+              {
+                campo: 'fecha_nac',
+                encabezado: 'Fecha de nacimiento',
+                renderizar: (v) => formatearFechaNacimientoLista(v),
+              },
+              {
+                campo: 'numero_telefono',
+                encabezado: 'Teléfono',
+                renderizar: (v) =>
+                  v != null && String(v).trim() !== '' ? String(v).trim() : '—',
+              },
+              {
+                campo: 'estado_emp',
+                encabezado: 'Estado',
+                renderizar: (v) => {
+                  const activo = estadoEmpActivo(v);
+                  const u = String(v || '').toUpperCase();
+                  const texto = activo ? 'Activo' : u === 'INACTIVO' ? 'Inactivo' : v ? String(v) : '—';
+                  return (
+                    <span className={`etiqueta etiqueta-${activo ? 'activo' : 'inactivo'}`}>
+                      {texto}
+                    </span>
+                  );
+                },
+              },
+            ]}
+            datos={filasFiltradas}
+            renderAcciones={(empleado) => (
+              <>
+                <button
+                  type="button"
+                  className="btn-accion-tabla btn-accion-editar"
+                  title="Editar"
+                  onClick={() => abrirEditar(empleado)}
+                >
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  className="btn-accion-tabla btn-accion-ver"
+                  title="Ver"
+                  onClick={() => {
+                    const c = codigoEmpleadoDesde(empleado);
+                    if (c != null) navegar(`/empleados/${c}`);
+                  }}
+                >
+                  👁
+                </button>
+                <button
+                  type="button"
+                  className="btn-accion-tabla btn-accion-eliminar"
+                  title="Eliminar"
+                  onClick={() => confirmarEliminar(empleado)}
+                >
+                  🗑
+                </button>
+              </>
+            )}
+          />
+        </div>
       </div>
 
       <ModalEmpleado
@@ -129,6 +265,8 @@ function Empleados() {
           setEmpleadoEditar(null);
         }}
         datosEmpleado={empleadoEditar}
+        bancos={bancos}
+        alExito={alExitoGuardado}
       />
     </ContenedorPrincipal>
   );

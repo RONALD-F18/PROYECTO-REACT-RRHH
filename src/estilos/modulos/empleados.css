@@ -129,12 +129,6 @@
   color: #ffffff;
   font-size: var(--texto-2xl);
   font-weight: 700;
-  margin: 0 0 6px 0;
-}
-
-.perfil-cargo {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: var(--texto-base);
   margin: 0;
 }
 
@@ -336,6 +330,84 @@
   .seccion-titulo {
     font-size: var(--texto-base);
   }
+}
+
+/* Listado + modal API empleados */
+.modulo-empleados {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-contenido--empleado-form {
+  max-width: 960px;
+}
+
+.formulario-empleado-api .formulario-empleado-seccion {
+  margin: 0 0 10px;
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  color: var(--color-texto-claro);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.formulario-empleado-api .formulario-empleado-grid {
+  align-items: flex-start;
+}
+
+.formulario-empleado-api .empleado-modal-alerta {
+  border-radius: var(--radio-lg);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: var(--texto-sm);
+  line-height: 1.45;
+}
+
+.formulario-empleado-api .empleado-modal-alerta--error {
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: var(--color-error-claro);
+}
+
+.formulario-empleado-api .empleado-modal-alerta--error strong {
+  color: #b91c1c;
+}
+
+.modulo-empleados .empleado-pagina-alerta {
+  border-radius: var(--radio-lg);
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  font-size: var(--texto-sm);
+  line-height: 1.45;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: var(--color-error-claro);
+}
+
+.modulo-empleados .empleado-pagina-alerta strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #b91c1c;
+  font-size: var(--texto-base);
+}
+
+.modulo-empleados .empleado-pagina-alerta p {
+  margin: 0;
+  color: var(--color-texto);
+}
+
+.modulo-empleados .empleado-pagina-alerta--info {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.modulo-empleados .empleado-pagina-alerta--info strong {
+  color: #15803d;
+}
+
+.empleado-pagina-cargando {
+  margin: 0 0 12px;
+  font-size: var(--texto-sm);
+  color: var(--color-texto-claro);
 }
 
 @media (max-width: 480px) {

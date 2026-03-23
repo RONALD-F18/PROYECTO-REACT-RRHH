@@ -28,7 +28,7 @@ function TablaDatos({ columnas, datos, acciones = true, renderAcciones }) {
                 );
               }
               return (
-              <tr key={fila.cod_usuario ?? fila.id ?? indiceFila}>
+              <tr key={fila.cod_empleado ?? fila.id ?? fila.cod_usuario ?? indiceFila}>
                 {columnas.map((col, indiceCol) => (
                   <td key={indiceCol}>
                     {col.renderizar

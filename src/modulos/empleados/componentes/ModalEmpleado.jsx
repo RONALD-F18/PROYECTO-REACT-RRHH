@@ -1,380 +1,756 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
-import { validarNumeroDocumento, validarNombres } from '../../../utils/validaciones';
-import { expresionesRegulares } from '../../../utils/validaciones';
+import {
+  validarNumeroDocumento,
+  prevenirSiNoEsDigito,
+  prevenirSiNoEsPasaporteDoc,
+  prevenirSiNoEsLetrasNombre,
+  prevenirSiNoEsNacionalidad,
+  prevenirSiNoEsProfesion,
+  sanitizarSoloDigitos,
+  sanitizarDocPasaporte,
+  sanitizarLetrasNombre,
+  sanitizarNacionalidad,
+  sanitizarProfesion,
+} from '../../../utils/validaciones';
+import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
+import {
+  createEmpleado,
+  patchEmpleado,
+  normalizarRegistroEmpleado,
+  codigoEmpleadoDesde,
+} from '../../../services/empleados';
+import {
+  TIPO_DOCUMENTO,
+  TIPO_CUENTA,
+  ESTADO_EMP,
+  DISCAPACIDAD,
+  ESTADO_CIVIL,
+  GRUPO_SANGUINEO,
+} from '../empleadoEnums';
 
-function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null }) {
-  const esEdicion = !!datosEmpleado;
-  const [formulario, setFormulario] = useState({
-    documento: datosEmpleado?.documento || '',
-    numeroCuenta: datosEmpleado?.numeroCuenta || '',
-    tipoCuenta: datosEmpleado?.tipoCuenta || '',
-    banco: datosEmpleado?.banco || '',
-    direccion: datosEmpleado?.direccion || '',
-    nacionalidad: datosEmpleado?.nacionalidad || '',
-    estadoCivil: datosEmpleado?.estadoCivil || '',
-    profesion: datosEmpleado?.profesion || '',
-    discapacidad: datosEmpleado?.discapacidad || '',
-    rh: datosEmpleado?.rh || '',
-    grupoSanguineo: datosEmpleado?.grupoSanguineo || '',
-    fechaExpedicion: datosEmpleado?.fechaExpedicion || '',
-    descripcion: datosEmpleado?.descripcion || '',
-  });
+const TELEFONO_CO = /^3[0-9]{9}$/;
+const CUENTA_DIGITOS = /^\d{8,20}$/;
+const NACIONALIDAD_OK = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/u;
 
+function estadoInicialVacio() {
+  return {
+    nombre_empleado: '',
+    apellidos_empleado: '',
+    doc_iden: '',
+    tipo_documento: '',
+    fecha_nac: '',
+    direccion: '',
+    numero_telefono: '',
+    numero_cuenta: '',
+    tipo_cuenta: '',
+    cod_banco: '',
+    estado_emp: 'ACTIVO',
+    discapacidad: 'NINGUNA',
+    nacionalidad: '',
+    estado_civil: '',
+    grupo_sanguineo: '',
+    profesion: '',
+    fec_exp_doc: '',
+    descripcion: '',
+  };
+}
+
+function empleadoApiAFormulario(emp) {
+  const e = normalizarRegistroEmpleado(emp) ?? emp;
+  if (!e || typeof e !== 'object') return estadoInicialVacio();
+  return {
+    nombre_empleado: e.nombre_empleado ?? '',
+    apellidos_empleado: e.apellidos_empleado ?? '',
+    doc_iden: e.doc_iden != null ? String(e.doc_iden) : '',
+    tipo_documento: e.tipo_documento ? String(e.tipo_documento).toUpperCase() : '',
+    fecha_nac: e.fecha_nac ? String(e.fecha_nac).slice(0, 10) : '',
+    direccion: e.direccion ?? '',
+    numero_telefono: e.numero_telefono != null ? String(e.numero_telefono) : '',
+    numero_cuenta: e.numero_cuenta != null ? String(e.numero_cuenta) : '',
+    tipo_cuenta: e.tipo_cuenta ? String(e.tipo_cuenta).toUpperCase() : '',
+    cod_banco: e.cod_banco != null && e.cod_banco !== '' ? String(e.cod_banco) : '',
+    estado_emp: e.estado_emp ? String(e.estado_emp).toUpperCase() : 'ACTIVO',
+    discapacidad: e.discapacidad ? String(e.discapacidad).toUpperCase() : 'NINGUNA',
+    nacionalidad: e.nacionalidad ?? '',
+    estado_civil: e.estado_civil ? String(e.estado_civil).toUpperCase() : '',
+    grupo_sanguineo: e.grupo_sanguineo ? String(e.grupo_sanguineo).toUpperCase() : '',
+    profesion: e.profesion ?? '',
+    fec_exp_doc: e.fec_exp_doc ? String(e.fec_exp_doc).slice(0, 10) : '',
+    descripcion: e.descripcion ?? '',
+  };
+}
+
+function valoresPayloadEquivalentes(a, b) {
+  if (a === b) return true;
+  const vacio = (v) => v === null || v === undefined || v === '';
+  if (vacio(a) && vacio(b)) return true;
+  if (typeof a === 'number' || typeof b === 'number') {
+    const na = Number(a);
+    const nb = Number(b);
+    return !Number.isNaN(na) && !Number.isNaN(nb) && na === nb;
+  }
+  return String(a).trim() === String(b).trim();
+}
+
+/** Solo claves distintas al guardado inicial (evita rules unique en PUT completo sin ignore en Laravel). */
+function construirPayloadParcialEdicion(payloadActual, payloadInicial) {
+  if (payloadInicial == null || typeof payloadInicial !== 'object') return payloadActual;
+  const diff = {};
+  const claves = new Set([...Object.keys(payloadActual), ...Object.keys(payloadInicial)]);
+  for (const k of claves) {
+    if (!valoresPayloadEquivalentes(payloadActual[k], payloadInicial[k])) {
+      diff[k] = payloadActual[k];
+    }
+  }
+  return diff;
+}
+
+function construirPayload(formulario) {
+  const codBanco = formulario.cod_banco === '' ? null : parseInt(formulario.cod_banco, 10);
+  return {
+    nombre_empleado: formulario.nombre_empleado.trim(),
+    apellidos_empleado: formulario.apellidos_empleado.trim(),
+    doc_iden: formulario.doc_iden.trim(),
+    tipo_documento: formulario.tipo_documento,
+    fecha_nac: formulario.fecha_nac,
+    direccion: formulario.direccion.trim(),
+    numero_telefono: formulario.numero_telefono.trim(),
+    numero_cuenta: formulario.numero_cuenta.trim(),
+    tipo_cuenta: formulario.tipo_cuenta,
+    cod_banco: codBanco,
+    estado_emp: formulario.estado_emp,
+    discapacidad: formulario.discapacidad,
+    nacionalidad: formulario.nacionalidad.trim(),
+    estado_civil: formulario.estado_civil,
+    grupo_sanguineo: formulario.grupo_sanguineo,
+    profesion: formulario.profesion.trim(),
+    fec_exp_doc: formulario.fec_exp_doc,
+    descripcion: formulario.descripcion.trim(),
+  };
+}
+
+/** Validación de un solo campo (también se usa en onKeyUp). */
+function validarCampoEmpleado(campo, f) {
+  switch (campo) {
+    case 'nombre_empleado':
+      if (!f.nombre_empleado.trim()) return 'El nombre es obligatorio.';
+      return null;
+    case 'apellidos_empleado':
+      if (!f.apellidos_empleado.trim()) return 'Los apellidos son obligatorios.';
+      return null;
+    case 'doc_iden':
+      if (!f.doc_iden.trim()) return 'El documento es obligatorio.';
+      if (f.tipo_documento === 'PASAPORTE') {
+        if (f.doc_iden.trim().length < 3) return 'Ingrese el número de pasaporte.';
+        return null;
+      }
+      if (f.tipo_documento) {
+        return validarNumeroDocumento(f.doc_iden.trim());
+      }
+      return null;
+    case 'tipo_documento':
+      return f.tipo_documento ? null : 'Seleccione el tipo de documento.';
+    case 'fecha_nac':
+      return f.fecha_nac ? null : 'La fecha de nacimiento es obligatoria.';
+    case 'direccion':
+      return f.direccion.trim() ? null : 'La dirección es obligatoria.';
+    case 'numero_telefono':
+      if (!f.numero_telefono.trim()) return 'El celular es obligatorio.';
+      if (!TELEFONO_CO.test(f.numero_telefono.trim())) {
+        return 'Use 10 dígitos: inicia en 3 (ej. 3001234567).';
+      }
+      return null;
+    case 'numero_cuenta':
+      if (!f.numero_cuenta.trim()) return 'El número de cuenta es obligatorio.';
+      if (!CUENTA_DIGITOS.test(f.numero_cuenta.trim())) {
+        return 'Solo dígitos, entre 8 y 20.';
+      }
+      return null;
+    case 'tipo_cuenta':
+      return f.tipo_cuenta ? null : 'Seleccione el tipo de cuenta.';
+    case 'cod_banco':
+      if (!f.cod_banco) return 'Seleccione un banco.';
+      if (Number.isNaN(parseInt(f.cod_banco, 10))) return 'Banco no válido.';
+      return null;
+    case 'discapacidad':
+      return f.discapacidad ? null : 'Seleccione una opción.';
+    case 'nacionalidad':
+      if (!f.nacionalidad.trim()) return 'La nacionalidad es obligatoria.';
+      if (!NACIONALIDAD_OK.test(f.nacionalidad.trim())) return 'Solo letras y espacios.';
+      return null;
+    case 'estado_civil':
+      return f.estado_civil ? null : 'Seleccione el estado civil.';
+    case 'grupo_sanguineo':
+      return f.grupo_sanguineo ? null : 'Seleccione el grupo sanguíneo.';
+    case 'profesion':
+      if (!f.profesion.trim()) return 'La profesión es obligatoria.';
+      if (f.profesion.trim().length > 100) return 'Máximo 100 caracteres.';
+      return null;
+    case 'fec_exp_doc': {
+      if (!f.fec_exp_doc) return 'La fecha de expedición del documento es obligatoria.';
+      const n = f.fecha_nac ? new Date(`${f.fecha_nac}T12:00:00`) : null;
+      const x = new Date(`${f.fec_exp_doc}T12:00:00`);
+      const hoy = new Date();
+      hoy.setHours(23, 59, 59, 999);
+      if (n && x <= n) return 'Debe ser posterior a la fecha de nacimiento.';
+      if (x > hoy) return 'No puede ser posterior a hoy.';
+      return null;
+    }
+    case 'descripcion':
+      if (!f.descripcion.trim()) return 'La descripción es obligatoria.';
+      if (f.descripcion.trim().length > 500) return 'Máximo 500 caracteres.';
+      return null;
+    default:
+      return null;
+  }
+}
+
+const CAMPOS_VALIDAR_ENVIO = [
+  'nombre_empleado',
+  'apellidos_empleado',
+  'doc_iden',
+  'tipo_documento',
+  'fecha_nac',
+  'direccion',
+  'numero_telefono',
+  'numero_cuenta',
+  'tipo_cuenta',
+  'cod_banco',
+  'discapacidad',
+  'nacionalidad',
+  'estado_civil',
+  'grupo_sanguineo',
+  'profesion',
+  'fec_exp_doc',
+  'descripcion',
+];
+
+function validar(formulario) {
+  const err = {};
+  for (const c of CAMPOS_VALIDAR_ENVIO) {
+    const m = validarCampoEmpleado(c, formulario);
+    if (m) err[c] = m;
+  }
+  return err;
+}
+
+function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alExito }) {
+  const registroEdicion = datosEmpleado ? normalizarRegistroEmpleado(datosEmpleado) : null;
+  const codEdicion = codigoEmpleadoDesde(registroEdicion);
+  const esEdicion = codEdicion != null;
+  const [formulario, setFormulario] = useState(() => estadoInicialVacio());
   const [errores, setErrores] = useState({});
-  const [camposTocados, setCamposTocados] = useState({});
+  const [erroresApi, setErroresApi] = useState({});
+  const [enviando, setEnviando] = useState(false);
+  const [errorGeneral, setErrorGeneral] = useState('');
+  const formRef = useRef(formulario);
+  formRef.current = formulario;
+  /** Payload al abrir el modal en edición (para PATCH solo con cambios). */
+  const payloadInicialEdicionRef = useRef(null);
+
+  const aplicarErroresTrasCambio = (nombreCampo, estadoFusionado) => {
+    setErrores((er) => {
+      const nuevos = { ...er };
+      const m = validarCampoEmpleado(nombreCampo, estadoFusionado);
+      if (m) nuevos[nombreCampo] = m;
+      else delete nuevos[nombreCampo];
+      if (nombreCampo === 'tipo_documento') {
+        const md = validarCampoEmpleado('doc_iden', estadoFusionado);
+        if (md) nuevos.doc_iden = md;
+        else delete nuevos.doc_iden;
+      }
+      if (nombreCampo === 'fecha_nac' || nombreCampo === 'fec_exp_doc') {
+        const mf = validarCampoEmpleado('fec_exp_doc', estadoFusionado);
+        if (mf) nuevos.fec_exp_doc = mf;
+        else delete nuevos.fec_exp_doc;
+      }
+      return nuevos;
+    });
+  };
+
+  const reiniciar = useCallback(() => {
+    const reg = datosEmpleado ? normalizarRegistroEmpleado(datosEmpleado) : null;
+    if (reg && codigoEmpleadoDesde(reg) != null) {
+      const f = empleadoApiAFormulario(reg);
+      setFormulario(f);
+      payloadInicialEdicionRef.current = construirPayload(f);
+    } else {
+      setFormulario(estadoInicialVacio());
+      payloadInicialEdicionRef.current = null;
+    }
+    setErrores({});
+    setErroresApi({});
+    setErrorGeneral('');
+  }, [datosEmpleado]);
 
   useEffect(() => {
-    if (datosEmpleado) {
-      setFormulario({
-        documento: datosEmpleado.documento || '',
-        numeroCuenta: datosEmpleado.numeroCuenta || '',
-        tipoCuenta: datosEmpleado.tipoCuenta || '',
-        banco: datosEmpleado.banco || '',
-        direccion: datosEmpleado.direccion || '',
-        nacionalidad: datosEmpleado.nacionalidad || '',
-        estadoCivil: datosEmpleado.estadoCivil || '',
-        profesion: datosEmpleado.profesion || '',
-        discapacidad: datosEmpleado.discapacidad || '',
-        rh: datosEmpleado.rh || '',
-        grupoSanguineo: datosEmpleado.grupoSanguineo || '',
-        fechaExpedicion: datosEmpleado.fechaExpedicion || '',
-        descripcion: datosEmpleado.descripcion || '',
-      });
-      setErrores({});
-      setCamposTocados({});
-    } else {
-      setFormulario({
-        documento: '',
-        numeroCuenta: '',
-        tipoCuenta: '',
-        banco: '',
-        direccion: '',
-        nacionalidad: '',
-        estadoCivil: '',
-        profesion: '',
-        discapacidad: '',
-        rh: '',
-        grupoSanguineo: '',
-        fechaExpedicion: '',
-        descripcion: '',
-      });
-      setErrores({});
-      setCamposTocados({});
-    }
-  }, [datosEmpleado, mostrar]);
-
-  const validarCampo = (nombre, valor) => {
-    switch (nombre) {
-      case 'documento':
-        return validarNumeroDocumento(valor);
-      case 'numeroCuenta':
-        if (!valor.trim()) return 'El número de cuenta es requerido';
-        if (!expresionesRegulares.soloNumeros.test(valor)) return 'Solo se permiten números';
-        return null;
-      case 'tipoCuenta':
-        return !valor ? 'Debes seleccionar un tipo de cuenta' : null;
-      case 'banco':
-        if (!valor.trim()) return 'El banco es requerido';
-        if (!expresionesRegulares.soloNumeros.test(valor)) return 'Solo se permiten números';
-        return null;
-      case 'direccion':
-        if (!valor.trim()) return 'La dirección es requerida';
-        return null;
-      case 'nacionalidad':
-        if (!valor.trim()) return 'La nacionalidad es requerida';
-        if (!expresionesRegulares.soloLetras.test(valor)) return 'Solo se permiten letras';
-        return null;
-      case 'estadoCivil':
-        return !valor ? 'Debes seleccionar un estado civil' : null;
-      case 'profesion':
-        if (!valor.trim()) return 'La profesión es requerida';
-        if (!expresionesRegulares.soloLetras.test(valor)) return 'Solo se permiten letras';
-        return null;
-      case 'discapacidad':
-        if (!valor.trim()) return 'Este campo es requerido';
-        return null;
-      case 'rh':
-        return !valor ? 'Debes seleccionar el RH' : null;
-      case 'grupoSanguineo':
-        return !valor ? 'Debes seleccionar el grupo sanguíneo' : null;
-      case 'fechaExpedicion':
-        if (!valor) return 'La fecha de expedición es requerida';
-        return null;
-      default:
-        return null;
-    }
-  };
+    if (mostrar) reiniciar();
+  }, [mostrar, reiniciar]);
 
   const manejarCambio = (e) => {
     const { name, value } = e.target;
-    setFormulario((prev) => ({ ...prev, [name]: value }));
+    if (erroresApi[name]) setErroresApi((p) => ({ ...p, [name]: undefined }));
 
-    if (camposTocados[name]) {
-      const error = validarCampo(name, value);
-      setErrores((prev) => ({ ...prev, [name]: error }));
-    }
-  };
-
-  const manejarBlur = (e) => {
-    const { name, value } = e.target;
-    setCamposTocados((prev) => ({ ...prev, [name]: true }));
-    const error = validarCampo(name, value);
-    setErrores((prev) => ({ ...prev, [name]: error }));
-  };
-
-  const validarFormulario = () => {
-    const nuevosErrores = {};
-    const todosTocados = {};
-
-    Object.keys(formulario).forEach((campo) => {
-      todosTocados[campo] = true;
-      const error = validarCampo(campo, formulario[campo]);
-      if (error) nuevosErrores[campo] = error;
+    setFormulario((prev) => {
+      let next;
+      if (name === 'tipo_documento') {
+        const doc =
+          value === 'PASAPORTE'
+            ? sanitizarDocPasaporte(prev.doc_iden, 50)
+            : sanitizarSoloDigitos(prev.doc_iden, 50);
+        next = { ...prev, tipo_documento: value, doc_iden: doc };
+      } else {
+        next = { ...prev };
+        switch (name) {
+          case 'doc_iden':
+            next.doc_iden =
+              prev.tipo_documento === 'PASAPORTE'
+                ? sanitizarDocPasaporte(value, 50)
+                : sanitizarSoloDigitos(value, 50);
+            break;
+          case 'numero_telefono':
+            next.numero_telefono = sanitizarSoloDigitos(value, 10);
+            break;
+          case 'numero_cuenta':
+            next.numero_cuenta = sanitizarSoloDigitos(value, 20);
+            break;
+          case 'nacionalidad':
+            next.nacionalidad = sanitizarNacionalidad(value, 50);
+            break;
+          case 'nombre_empleado':
+            next.nombre_empleado = sanitizarLetrasNombre(value, 100);
+            break;
+          case 'apellidos_empleado':
+            next.apellidos_empleado = sanitizarLetrasNombre(value, 100);
+            break;
+          case 'profesion':
+            next.profesion = sanitizarProfesion(value, 100);
+            break;
+          case 'direccion':
+            next.direccion = String(value).slice(0, 200);
+            break;
+          case 'descripcion':
+            next.descripcion = String(value).slice(0, 500);
+            break;
+          default:
+            next[name] = value;
+        }
+      }
+      queueMicrotask(() => aplicarErroresTrasCambio(name, next));
+      return next;
     });
-
-    setCamposTocados(todosTocados);
-    setErrores(nuevosErrores);
-    return Object.keys(nuevosErrores).length === 0;
   };
 
-  const manejarGuardar = (e) => {
+  /** Validación en vivo tras cada tecla (y coherencia fechas / tipo doc). */
+  const manejarKeyUpValidar = (e) => {
+    const nombre = e.currentTarget.name;
+    if (!nombre) return;
+    const valorDom = e.currentTarget.value;
+    const fusionado = { ...formRef.current, [nombre]: valorDom };
+    aplicarErroresTrasCambio(nombre, fusionado);
+  };
+
+  const manejarKeyDownDocIden = (e) => {
+    if (formulario.tipo_documento === 'PASAPORTE') prevenirSiNoEsPasaporteDoc(e);
+    else prevenirSiNoEsDigito(e);
+  };
+
+  const mensajeCampo = (campo) => errores[campo] || (erroresApi[campo] && erroresApi[campo][0]);
+
+  const manejarGuardar = async (e) => {
     e.preventDefault();
-    if (validarFormulario()) {
-      console.log('Guardar empleado:', formulario);
+    setErrorGeneral('');
+    setErroresApi({});
+    const v = validar(formulario);
+    setErrores(v);
+    if (Object.keys(v).length > 0) return;
+
+    setEnviando(true);
+    try {
+      const payload = construirPayload(formulario);
+      if (esEdicion && codEdicion != null) {
+        const parcial = construirPayloadParcialEdicion(payload, payloadInicialEdicionRef.current);
+        if (Object.keys(parcial).length === 0) {
+          setErrorGeneral('No hay cambios que guardar.');
+          return;
+        }
+        await patchEmpleado(codEdicion, parcial);
+        await alExito?.('actualizado');
+      } else {
+        await createEmpleado(payload);
+        await alExito?.('creado');
+      }
       cerrar();
+    } catch (err) {
+      const data = err.response?.data;
+      if (err.response?.status === 422 && data?.errors && typeof data.errors === 'object') {
+        setErroresApi(data.errors);
+        setErrorGeneral('Revisa los campos marcados.');
+      } else {
+        setErrorGeneral(mensajeErrorApi(err));
+      }
+    } finally {
+      setEnviando(false);
     }
   };
-
-  const obtenerClaseCampo = (nombreCampo) => {
-    if (errores[nombreCampo]) return 'campo-error';
-    if (camposTocados[nombreCampo] && !errores[nombreCampo] && formulario[nombreCampo]) {
-      return 'campo-valido';
-    }
-    return '';
-  };
-
-  const mostrarMensaje = (nombreCampo) => {
-    if (!camposTocados[nombreCampo]) return null;
-    if (errores[nombreCampo]) {
-      return <span className="mensaje-error">{errores[nombreCampo]}</span>;
-    }
-    if (formulario[nombreCampo]) {
-      return <span className="mensaje-exito">✓ Correcto</span>;
-    }
-    return null;
-  };
-
-  const estadosCiviles = ['Soltero', 'Casado', 'Divorciado', 'Viudo', 'Unión Libre'];
-  const tiposCuenta = ['Ahorros', 'Corriente'];
-  const gruposSanguineos = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-  const tiposRH = ['Positivo', 'Negativo'];
 
   return (
-    <Modal mostrar={mostrar} cerrar={cerrar} titulo={esEdicion ? "Editar Empleado" : "Registrar Nuevo Empleado"}>
-      <form onSubmit={manejarGuardar}>
-        <div className="formulario-grid-doble">
+    <Modal
+      mostrar={mostrar}
+      cerrar={cerrar}
+      titulo={esEdicion ? 'Editar empleado' : 'Registrar empleado'}
+      classNameContenedor="modal-contenido--empleado-form"
+    >
+      <form className="formulario-empleado-api" onSubmit={manejarGuardar}>
+        {errorGeneral ? (
+          <div className="empleado-modal-alerta empleado-modal-alerta--error" role="alert">
+            <strong>Error</strong>
+            <p>{errorGeneral}</p>
+          </div>
+        ) : null}
+
+        <div className="formulario-grid-doble formulario-empleado-grid">
           <div className="columna-izquierda">
+            <h3 className="formulario-empleado-seccion">Identificación</h3>
             <div className="campo-formulario">
-              <label>Número de Documento*</label>
+              <label htmlFor="emp-doc_iden">Número de documento *</label>
               <input
-                type="text"
-                name="documento"
-                value={formulario.documento}
+                id="emp-doc_iden"
+                name="doc_iden"
+                value={formulario.doc_iden}
                 onChange={manejarCambio}
-                onBlur={manejarBlur}
-                placeholder="Ingrese el documento"
-                className={obtenerClaseCampo('documento')}
+                onKeyDown={manejarKeyDownDocIden}
+                onKeyUp={manejarKeyUpValidar}
+                maxLength={50}
+                autoComplete="off"
+                inputMode={formulario.tipo_documento === 'PASAPORTE' ? 'text' : 'numeric'}
+                className={mensajeCampo('doc_iden') ? 'campo-error' : ''}
               />
-              {mostrarMensaje('documento')}
+              {mensajeCampo('doc_iden') ? (
+                <span className="mensaje-error">{mensajeCampo('doc_iden')}</span>
+              ) : null}
             </div>
-
             <div className="campo-formulario">
-              <label>Número de Cuenta*</label>
-              <input
-                type="text"
-                name="numeroCuenta"
-                value={formulario.numeroCuenta}
+              <label htmlFor="emp-tipo_documento">Tipo de documento *</label>
+              <select
+                id="emp-tipo_documento"
+                name="tipo_documento"
+                value={formulario.tipo_documento}
                 onChange={manejarCambio}
-                onBlur={manejarBlur}
-                placeholder="Número de cuenta bancaria"
-                className={obtenerClaseCampo('numeroCuenta')}
-              />
-              {mostrarMensaje('numeroCuenta')}
+                onKeyUp={manejarKeyUpValidar}
+                className={mensajeCampo('tipo_documento') ? 'campo-error' : ''}
+              >
+                <option value="">Seleccione</option>
+                {TIPO_DOCUMENTO.map((o) => (
+                  <option key={o.valor} value={o.valor}>
+                    {o.etiqueta}
+                  </option>
+                ))}
+              </select>
+              {mensajeCampo('tipo_documento') ? (
+                <span className="mensaje-error">{mensajeCampo('tipo_documento')}</span>
+              ) : null}
             </div>
-
             <div className="campo-formulario">
-              <label>Dirección*</label>
+              <label htmlFor="emp-nombre_empleado">Nombre *</label>
               <input
-                type="text"
+                id="emp-nombre_empleado"
+                name="nombre_empleado"
+                value={formulario.nombre_empleado}
+                onChange={manejarCambio}
+                onKeyDown={prevenirSiNoEsLetrasNombre}
+                onKeyUp={manejarKeyUpValidar}
+                maxLength={100}
+                className={mensajeCampo('nombre_empleado') ? 'campo-error' : ''}
+              />
+              {mensajeCampo('nombre_empleado') ? (
+                <span className="mensaje-error">{mensajeCampo('nombre_empleado')}</span>
+              ) : null}
+            </div>
+            <div className="campo-formulario">
+              <label htmlFor="emp-apellidos_empleado">Apellidos *</label>
+              <input
+                id="emp-apellidos_empleado"
+                name="apellidos_empleado"
+                value={formulario.apellidos_empleado}
+                onChange={manejarCambio}
+                onKeyDown={prevenirSiNoEsLetrasNombre}
+                onKeyUp={manejarKeyUpValidar}
+                maxLength={100}
+                className={mensajeCampo('apellidos_empleado') ? 'campo-error' : ''}
+              />
+              {mensajeCampo('apellidos_empleado') ? (
+                <span className="mensaje-error">{mensajeCampo('apellidos_empleado')}</span>
+              ) : null}
+            </div>
+            <div className="campo-formulario">
+              <label htmlFor="emp-fecha_nac">Fecha de nacimiento *</label>
+              <input
+                id="emp-fecha_nac"
+                type="date"
+                name="fecha_nac"
+                value={formulario.fecha_nac}
+                onChange={manejarCambio}
+                onKeyUp={manejarKeyUpValidar}
+                className={mensajeCampo('fecha_nac') ? 'campo-error' : ''}
+              />
+              {mensajeCampo('fecha_nac') ? (
+                <span className="mensaje-error">{mensajeCampo('fecha_nac')}</span>
+              ) : null}
+            </div>
+            <div className="campo-formulario">
+              <label htmlFor="emp-fec_exp_doc">Fecha expedición documento *</label>
+              <input
+                id="emp-fec_exp_doc"
+                type="date"
+                name="fec_exp_doc"
+                value={formulario.fec_exp_doc}
+                onChange={manejarCambio}
+                onKeyUp={manejarKeyUpValidar}
+                className={mensajeCampo('fec_exp_doc') ? 'campo-error' : ''}
+              />
+              {mensajeCampo('fec_exp_doc') ? (
+                <span className="mensaje-error">{mensajeCampo('fec_exp_doc')}</span>
+              ) : null}
+            </div>
+            <div className="campo-formulario">
+              <label htmlFor="emp-numero_telefono">Celular (10 dígitos, inicia en 3) *</label>
+              <input
+                id="emp-numero_telefono"
+                name="numero_telefono"
+                value={formulario.numero_telefono}
+                onChange={manejarCambio}
+                onKeyDown={prevenirSiNoEsDigito}
+                onKeyUp={manejarKeyUpValidar}
+                maxLength={10}
+                placeholder="3001234567"
+                inputMode="numeric"
+                autoComplete="tel"
+                className={mensajeCampo('numero_telefono') ? 'campo-error' : ''}
+              />
+              {mensajeCampo('numero_telefono') ? (
+                <span className="mensaje-error">{mensajeCampo('numero_telefono')}</span>
+              ) : null}
+            </div>
+            <div className="campo-formulario">
+              <label htmlFor="emp-direccion">Dirección *</label>
+              <input
+                id="emp-direccion"
                 name="direccion"
                 value={formulario.direccion}
                 onChange={manejarCambio}
-                onBlur={manejarBlur}
-                placeholder="Dirección de residencia"
-                className={obtenerClaseCampo('direccion')}
+                onKeyUp={manejarKeyUpValidar}
+                maxLength={200}
+                className={mensajeCampo('direccion') ? 'campo-error' : ''}
               />
-              {mostrarMensaje('direccion')}
+              {mensajeCampo('direccion') ? (
+                <span className="mensaje-error">{mensajeCampo('direccion')}</span>
+              ) : null}
             </div>
-
             <div className="campo-formulario">
-              <label>Nacionalidad*</label>
+              <label htmlFor="emp-nacionalidad">Nacionalidad *</label>
               <input
-                type="text"
+                id="emp-nacionalidad"
                 name="nacionalidad"
                 value={formulario.nacionalidad}
                 onChange={manejarCambio}
-                onBlur={manejarBlur}
-                placeholder="País de nacionalidad"
-                className={obtenerClaseCampo('nacionalidad')}
+                onKeyDown={prevenirSiNoEsNacionalidad}
+                onKeyUp={manejarKeyUpValidar}
+                maxLength={50}
+                className={mensajeCampo('nacionalidad') ? 'campo-error' : ''}
               />
-              {mostrarMensaje('nacionalidad')}
+              {mensajeCampo('nacionalidad') ? (
+                <span className="mensaje-error">{mensajeCampo('nacionalidad')}</span>
+              ) : null}
             </div>
-
             <div className="campo-formulario">
-              <label>Estado Civil*</label>
+              <label htmlFor="emp-estado_civil">Estado civil *</label>
               <select
-                name="estadoCivil"
-                value={formulario.estadoCivil}
+                id="emp-estado_civil"
+                name="estado_civil"
+                value={formulario.estado_civil}
                 onChange={manejarCambio}
-                onBlur={manejarBlur}
-                className={obtenerClaseCampo('estadoCivil')}
+                onKeyUp={manejarKeyUpValidar}
+                className={mensajeCampo('estado_civil') ? 'campo-error' : ''}
               >
                 <option value="">Seleccione</option>
-                {estadosCiviles.map((estado) => (
-                  <option key={estado} value={estado}>{estado}</option>
+                {ESTADO_CIVIL.map((o) => (
+                  <option key={o.valor} value={o.valor}>
+                    {o.etiqueta}
+                  </option>
                 ))}
               </select>
-              {mostrarMensaje('estadoCivil')}
-            </div>
-
-            <div className="campo-formulario">
-              <label>Profesión*</label>
-              <input
-                type="text"
-                name="profesion"
-                value={formulario.profesion}
-                onChange={manejarCambio}
-                onBlur={manejarBlur}
-                placeholder="Profesión u oficio"
-                className={obtenerClaseCampo('profesion')}
-              />
-              {mostrarMensaje('profesion')}
-            </div>
-
-            <div className="campo-formulario">
-              <label>Descripción</label>
-              <textarea
-                name="descripcion"
-                value={formulario.descripcion}
-                onChange={manejarCambio}
-                placeholder="Información adicional del empleado"
-                rows="4"
-              />
+              {mensajeCampo('estado_civil') ? (
+                <span className="mensaje-error">{mensajeCampo('estado_civil')}</span>
+              ) : null}
             </div>
           </div>
 
           <div className="columna-derecha">
+            <h3 className="formulario-empleado-seccion">Bancario y laboral</h3>
             <div className="campo-formulario">
-              <label>Tipo de Cuenta*</label>
+              <label htmlFor="emp-cod_banco">Banco *</label>
               <select
-                name="tipoCuenta"
-                value={formulario.tipoCuenta}
+                id="emp-cod_banco"
+                name="cod_banco"
+                value={formulario.cod_banco}
                 onChange={manejarCambio}
-                onBlur={manejarBlur}
-                className={obtenerClaseCampo('tipoCuenta')}
+                onKeyUp={manejarKeyUpValidar}
+                className={mensajeCampo('cod_banco') ? 'campo-error' : ''}
               >
                 <option value="">Seleccione</option>
-                {tiposCuenta.map((tipo) => (
-                  <option key={tipo} value={tipo}>{tipo}</option>
+                {bancos.map((b) => (
+                  <option key={b.cod_banco} value={String(b.cod_banco)}>
+                    {b.nombre_banco ?? `Banco ${b.cod_banco}`}
+                  </option>
                 ))}
               </select>
-              {mostrarMensaje('tipoCuenta')}
+              {mensajeCampo('cod_banco') ? (
+                <span className="mensaje-error">{mensajeCampo('cod_banco')}</span>
+              ) : null}
             </div>
-
             <div className="campo-formulario">
-              <label>Banco*</label>
+              <label htmlFor="emp-numero_cuenta">Número de cuenta *</label>
               <input
-                type="text"
-                name="banco"
-                value={formulario.banco}
+                id="emp-numero_cuenta"
+                name="numero_cuenta"
+                value={formulario.numero_cuenta}
                 onChange={manejarCambio}
-                onBlur={manejarBlur}
-                placeholder="Código del banco"
-                className={obtenerClaseCampo('banco')}
+                onKeyDown={prevenirSiNoEsDigito}
+                onKeyUp={manejarKeyUpValidar}
+                maxLength={20}
+                inputMode="numeric"
+                autoComplete="off"
+                className={mensajeCampo('numero_cuenta') ? 'campo-error' : ''}
               />
-              {mostrarMensaje('banco')}
+              {mensajeCampo('numero_cuenta') ? (
+                <span className="mensaje-error">{mensajeCampo('numero_cuenta')}</span>
+              ) : null}
+            </div>
+            <div className="campo-formulario">
+              <label htmlFor="emp-tipo_cuenta">Tipo de cuenta *</label>
+              <select
+                id="emp-tipo_cuenta"
+                name="tipo_cuenta"
+                value={formulario.tipo_cuenta}
+                onChange={manejarCambio}
+                onKeyUp={manejarKeyUpValidar}
+                className={mensajeCampo('tipo_cuenta') ? 'campo-error' : ''}
+              >
+                <option value="">Seleccione</option>
+                {TIPO_CUENTA.map((o) => (
+                  <option key={o.valor} value={o.valor}>
+                    {o.etiqueta}
+                  </option>
+                ))}
+              </select>
+              {mensajeCampo('tipo_cuenta') ? (
+                <span className="mensaje-error">{mensajeCampo('tipo_cuenta')}</span>
+              ) : null}
+            </div>
+            <div className="campo-formulario">
+              <label htmlFor="emp-estado_emp">Estado en la empresa *</label>
+              <select
+                id="emp-estado_emp"
+                name="estado_emp"
+                value={formulario.estado_emp}
+                onChange={manejarCambio}
+                onKeyUp={manejarKeyUpValidar}
+              >
+                {ESTADO_EMP.map((o) => (
+                  <option key={o.valor} value={o.valor}>
+                    {o.etiqueta}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="campo-formulario">
+              <label htmlFor="emp-profesion">Profesión *</label>
+              <input
+                id="emp-profesion"
+                name="profesion"
+                value={formulario.profesion}
+                onChange={manejarCambio}
+                onKeyDown={prevenirSiNoEsProfesion}
+                onKeyUp={manejarKeyUpValidar}
+                maxLength={100}
+                className={mensajeCampo('profesion') ? 'campo-error' : ''}
+              />
+              {mensajeCampo('profesion') ? (
+                <span className="mensaje-error">{mensajeCampo('profesion')}</span>
+              ) : null}
             </div>
 
+            <h3 className="formulario-empleado-seccion">Salud</h3>
             <div className="campo-formulario">
-              <label>Discapacidad*</label>
-              <input
-                type="text"
+              <label htmlFor="emp-grupo_sanguineo">Grupo sanguíneo (incluye RH) *</label>
+              <select
+                id="emp-grupo_sanguineo"
+                name="grupo_sanguineo"
+                value={formulario.grupo_sanguineo}
+                onChange={manejarCambio}
+                onKeyUp={manejarKeyUpValidar}
+                className={mensajeCampo('grupo_sanguineo') ? 'campo-error' : ''}
+              >
+                <option value="">Seleccione</option>
+                {GRUPO_SANGUINEO.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+              {mensajeCampo('grupo_sanguineo') ? (
+                <span className="mensaje-error">{mensajeCampo('grupo_sanguineo')}</span>
+              ) : null}
+            </div>
+            <div className="campo-formulario">
+              <label htmlFor="emp-discapacidad">Discapacidad *</label>
+              <select
+                id="emp-discapacidad"
                 name="discapacidad"
                 value={formulario.discapacidad}
                 onChange={manejarCambio}
-                onBlur={manejarBlur}
-                placeholder="Ninguna"
-                className={obtenerClaseCampo('discapacidad')}
-              />
-              {mostrarMensaje('discapacidad')}
-            </div>
-
-            <div className="campo-formulario">
-              <label>RH*</label>
-              <select
-                name="rh"
-                value={formulario.rh}
-                onChange={manejarCambio}
-                onBlur={manejarBlur}
-                className={obtenerClaseCampo('rh')}
+                onKeyUp={manejarKeyUpValidar}
+                className={mensajeCampo('discapacidad') ? 'campo-error' : ''}
               >
-                <option value="">Seleccione</option>
-                {tiposRH.map((rh) => (
-                  <option key={rh} value={rh}>{rh}</option>
+                {DISCAPACIDAD.map((o) => (
+                  <option key={o.valor} value={o.valor}>
+                    {o.etiqueta}
+                  </option>
                 ))}
               </select>
-              {mostrarMensaje('rh')}
+              {mensajeCampo('discapacidad') ? (
+                <span className="mensaje-error">{mensajeCampo('discapacidad')}</span>
+              ) : null}
             </div>
 
-            <div className="campo-formulario">
-              <label>Grupo Sanguíneo*</label>
-              <select
-                name="grupoSanguineo"
-                value={formulario.grupoSanguineo}
+            <h3 className="formulario-empleado-seccion">Descripción</h3>
+            <div className="campo-formulario campo-formulario--ancho">
+              <label htmlFor="emp-descripcion">Descripción / perfil *</label>
+              <textarea
+                id="emp-descripcion"
+                name="descripcion"
+                rows={4}
+                value={formulario.descripcion}
                 onChange={manejarCambio}
-                onBlur={manejarBlur}
-                className={obtenerClaseCampo('grupoSanguineo')}
-              >
-                <option value="">Seleccione</option>
-                {gruposSanguineos.map((grupo) => (
-                  <option key={grupo} value={grupo}>{grupo}</option>
-                ))}
-              </select>
-              {mostrarMensaje('grupoSanguineo')}
-            </div>
-
-            <div className="campo-formulario">
-              <label>Fecha de Expedición del Doc*</label>
-              <input
-                type="date"
-                name="fechaExpedicion"
-                value={formulario.fechaExpedicion}
-                onChange={manejarCambio}
-                onBlur={manejarBlur}
-                className={obtenerClaseCampo('fechaExpedicion')}
+                onKeyUp={manejarKeyUpValidar}
+                maxLength={500}
+                className={mensajeCampo('descripcion') ? 'campo-error' : ''}
               />
-              {mostrarMensaje('fechaExpedicion')}
+              {mensajeCampo('descripcion') ? (
+                <span className="mensaje-error">{mensajeCampo('descripcion')}</span>
+              ) : null}
             </div>
           </div>
         </div>
 
         <div className="modal-acciones">
-          <button type="button" className="btn-cancelar" onClick={cerrar}>
+          <button type="button" className="btn-cancelar" onClick={cerrar} disabled={enviando}>
             Cancelar
           </button>
-          <button type="submit" className="btn-guardar">
-            {esEdicion ? 'Actualizar Empleado' : 'Guardar Empleado'}
+          <button type="submit" className="btn-guardar" disabled={enviando}>
+            {enviando ? 'Guardando…' : esEdicion ? 'Actualizar' : 'Guardar'}
           </button>
         </div>
       </form>
@@ -383,4 +759,3 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null }) {
 }
 
 export default ModalEmpleado;
-

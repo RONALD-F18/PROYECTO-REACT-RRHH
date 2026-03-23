@@ -111,5 +111,94 @@ export const validarTerminos = (valor) => {
   return null;
 };
 
+/** Teclas que no deben bloquearse en inputs de texto (navegación, copiar/pegar, etc.) */
+export function esTeclaControlNavegacion(e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return true;
+  const k = e.key;
+  if (
+    k === 'Backspace' ||
+    k === 'Delete' ||
+    k === 'Tab' ||
+    k === 'Escape' ||
+    k === 'Enter' ||
+    k === 'ArrowLeft' ||
+    k === 'ArrowRight' ||
+    k === 'ArrowUp' ||
+    k === 'ArrowDown' ||
+    k === 'Home' ||
+    k === 'End'
+  ) {
+    return true;
+  }
+  return false;
+}
 
+/** Bloquea en keydown cualquier tecla que no sea dígito (útil en documento CC/CE/TI, celular, cuenta). */
+export function prevenirSiNoEsDigito(e) {
+  if (esTeclaControlNavegacion(e)) return;
+  if (e.key.length === 1 && !/\d/.test(e.key)) {
+    e.preventDefault();
+  }
+}
+
+/** Documento tipo pasaporte: letras, números y guion. */
+export function prevenirSiNoEsPasaporteDoc(e) {
+  if (esTeclaControlNavegacion(e)) return;
+  if (e.key.length === 1 && !/^[A-Za-z0-9\-]$/.test(e.key)) {
+    e.preventDefault();
+  }
+}
+
+/** Nombres: letras con tildes, espacio, guion, apóstrofo, punto. */
+export function prevenirSiNoEsLetrasNombre(e) {
+  if (esTeclaControlNavegacion(e)) return;
+  if (e.key.length === 1 && !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-'.]$/u.test(e.key)) {
+    e.preventDefault();
+  }
+}
+
+/** Nacionalidad (solo letras y espacios, alineado a sanitizarNacionalidad). */
+export function prevenirSiNoEsNacionalidad(e) {
+  if (esTeclaControlNavegacion(e)) return;
+  if (e.key.length === 1 && !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]$/u.test(e.key)) {
+    e.preventDefault();
+  }
+}
+
+/** Profesión: letras, números, espacios y signos habituales. */
+export function prevenirSiNoEsProfesion(e) {
+  if (esTeclaControlNavegacion(e)) return;
+  if (e.key.length === 1 && !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s\-.,/+#()°]$/u.test(e.key)) {
+    e.preventDefault();
+  }
+}
+
+export function sanitizarSoloDigitos(valor, maxLen = Infinity) {
+  const s = String(valor ?? '').replace(/\D/g, '');
+  return maxLen < Infinity ? s.slice(0, maxLen) : s;
+}
+
+export function sanitizarDocPasaporte(valor, maxLen = 50) {
+  return String(valor ?? '')
+    .replace(/[^A-Za-z0-9\-]/g, '')
+    .slice(0, maxLen);
+}
+
+export function sanitizarLetrasNombre(valor, maxLen = 100) {
+  return String(valor ?? '')
+    .replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-'.]/gu, '')
+    .slice(0, maxLen);
+}
+
+export function sanitizarNacionalidad(valor, maxLen = 50) {
+  return String(valor ?? '')
+    .replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/gu, '')
+    .slice(0, maxLen);
+}
+
+export function sanitizarProfesion(valor, maxLen = 100) {
+  return String(valor ?? '')
+    .replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s\-.,/+#()°]/gu, '')
+    .slice(0, maxLen);
+}
 

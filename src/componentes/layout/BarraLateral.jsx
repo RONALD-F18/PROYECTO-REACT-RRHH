@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { cerrarSesion } from '../../services/autenticacion';
+import { cerrarSesion, esAdminSesionLocal } from '../../services/autenticacion';
 
 /**
  * Componente de barra lateral de navegación
@@ -22,6 +22,8 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
     { ruta: '/actividades', etiqueta: 'Actividades', icono: '' },
     { ruta: '/reportes', etiqueta: 'Reportes', icono: '' },
   ];
+  const esAdmin = esAdminSesionLocal();
+  const enlacesVisibles = enlacesMenu.filter((item) => item.ruta !== '/usuarios' || esAdmin);
 
   const estaActivo = (ruta) => ubicacion.pathname === ruta;
 
@@ -31,13 +33,9 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
     }
   };
 
-  const manejarCerrarSesion = async () => {
+  const manejarCerrarSesion = () => {
     cerrarMenu?.();
-    try {
-      await cerrarSesion();
-    } catch {
-      /* el backend puede fallar; igual salimos al login */
-    }
+    void cerrarSesion();
     navegar('/login');
   };
 
@@ -54,7 +52,7 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
       </div>
 
       <nav className="barra-lateral-menu">
-        {enlacesMenu.map((item) => (
+        {enlacesVisibles.map((item) => (
           <Link
             key={item.ruta}
             to={item.ruta}

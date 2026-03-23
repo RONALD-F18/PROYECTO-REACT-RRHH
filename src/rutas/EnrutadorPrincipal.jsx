@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import {
   Inicio,
   InicioSesion,
@@ -14,6 +14,7 @@ import {
   Afiliaciones,
   DetallesAfiliacion,
 } from "../modulos";
+import { esAdminSesionLocal } from "../services/autenticacion";
 
 // Rutas públicas
 export const rutasPublicas = [
@@ -22,7 +23,7 @@ export const rutasPublicas = [
   { ruta: "/recuperar-contrasena", componente: RecuperarContrasena },
 ];
 
-// Rutas privadas
+// Rutas privadas (empleados y el resto salvo /usuarios: accesibles con sesión; /usuarios solo admin abajo)
 export const rutasPrivadas = [
   { ruta: "/dashboard", componente: Panel },
   { ruta: "/empleados", componente: Empleados },
@@ -38,14 +39,18 @@ export const rutasPrivadas = [
 ];
 
 function EnrutadorPrincipal() {
+  const esAdmin = esAdminSesionLocal();
   return (
     <Routes>
       {rutasPublicas.map(({ ruta, componente: Componente }) => (
         <Route key={ruta} path={ruta} element={<Componente />} />
       ))}
-      {rutasPrivadas.map(({ ruta, componente: Componente }) => (
-        <Route key={ruta} path={ruta} element={<Componente />} />
-      ))}
+      {rutasPrivadas.map(({ ruta, componente: Componente }) => {
+        if (ruta === "/usuarios" && !esAdmin) {
+          return <Route key={ruta} path={ruta} element={<Navigate to="/dashboard" replace />} />;
+        }
+        return <Route key={ruta} path={ruta} element={<Componente />} />;
+      })}
     </Routes>
   );
 }

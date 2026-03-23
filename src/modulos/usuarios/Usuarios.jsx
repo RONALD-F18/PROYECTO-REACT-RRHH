@@ -61,8 +61,19 @@ function esAdminFila(u) {
 
 function formatearFechaRegistro(valor) {
   if (!valor) return '—';
+  const texto = String(valor).trim();
+
+  // Laravel suele devolver "YYYY-MM-DD HH:mm:ss" sin zona: lo mostramos sin reinterpretar TZ
+  const matchLaravel = texto.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/,
+  );
+  if (matchLaravel) {
+    const [, y, m, d, hh = '00', mm = '00', ss = '00'] = matchLaravel;
+    return `${d}/${m}/${y} ${hh}:${mm}:${ss}`;
+  }
+
   const d = new Date(valor);
-  return Number.isNaN(d.getTime()) ? String(valor) : d.toLocaleString();
+  return Number.isNaN(d.getTime()) ? texto : d.toLocaleString();
 }
 
 function Usuarios() {
@@ -75,6 +86,7 @@ function Usuarios() {
   const [rolesPendientes, setRolesPendientes] = useState(true);
   const [rolesFallo, setRolesFallo] = useState(false);
   const [nombresRolCatalogo, setNombresRolCatalogo] = useState([]);
+  const [mensajeExito, setMensajeExito] = useState('');
   const [criteriosFiltro, setCriteriosFiltro] = useState({
     busqueda: '',
     estado: '',
@@ -94,6 +106,12 @@ function Usuarios() {
       setCargando(false);
     }
   }, []);
+
+  const manejarExitoGuardado = async (tipo = 'actualizado') => {
+    await recargarLista();
+    setMensajeExito(tipo === 'creado' ? 'Usuario creado correctamente.' : 'Usuario actualizado correctamente.');
+    window.setTimeout(() => setMensajeExito(''), 3000);
+  };
 
   const cargarPagina = useCallback(async () => {
     setMensajeLista('');
@@ -206,6 +224,12 @@ function Usuarios() {
           <div className="usuario-pagina-alerta usuario-pagina-alerta--error" role="alert">
             <strong>Error al cargar usuarios</strong>
             <p>{mensajeLista}</p>
+          </div>
+        ) : null}
+        {mensajeExito ? (
+          <div className="usuario-pagina-alerta usuario-pagina-alerta--info" role="status">
+            <strong>Operación completada</strong>
+            <p>{mensajeExito}</p>
           </div>
         ) : null}
         {cargando ? <p className="usuario-pagina-cargando">Cargando usuarios…</p> : null}
@@ -331,7 +355,7 @@ function Usuarios() {
             setUsuarioEditar(null);
           }}
           datosUsuario={usuarioEditar}
-          alExito={recargarLista}
+          alExito={manejarExitoGuardado}
           rolesCatalogo={rolesCatalogo}
           rolesPendientes={rolesPendientes}
           rolesFallo={rolesFallo}

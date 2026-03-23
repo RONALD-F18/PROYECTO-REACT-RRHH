@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useMenu } from '../../contextos/MenuContext';
 import { useState, useEffect } from 'react';
-import { cerrarSesion } from '../../services/autenticacion';
+import { cerrarSesion, esAdminSesionLocal } from '../../services/autenticacion';
 
 function PanelNavegacion() {
   const ubicacion = useLocation();
@@ -32,6 +32,8 @@ function PanelNavegacion() {
     { ruta: '/actividades', etiqueta: 'Actividades', descripcion: 'Actividades y eventos' },
     { ruta: '/reportes', etiqueta: 'Reportes', descripcion: 'Reportes y estadísticas' },
   ];
+  const esAdmin = esAdminSesionLocal();
+  const modulosVisibles = modulos.filter((item) => item.ruta !== '/usuarios' || esAdmin);
 
   const estaActivo = (ruta) => ubicacion.pathname === ruta;
 
@@ -39,13 +41,9 @@ function PanelNavegacion() {
     cerrarMenu();
   };
 
-  const manejarCerrarSesion = async () => {
+  const manejarCerrarSesion = () => {
     cerrarMenu();
-    try {
-      await cerrarSesion();
-    } catch {
-      /* igual redirigimos */
-    }
+    void cerrarSesion();
     navegar('/login');
   };
 
@@ -69,7 +67,7 @@ function PanelNavegacion() {
         </div>
 
         <nav className="panel-navegacion-menu">
-          {modulos.map((modulo) => (
+          {modulosVisibles.map((modulo) => (
             <Link
               key={modulo.ruta}
               to={modulo.ruta}

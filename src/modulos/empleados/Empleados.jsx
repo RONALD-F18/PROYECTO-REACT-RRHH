@@ -146,7 +146,7 @@ function Empleados() {
       <div className="modulo-empleados">
         <EncabezadoModulo
           titulo="Módulo de Empleados"
-          subtitulo="Talent Sphere — datos alineados al API"
+          subtitulo="Gestión del directorio de empleados y su información"
           textoBoton="Nuevo Empleado"
           alHacerClic={abrirNuevo}
         />

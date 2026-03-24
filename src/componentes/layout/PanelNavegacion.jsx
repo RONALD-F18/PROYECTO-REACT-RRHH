@@ -27,7 +27,11 @@ function PanelNavegacion() {
     { ruta: '/afiliaciones', etiqueta: 'Afiliaciones', descripcion: 'Seguridad social' },
     { ruta: '/contratos', etiqueta: 'Contratos', descripcion: 'Gestión de contratos' },
     { ruta: '/certificacion', etiqueta: 'Certificación', descripcion: 'Certificados laborales' },
-    { ruta: '/memorandos', etiqueta: 'Memorandos', descripcion: 'Comunicaciones internas' },
+    {
+      ruta: '/comunicaciones-disciplinarias',
+      etiqueta: 'Comunicaciones Disciplinarias',
+      descripcion: 'Memorandos y reconocimientos',
+    },
     { ruta: '/inasistencias', etiqueta: 'Inasistencias', descripcion: 'Control de asistencia' },
     { ruta: '/actividades', etiqueta: 'Actividades', descripcion: 'Actividades y eventos' },
     { ruta: '/reportes', etiqueta: 'Reportes', descripcion: 'Reportes y estadísticas' },

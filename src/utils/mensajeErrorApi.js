@@ -14,8 +14,8 @@ export function mensajeErrorApi(error) {
     if (codigo === 'ERR_NETWORK' || error.message === 'Network Error') {
       return 'No hay conexión con el servidor. Comprueba que Laravel esté en marcha, la variable VITE_API_URL en .env y que CORS permita tu origen con credenciales.';
     }
-    if (codigo === 'ECONNABORTED') {
-      return 'La petición tardó demasiado (tiempo agotado). Comprueba que el API esté en marcha, VITE_API_URL (…/api/v1), CORS con credenciales y que la cookie de sesión llegue al servidor.';
+    if (codigo === 'ECONNABORTED' || codigo === 'ETIMEDOUT') {
+      return 'La petición tardó demasiado (tiempo agotado). Revisa que Laravel responda, que VITE_API_URL termine en /api/v1 y CORS permita credenciales. Si el back es lento (Docker, muchos datos), sube VITE_API_TIMEOUT_MS en .env (p. ej. 180000 o 300000). En desarrollo puedes usar VITE_API_URL=/api/v1 con el proxy de Vite para evitar CORS.';
     }
     return error.message?.trim() || 'No se pudo conectar con el servidor.';
   }

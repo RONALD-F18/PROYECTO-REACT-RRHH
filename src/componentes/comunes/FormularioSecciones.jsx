@@ -41,6 +41,7 @@ function FormularioSecciones({
             onChange={onChange}
             onBlur={onBlur}
             className={claseCampo}
+            disabled={campo.deshabilitado}
           >
             <option value="">{campo.placeholder || 'Seleccione...'}</option>
             {campo.opciones?.map((opcion, idx) => (

@@ -59,6 +59,7 @@ function Inicio() {
   const claseRev = (id) =>
     `inicio-reveal ${revelado.has(id) ? "inicio-reveal-vis" : ""}`;
 
+  // TODO: Cambiar los servicios por los módulos del sistema
   const servicios = [
     {
       titulo: "Empleados",
@@ -106,7 +107,7 @@ function Inicio() {
       descripcion: "Certificados laborales y documentos para empleados o terceros.",
     },
     {
-      titulo: "Comunicaciones disciplinarias",
+      titulo: "Comunicaciones Disciplinarias",
       descripcion: "Registro de comunicados y actuaciones disciplinarias.",
     },
     {

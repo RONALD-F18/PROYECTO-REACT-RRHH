@@ -64,9 +64,9 @@ export const MODULOS_NAVEGACION = [
     descripcion: "Certificados laborales",
   },
   {
-    ruta: "/disciplinario",
-    etiqueta: "Disciplinario",
-    descripcion: "Comunicaciones disciplinarias",
+    ruta: "/comunicaciones-disciplinarias",
+    etiqueta: "Comunicaciones Disciplinarias",
+    descripcion: "Memorandos, suspensiones y reconocimientos",
   },
   {
     ruta: "/reportes",
@@ -146,7 +146,7 @@ export const SERVICIOS_LANDING = [
     destacado: false,
   },
   {
-    titulo: "Comunicaciones disciplinarias",
+    titulo: "Comunicaciones Disciplinarias",
     descripcion: "Comunicaciones y actuaciones disciplinarias documentadas.",
     metrica: "Historial disciplinario",
     destacado: false,

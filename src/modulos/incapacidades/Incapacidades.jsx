@@ -1,71 +1,224 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ContenedorPrincipal, EncabezadoModulo, FiltrosBusqueda, SinDatos } from '../../componentes';
 import { ModalIncapacidad } from './componentes';
+import {
+  getIncapacidades,
+  getIncapacidadById,
+  deleteIncapacidad,
+  extraerFilasIncapacidades,
+  codigoIncapacidadDesde,
+} from '../../services/incapacidades';
+import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
+import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+
+function diasEntre(fechaInicio, fechaFin) {
+  if (!fechaInicio || !fechaFin) return 0;
+  const a = new Date(`${String(fechaInicio).slice(0, 10)}T12:00:00`);
+  const b = new Date(`${String(fechaFin).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) return 0;
+  return Math.ceil((b - a) / 86400000) + 1;
+}
+
+function entidadPagadoraPorTipo(tipo) {
+  const t = String(tipo || '');
+  if (t.toLowerCase().includes('accidente') || t.toLowerCase().includes('laboral')) return 'ARL';
+  if (t.toLowerCase().includes('licencia')) return 'EPS';
+  return 'EPS';
+}
+
+function incapacidadActiva(row) {
+  if (!row || typeof row !== 'object') return false;
+  if (row.activa === true || row.activa === 1 || row.activa === '1') return true;
+  const e = String(row.estado_incapacidad || '').toUpperCase();
+  return e === 'ACTIVA' || e === 'EN_REVISION' || e === 'EN REVISIÓN';
+}
+
+function formatearPeriodo(fi, ff) {
+  const a = fi ? String(fi).slice(0, 10) : '';
+  const b = ff ? String(ff).slice(0, 10) : '';
+  if (!a || !b) return '—';
+  const pa = a.split('-');
+  const pb = b.split('-');
+  if (pa.length === 3 && pb.length === 3) {
+    return `${pa[2]}-${pa[1]}-${pa[0]} al ${pb[2]}-${pb[1]}-${pb[0]}`;
+  }
+  return `${a} al ${b}`;
+}
+
+function formatearCOP(n) {
+  if (n == null || n === '') return null;
+  const num = Number(n);
+  if (Number.isNaN(num)) return null;
+  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(num);
+}
 
 function Incapacidades() {
   const navegar = useNavigate();
+  const [lista, setLista] = useState([]);
+  const [empleados, setEmpleados] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [mensajeLista, setMensajeLista] = useState('');
+  const [mensajeExito, setMensajeExito] = useState('');
   const [mostrarModal, setMostrarModal] = useState(false);
   const [incapacidadEditar, setIncapacidadEditar] = useState(null);
-  const [incapacidades] = useState([
-    {
-      id: 1,
-      codigo: 1654499,
-      empleado: 'Carlos Andrés Martinez',
-      documento: '1001234567',
-      nombre: 'Carlos Andrés Martinez',
-      codigoContrato: 'CT-2024-001',
-      codigoAfiliacion: '1654499',
-      tipo: 'Accidente Laboral',
-      tipoIncapacidad: 'Accidente Laboral',
-      periodo: '11-11-2025 al 24-11-2025',
-      fechaInicio: '2025-11-11',
-      fechaFin: '2025-11-24',
-      dias: 14,
-      diasCalculados: 14,
-      entidad: 'ARL',
-      activa: true,
-      diagnostico: 'Se detectaron cálculos renales con signos obstructivos. Se recomienda reposo y seguimiento médico.',
-      descripcionDiagnostico: 'Se detectaron cálculos renales con signos obstructivos. Se recomienda reposo y seguimiento médico.',
-      codigoClasificacion: 'J00, S82',
-      codigoEnfermedad: '545656',
-      observaciones: 'Que tal como se encuentra.',
-      descripcion: 'Que tal como se encuentra.'
+  const [criteriosFiltro, setCriteriosFiltro] = useState({
+    busqueda: '',
+    estado: '',
+    tipo: '',
+  });
+
+  const mapaEmpleados = useMemo(() => {
+    const m = new Map();
+    for (const e of empleados) {
+      const c = codigoEmpleadoDesde(e);
+      if (c != null) m.set(Number(c), e);
     }
-  ]);
+    return m;
+  }, [empleados]);
+
+  const filasVista = useMemo(() => {
+    return lista.map((row) => {
+      if (!row || typeof row !== 'object') return row;
+      const codEmp = row.cod_empleado != null ? Number(row.cod_empleado) : null;
+      const emp = codEmp != null && Number.isFinite(codEmp) ? mapaEmpleados.get(codEmp) : null;
+      const tipo = row.tipo_incapacidad ?? row.tipo ?? '—';
+      const fi = row.fecha_inicio ?? row.fechaInicio;
+      const ff = row.fecha_fin ?? row.fechaFin;
+      const dias = row.dias_incapacidad ?? row.dias ?? diasEntre(fi, ff);
+      return {
+        ...row,
+        _empleado: emp ? nombreCompletoEmpleado(emp) : '—',
+        _documento: emp ? String(emp.doc_iden ?? '—') : '—',
+        _tipo: String(tipo),
+        _periodo: formatearPeriodo(fi, ff),
+        _dias: dias,
+        _entidad: row.entidad_pagadora ?? entidadPagadoraPorTipo(tipo),
+        _activa: incapacidadActiva(row),
+        _codigoMostrar: codigoIncapacidadDesde(row) ?? '—',
+      };
+    });
+  }, [lista, mapaEmpleados]);
+
+  const filasFiltradas = useMemo(() => {
+    const q = (criteriosFiltro.busqueda || '').trim().toLowerCase();
+    const est = criteriosFiltro.estado || '';
+    const tipoF = criteriosFiltro.tipo || '';
+
+    return filasVista.filter((row) => {
+      if (!row || typeof row !== 'object') return false;
+      if (tipoF && String(row._tipo) !== tipoF) return false;
+      if (est === 'Activa' && !row._activa) return false;
+      if (est === 'Inactiva' && row._activa) return false;
+      if (q) {
+        const nom = String(row._empleado || '').toLowerCase();
+        const doc = String(row._documento || '').toLowerCase();
+        const cod = String(row._codigoMostrar ?? '');
+        if (!nom.includes(q) && !doc.includes(q) && !cod.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [filasVista, criteriosFiltro]);
+
+  const kpis = useMemo(() => {
+    const base = filasFiltradas;
+    let totalDias = 0;
+    let costo = 0;
+    for (const r of base) {
+      totalDias += Number(r._dias) || 0;
+      const v = r.valor_total ?? r.costo_incapacidad;
+      const fc = formatearCOP(v);
+      if (fc && v != null) costo += Number(v) || 0;
+    }
+    return {
+      total: base.length,
+      activas: base.filter((r) => r._activa).length,
+      origenComun: base.filter((r) => String(r._tipo).toLowerCase().includes('enfermedad')).length,
+      laboral: base.filter((r) => String(r._tipo).toLowerCase().includes('accidente')).length,
+      totalDias,
+      costoTotal: costo > 0 ? formatearCOP(costo) : null,
+    };
+  }, [filasFiltradas]);
+
+  const recargarLista = useCallback(async () => {
+    setMensajeLista('');
+    setCargando(true);
+    try {
+      const json = await getIncapacidades();
+      setLista(extraerFilasIncapacidades(json));
+    } catch (e) {
+      setLista([]);
+      setMensajeLista(mensajeErrorApi(e));
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let activo = true;
+    (async () => {
+      setMensajeLista('');
+      setCargando(true);
+      try {
+        const [ji, je] = await Promise.all([getIncapacidades(), getEmpleados()]);
+        if (!activo) return;
+        setLista(extraerFilasIncapacidades(ji));
+        setEmpleados(extraerFilasEmpleados(je));
+      } catch (e) {
+        if (!activo) return;
+        setLista([]);
+        setMensajeLista(mensajeErrorApi(e));
+      } finally {
+        if (activo) setCargando(false);
+      }
+    })();
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   const manejarNuevaIncapacidad = () => {
     setIncapacidadEditar(null);
     setMostrarModal(true);
   };
 
-  const manejarEditar = (id) => {
-    const incapacidad = incapacidades.find(inc => inc.id === id);
-    if (incapacidad) {
-      setIncapacidadEditar(incapacidad);
+  const manejarEditar = async (fila) => {
+    const cod = codigoIncapacidadDesde(fila);
+    if (cod == null) return;
+    try {
+      const json = await getIncapacidadById(cod);
+      const raw = json?.data ?? json;
+      setIncapacidadEditar(raw);
       setMostrarModal(true);
+    } catch (err) {
+      window.alert(mensajeErrorApi(err));
     }
   };
 
-  const manejarGuardarIncapacidad = (datos) => {
-    // Solo registrar en consola - el backend manejará la persistencia
-    if (incapacidadEditar) {
-      console.log('Actualizar incapacidad:', { id: incapacidadEditar.id, ...datos });
-    } else {
-      console.log('Registrar nueva incapacidad:', datos);
+  const confirmarEliminar = async (fila) => {
+    const cod = codigoIncapacidadDesde(fila);
+    if (cod == null) return;
+    if (!window.confirm('¿Eliminar esta incapacidad? Esta acción no se puede deshacer.')) return;
+    try {
+      await deleteIncapacidad(cod);
+      await recargarLista();
+      setMensajeExito('Incapacidad eliminada correctamente.');
+      window.setTimeout(() => setMensajeExito(''), 3000);
+    } catch (e) {
+      window.alert(mensajeErrorApi(e));
     }
-    setMostrarModal(false);
+  };
+
+  const alExitoGuardado = async () => {
+    await recargarLista();
+    setMensajeExito('Cambios guardados correctamente.');
+    window.setTimeout(() => setMensajeExito(''), 3000);
     setIncapacidadEditar(null);
   };
 
-  const manejarVer = (id) => {
-    navegar(`/incapacidades/${id}`);
-  };
-
-
-  const manejarFiltrar = (filtros) => {
-    console.log('Filtrar incapacidades:', filtros);
-    // Aquí se implementaría la lógica de filtrado
+  const manejarVer = (fila) => {
+    const cod = codigoIncapacidadDesde(fila);
+    if (cod != null) navegar(`/incapacidades/${cod}`);
   };
 
   return (
@@ -83,88 +236,105 @@ function Incapacidades() {
           <p className="incapacidades-subtitulo">Control de incapacidades médicas y licencias</p>
         </div>
 
-        {/* Tarjetas de resumen */}
+        {mensajeLista ? (
+          <div className="login-alerta login-alerta--error" style={{ marginBottom: 16 }} role="alert">
+            <p className="login-alerta-mensaje">{mensajeLista}</p>
+          </div>
+        ) : null}
+        {mensajeExito ? (
+          <div className="login-alerta login-alerta--exito" style={{ marginBottom: 16 }} role="status">
+            <p className="login-alerta-mensaje">{mensajeExito}</p>
+          </div>
+        ) : null}
+        {cargando ? <p className="contrato-pagina-cargando">Cargando incapacidades…</p> : null}
+
         <div className="tarjetas-resumen-incapacidades">
           <div className="tarjeta-resumen-incapacidad">
             <span className="tarjeta-resumen-etiqueta">Total</span>
-            <span className="tarjeta-resumen-valor tarjeta-resumen-morado">0</span>
+            <span className="tarjeta-resumen-valor tarjeta-resumen-morado">{kpis.total}</span>
           </div>
           <div className="tarjeta-resumen-incapacidad">
             <span className="tarjeta-resumen-etiqueta">Activas</span>
-            <span className="tarjeta-resumen-valor tarjeta-resumen-rojo">0</span>
+            <span className="tarjeta-resumen-valor tarjeta-resumen-rojo">{kpis.activas}</span>
           </div>
           <div className="tarjeta-resumen-incapacidad">
             <span className="tarjeta-resumen-etiqueta">Origen Común</span>
-            <span className="tarjeta-resumen-valor tarjeta-resumen-verde">0</span>
+            <span className="tarjeta-resumen-valor tarjeta-resumen-verde">{kpis.origenComun}</span>
           </div>
           <div className="tarjeta-resumen-incapacidad">
             <span className="tarjeta-resumen-etiqueta">Laboral</span>
-            <span className="tarjeta-resumen-valor tarjeta-resumen-naranja">0</span>
+            <span className="tarjeta-resumen-valor tarjeta-resumen-naranja">{kpis.laboral}</span>
           </div>
           <div className="tarjeta-resumen-incapacidad">
             <span className="tarjeta-resumen-etiqueta">Total Días</span>
-            <span className="tarjeta-resumen-valor tarjeta-resumen-morado">0</span>
+            <span className="tarjeta-resumen-valor tarjeta-resumen-morado">{kpis.totalDias}</span>
           </div>
         </div>
 
-        {/* Tarjeta de costo total */}
         <div className="tarjeta-costo-total">
           <div className="tarjeta-costo-contenido">
             <span className="tarjeta-costo-etiqueta">Costo Total de Incapacidades</span>
-            <span className="tarjeta-costo-valor">$3.200.000</span>
+            <span className="tarjeta-costo-valor">{kpis.costoTotal ?? '—'}</span>
           </div>
           <div className="tarjeta-costo-icono">$</div>
         </div>
 
-        {/* Filtros */}
         <FiltrosBusqueda
           placeholderBusqueda="Buscar documento o código..."
           filtrosSelect={[
             {
               nombre: 'estado',
               placeholder: 'Todos los Estados',
-              opciones: ['Activa', 'Inactiva']
+              opciones: ['Activa', 'Inactiva'],
             },
             {
               nombre: 'tipo',
               placeholder: 'Todos los Tipos',
-              opciones: ['Accidente Laboral', 'Enfermedad General', 'Licencia']
-            }
+              opciones: ['Enfermedad General', 'Accidente Laboral', 'Licencia Maternidad', 'Licencia Paternidad'],
+            },
           ]}
-          onFiltrar={manejarFiltrar}
+          onFiltrar={(filtros) =>
+            setCriteriosFiltro({
+              busqueda: filtros.busqueda || '',
+              estado: filtros.estado || '',
+              tipo: filtros.tipo || '',
+            })
+          }
         />
 
-        {/* Lista de incapacidades */}
         <div className="lista-incapacidades">
-          {incapacidades.length === 0 ? (
+          {filasFiltradas.length === 0 && !cargando ? (
             <SinDatos mensaje="No se encontraron incapacidades" />
           ) : (
-            incapacidades.map((incapacidad) => (
-              <div key={incapacidad.id} className="tarjeta-incapacidad">
+            filasFiltradas.map((incapacidad) => (
+              <div key={String(codigoIncapacidadDesde(incapacidad) ?? incapacidad.id)} className="tarjeta-incapacidad">
                 <div className="tarjeta-incapacidad-header">
                   <div className="tarjeta-incapacidad-info-empleado">
-                    <h3 className="tarjeta-incapacidad-nombre">{incapacidad.empleado}</h3>
-                    <p className="tarjeta-incapacidad-documento">Documento: {incapacidad.documento}</p>
+                    <h3 className="tarjeta-incapacidad-nombre">{incapacidad._empleado}</h3>
+                    <p className="tarjeta-incapacidad-documento">Documento: {incapacidad._documento}</p>
                   </div>
                   <div className="tarjeta-incapacidad-acciones">
                     <button
+                      type="button"
                       className="btn-accion-incapacidad btn-accion-editar"
                       title="Editar"
-                      onClick={() => manejarEditar(incapacidad.id)}
+                      onClick={() => manejarEditar(incapacidad)}
                     >
                       ✎
                     </button>
                     <button
+                      type="button"
                       className="btn-accion-incapacidad btn-accion-ver"
                       title="Ver"
-                      onClick={() => manejarVer(incapacidad.id)}
+                      onClick={() => manejarVer(incapacidad)}
                     >
                       👁
                     </button>
                     <button
+                      type="button"
                       className="btn-accion-incapacidad btn-accion-eliminar"
                       title="Eliminar"
-                      onClick={() => console.log('Eliminar incapacidad:', incapacidad.id)}
+                      onClick={() => confirmarEliminar(incapacidad)}
                     >
                       🗑
                     </button>
@@ -173,27 +343,29 @@ function Incapacidades() {
                 <div className="tarjeta-incapacidad-detalles">
                   <div className="detalle-item">
                     <span className="detalle-etiqueta">Código</span>
-                    <span className="detalle-valor">{incapacidad.codigo}</span>
+                    <span className="detalle-valor">{incapacidad._codigoMostrar}</span>
                   </div>
                   <div className="detalle-item">
                     <span className="detalle-etiqueta">Tipo</span>
-                    <span className="detalle-valor">{incapacidad.tipo}</span>
+                    <span className="detalle-valor">{incapacidad._tipo}</span>
                   </div>
                   <div className="detalle-item">
                     <span className="detalle-etiqueta">Periodo</span>
-                    <span className="detalle-valor">{incapacidad.periodo}</span>
+                    <span className="detalle-valor">{incapacidad._periodo}</span>
                   </div>
                   <div className="detalle-item">
                     <span className="detalle-etiqueta">Días</span>
-                    <span className="detalle-valor">{incapacidad.dias}</span>
+                    <span className="detalle-valor">{incapacidad._dias}</span>
                   </div>
                   <div className="detalle-item">
                     <span className="detalle-etiqueta">Entidad</span>
-                    <span className="detalle-valor">{incapacidad.entidad}</span>
+                    <span className="detalle-valor">{incapacidad._entidad}</span>
                   </div>
                   <div className="detalle-item">
                     <span className="detalle-etiqueta">Activa</span>
-                    <span className="etiqueta etiqueta-verde">{incapacidad.activa ? 'Activa' : 'Inactiva'}</span>
+                    <span className={`etiqueta ${incapacidad._activa ? 'etiqueta-verde' : 'etiqueta-gris'}`}>
+                      {incapacidad._activa ? 'Activa' : 'Inactiva'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -209,11 +381,11 @@ function Incapacidades() {
           setIncapacidadEditar(null);
         }}
         datosIncapacidad={incapacidadEditar}
-        onGuardar={manejarGuardarIncapacidad}
+        empleados={empleados}
+        alExito={alExitoGuardado}
       />
     </ContenedorPrincipal>
   );
 }
 
 export default Incapacidades;
-

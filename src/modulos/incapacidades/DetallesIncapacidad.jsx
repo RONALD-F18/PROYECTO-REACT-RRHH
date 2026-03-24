@@ -1,76 +1,220 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ContenedorPrincipal, EncabezadoModulo } from '../../componentes';
+import { ModalIncapacidad } from './componentes';
+import {
+  getIncapacidadById,
+  deleteIncapacidad,
+  patchIncapacidad,
+  normalizarRegistroIncapacidad,
+  codigoIncapacidadDesde,
+} from '../../services/incapacidades';
+import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
+import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+
+function formatearSoloFecha(valor) {
+  if (!valor) return '—';
+  const t = String(valor).trim().slice(0, 10);
+  const m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return String(valor);
+}
+
+function diasEntre(fechaInicio, fechaFin) {
+  if (!fechaInicio || !fechaFin) return 0;
+  const a = new Date(`${String(fechaInicio).slice(0, 10)}T12:00:00`);
+  const b = new Date(`${String(fechaFin).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) return 0;
+  return Math.ceil((b - a) / 86400000) + 1;
+}
+
+function entidadPagadoraPorTipo(tipo) {
+  const t = String(tipo || '').toLowerCase();
+  if (t.includes('accidente') || t.includes('laboral')) return 'ARL';
+  return 'EPS';
+}
+
+function inicialesDesdeNombre(nombre) {
+  const p = String(nombre || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (p.length === 0) return '—';
+  if (p.length === 1) return p[0].slice(0, 2).toUpperCase();
+  return `${p[0][0] ?? ''}${p[p.length - 1][0] ?? ''}`.toUpperCase() || '—';
+}
+
+function formatearCOP(n) {
+  if (n == null || n === '') return '—';
+  const num = Number(n);
+  if (Number.isNaN(num)) return String(n);
+  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(num);
+}
+
+const ESTADOS_SELECT = [
+  { valor: 'ACTIVA', etiqueta: 'Activa' },
+  { valor: 'FINALIZADA', etiqueta: 'Finalizada' },
+  { valor: 'CANCELADA', etiqueta: 'Cancelada' },
+  { valor: 'EN_REVISION', etiqueta: 'En Revisión' },
+];
 
 function DetallesIncapacidad() {
   const { id } = useParams();
   const navegar = useNavigate();
-  const [estado, setEstado] = useState('Activa');
+  const [registro, setRegistro] = useState(null);
+  const [empleados, setEmpleados] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [actualizandoEstado, setActualizandoEstado] = useState(false);
 
-  const incapacidad = {
-    id,
-    empleado: 'Willi G',
-    iniciales: 'WG',
-    documento: '32131123',
-    codigo: '654546',
-    tipo: 'Accidente Laboral',
-    dias: 14,
-    fechaInicio: '11/11/2025',
-    fechaFin: '24/11/2025',
-    pagador: 'ARL',
-    porcentajePagador: '100%',
-    descripcionDiagnostico:
-      'Se detectaron cálculos renales con signos obstructivos. Se recomienda reposo y seguimiento médico.',
-    codigoEnfermedad: '545656',
-    diasEmpresa: 0,
-    valorEmpresa: '$0',
-    diasEps: 0,
-    valorEps: '$0',
-    diasArl: 14,
-    valorArl: '$1.633.333',
-    totalPagado: '$1.633.333',
-    salarioBase: '$3.633.333',
-    salarioDiario: '$116.667',
-    observaciones: 'Que tal como se encuentra.',
-    estado: estado,
+  const cargar = useCallback(async () => {
+    if (!id) return;
+    setError('');
+    setCargando(true);
+    try {
+      const raw = await getIncapacidadById(id);
+      const r = normalizarRegistroIncapacidad(raw) ?? raw?.data ?? raw;
+      const cod = codigoIncapacidadDesde(r);
+      if (!r || cod == null) {
+        setRegistro(null);
+        setError('No se encontró la incapacidad.');
+        return;
+      }
+      setRegistro(r);
+    } catch (e) {
+      setRegistro(null);
+      setError(mensajeErrorApi(e));
+    } finally {
+      setCargando(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  useEffect(() => {
+    let a = true;
+    (async () => {
+      try {
+        const je = await getEmpleados();
+        if (!a) return;
+        setEmpleados(extraerFilasEmpleados(je));
+      } catch {
+        if (a) setEmpleados([]);
+      }
+    })();
+    return () => {
+      a = false;
+    };
+  }, []);
+
+  const vista = useMemo(() => {
+    if (!registro) return null;
+    let emp =
+      registro.empleado && typeof registro.empleado === 'object' && !Array.isArray(registro.empleado)
+        ? registro.empleado
+        : null;
+    if (!emp && registro.cod_empleado != null) {
+      emp = empleados.find((e) => String(codigoEmpleadoDesde(e)) === String(registro.cod_empleado)) ?? null;
+    }
+    const nombreEmp = emp ? nombreCompletoEmpleado(emp) : '—';
+    const docEmp = emp ? String(emp.doc_iden ?? '—') : '—';
+    const tipo = registro.tipo_incapacidad ?? registro.tipo ?? '—';
+    const fi = registro.fecha_inicio ?? registro.fechaInicio;
+    const ff = registro.fecha_fin ?? registro.fechaFin;
+    const dias = registro.dias_incapacidad ?? registro.dias ?? diasEntre(fi, ff);
+    const pagador = registro.entidad_pagadora ?? entidadPagadoraPorTipo(tipo);
+    const estadoVal = String(registro.estado_incapacidad || registro.estado || 'ACTIVA').toUpperCase().replace(/\s+/g, '_');
+
+    return {
+      nombreEmp,
+      docEmp,
+      iniciales: inicialesDesdeNombre(nombreEmp),
+      codigo: codigoIncapacidadDesde(registro),
+      tipo,
+      dias,
+      fechaInicio: formatearSoloFecha(fi),
+      fechaFin: formatearSoloFecha(ff),
+      pagador,
+      porcentajePagador: registro.porcentaje_pagador ? `${registro.porcentaje_pagador}%` : pagador === 'ARL' ? '100%' : '—',
+      descripcionDiagnostico: registro.diagnostico ?? registro.descripcion_diagnostico ?? '—',
+      codigoEnfermedad: registro.codigo_enfermedad ?? registro.codigo_cie ?? '—',
+      diasEmpresa: registro.dias_empresa ?? 0,
+      valorEmpresa: formatearCOP(registro.valor_empresa),
+      diasEps: registro.dias_eps ?? 0,
+      valorEps: formatearCOP(registro.valor_eps),
+      diasArl: registro.dias_arl ?? 0,
+      valorArl: formatearCOP(registro.valor_arl),
+      totalPagado: formatearCOP(registro.total_pagado ?? registro.valor_total),
+      salarioBase: formatearCOP(registro.salario_base),
+      salarioDiario: formatearCOP(registro.salario_diario),
+      observaciones: registro.observaciones ?? registro.descripcion ?? '—',
+      estadoSelect: estadoVal,
+    };
+  }, [registro, empleados]);
+
+  const manejarCambioEstado = async (nuevoEstado) => {
+    const cod = registro ? codigoIncapacidadDesde(registro) : null;
+    if (cod == null || !nuevoEstado) return;
+    setActualizandoEstado(true);
+    try {
+      await patchIncapacidad(cod, { estado_incapacidad: nuevoEstado });
+      setRegistro((prev) => (prev ? { ...prev, estado_incapacidad: nuevoEstado } : prev));
+    } catch (e) {
+      window.alert(mensajeErrorApi(e));
+    } finally {
+      setActualizandoEstado(false);
+    }
   };
 
-  const manejarEditar = () => {
-    navegar(`/incapacidades/${id}/editar`);
+  const manejarEliminar = async () => {
+    const cod = registro ? codigoIncapacidadDesde(registro) : null;
+    if (cod == null) return;
+    if (!window.confirm('¿Eliminar esta incapacidad?')) return;
+    try {
+      await deleteIncapacidad(cod);
+      navegar('/incapacidades');
+    } catch (e) {
+      window.alert(mensajeErrorApi(e));
+    }
   };
 
-  const manejarCambioEstado = (nuevoEstado) => {
-    setEstado(nuevoEstado);
-    console.log('Cambiar estado de incapacidad:', { id, nuevoEstado });
-  };
+  if (cargando) {
+    return (
+      <ContenedorPrincipal>
+        <EncabezadoModulo titulo="Incapacidades" subtitulo="Detalle" mostrarBoton={false} />
+        <p className="contrato-pagina-cargando">Cargando…</p>
+      </ContenedorPrincipal>
+    );
+  }
 
-  const estadosDisponibles = ['Activa', 'Finalizada', 'Cancelada', 'En Revisión'];
-
+  if (error || !registro || !vista) {
+    return (
+      <ContenedorPrincipal>
+        <EncabezadoModulo titulo="Incapacidades" subtitulo="Detalle" mostrarBoton={false} />
+        <div className="contrato-pagina-alerta contrato-pagina-alerta--error" role="alert">
+          <p>{error || 'No disponible.'}</p>
+          <button type="button" className="btn-volver" style={{ marginTop: 12 }} onClick={() => navegar('/incapacidades')}>
+            ← Volver al listado
+          </button>
+        </div>
+      </ContenedorPrincipal>
+    );
+  }
 
   return (
     <ContenedorPrincipal>
-      <EncabezadoModulo
-        titulo="Incapacidades"
-        subtitulo="Detalle completo de la incapacidad seleccionada"
-        mostrarBoton={false}
-      />
+      <EncabezadoModulo titulo="Incapacidades" subtitulo="Detalle completo de la incapacidad seleccionada" mostrarBoton={false} />
 
       <div className="detalle-incapacidad">
         <div className="detalles-acciones">
-          <button
-            type="button"
-            className="btn-volver"
-            onClick={() => navegar('/incapacidades')}
-          >
+          <button type="button" className="btn-volver" onClick={() => navegar('/incapacidades')}>
             ← Volver
           </button>
           <div className="detalles-botones-accion">
-            <button
-              type="button"
-              className="btn-accion btn-accion-editar"
-              onClick={manejarEditar}
-              title="Editar"
-            >
+            <button type="button" className="btn-accion btn-accion-editar" onClick={() => setMostrarModal(true)} title="Editar">
               <svg
                 width="18"
                 height="18"
@@ -85,12 +229,7 @@ function DetallesIncapacidad() {
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
               </svg>
             </button>
-            <button
-              type="button"
-              className="btn-accion btn-accion-eliminar"
-              onClick={() => console.log('Eliminar incapacidad:', id)}
-              title="Eliminar"
-            >
+            <button type="button" className="btn-accion btn-accion-eliminar" onClick={manejarEliminar} title="Eliminar">
               <svg
                 width="18"
                 height="18"
@@ -113,33 +252,31 @@ function DetallesIncapacidad() {
         <section className="detalle-incapacidad-encabezado">
           <div className="detalle-incapacidad-info">
             <div className="detalle-incapacidad-avatar">
-              <span>{incapacidad.iniciales}</span>
+              <span>{vista.iniciales}</span>
             </div>
             <div className="detalle-incapacidad-datos">
               <h1>Detalles de la Incapacidad</h1>
               <p>Información completa del registro médico</p>
               <div className="detalle-incapacidad-empleado">
                 <div>
-                  <span className="detalle-incapacidad-nombre">{incapacidad.empleado}</span>
-                  <span className="detalle-incapacidad-documento">
-                    {incapacidad.documento}
-                  </span>
-                  <span className="detalle-incapacidad-codigo">
-                    Código: {incapacidad.codigo}
-                  </span>
+                  <span className="detalle-incapacidad-nombre">{vista.nombreEmp}</span>
+                  <span className="detalle-incapacidad-documento">{vista.docEmp}</span>
+                  <span className="detalle-incapacidad-codigo">Código: {vista.codigo}</span>
                 </div>
               </div>
             </div>
           </div>
           <div className="detalle-incapacidad-estado">
             <select
-              value={estado}
+              value={vista.estadoSelect}
               onChange={(e) => manejarCambioEstado(e.target.value)}
               className="select-estado-incapacidad"
+              disabled={actualizandoEstado}
+              aria-busy={actualizandoEstado}
             >
-              {estadosDisponibles.map((est) => (
-                <option key={est} value={est}>
-                  {est}
+              {ESTADOS_SELECT.map((est) => (
+                <option key={est.valor} value={est.valor}>
+                  {est.etiqueta}
                 </option>
               ))}
             </select>
@@ -149,19 +286,19 @@ function DetallesIncapacidad() {
         <section className="detalle-incapacidad-resumen-grid">
           <article className="detalle-incapacidad-tarjeta">
             <span className="detalle-tarjeta-etiqueta">Tipo</span>
-            <h3 className="detalle-tarjeta-titulo">{incapacidad.tipo}</h3>
+            <h3 className="detalle-tarjeta-titulo">{vista.tipo}</h3>
           </article>
           <article className="detalle-incapacidad-tarjeta">
             <span className="detalle-tarjeta-etiqueta">Duración</span>
-            <h3 className="detalle-tarjeta-titulo">{incapacidad.dias} días</h3>
+            <h3 className="detalle-tarjeta-titulo">{vista.dias} días</h3>
             <p className="detalle-tarjeta-subtexto">
-              Del {incapacidad.fechaInicio} al {incapacidad.fechaFin}
+              Del {vista.fechaInicio} al {vista.fechaFin}
             </p>
           </article>
           <article className="detalle-incapacidad-tarjeta">
             <span className="detalle-tarjeta-etiqueta">Pagador</span>
-            <h3 className="detalle-tarjeta-titulo">{incapacidad.pagador}</h3>
-            <p className="detalle-tarjeta-subtexto">{incapacidad.porcentajePagador}</p>
+            <h3 className="detalle-tarjeta-titulo">{vista.pagador}</h3>
+            <p className="detalle-tarjeta-subtexto">{vista.porcentajePagador}</p>
           </article>
         </section>
 
@@ -171,12 +308,10 @@ function DetallesIncapacidad() {
             <h2>Diagnóstico Médico</h2>
           </header>
           <div className="detalle-incapacidad-card">
-            <p className="detalle-incapacidad-descripcion">
-              {incapacidad.descripcionDiagnostico}
-            </p>
+            <p className="detalle-incapacidad-descripcion">{vista.descripcionDiagnostico}</p>
             <div className="detalle-incapacidad-codigo">
               <span className="detalle-etiqueta">Código Enfermedad</span>
-              <span className="detalle-valor">{incapacidad.codigoEnfermedad}</span>
+              <span className="detalle-valor">{vista.codigoEnfermedad}</span>
             </div>
           </div>
         </section>
@@ -189,22 +324,22 @@ function DetallesIncapacidad() {
           <div className="detalle-incapacidad-distribucion">
             <div className="bloque-pago empresa">
               <span className="bloque-pago-etiqueta">Días Empresa</span>
-              <span className="bloque-pago-valor">{incapacidad.diasEmpresa}</span>
-              <span className="bloque-pago-monto">{incapacidad.valorEmpresa}</span>
+              <span className="bloque-pago-valor">{vista.diasEmpresa}</span>
+              <span className="bloque-pago-monto">{vista.valorEmpresa}</span>
             </div>
             <div className="bloque-pago eps">
               <span className="bloque-pago-etiqueta">Días EPS</span>
-              <span className="bloque-pago-valor">{incapacidad.diasEps}</span>
-              <span className="bloque-pago-monto">{incapacidad.valorEps}</span>
+              <span className="bloque-pago-valor">{vista.diasEps}</span>
+              <span className="bloque-pago-monto">{vista.valorEps}</span>
             </div>
             <div className="bloque-pago arl">
               <span className="bloque-pago-etiqueta">Días ARL</span>
-              <span className="bloque-pago-valor">{incapacidad.diasArl}</span>
-              <span className="bloque-pago-monto">{incapacidad.valorArl}</span>
+              <span className="bloque-pago-valor">{vista.diasArl}</span>
+              <span className="bloque-pago-monto">{vista.valorArl}</span>
             </div>
             <div className="bloque-pago total">
               <span className="bloque-pago-etiqueta">Total Pagado</span>
-              <span className="bloque-pago-valor">{incapacidad.totalPagado}</span>
+              <span className="bloque-pago-valor">{vista.totalPagado}</span>
             </div>
           </div>
         </section>
@@ -217,11 +352,11 @@ function DetallesIncapacidad() {
           <div className="detalle-incapacidad-salario">
             <div>
               <span className="detalle-etiqueta">Salario Base del Contrato</span>
-              <span className="detalle-valor">{incapacidad.salarioBase}</span>
+              <span className="detalle-valor">{vista.salarioBase}</span>
             </div>
             <div>
               <span className="detalle-etiqueta">Salario Diario</span>
-              <span className="detalle-valor">{incapacidad.salarioDiario}</span>
+              <span className="detalle-valor">{vista.salarioDiario}</span>
             </div>
           </div>
         </section>
@@ -232,32 +367,32 @@ function DetallesIncapacidad() {
             <h2>Observaciones</h2>
           </header>
           <div className="detalle-incapacidad-card">
-            <p className="detalle-incapacidad-descripcion">
-              {incapacidad.observaciones}
-            </p>
+            <p className="detalle-incapacidad-descripcion">{vista.observaciones}</p>
           </div>
         </section>
 
         <section className="detalle-incapacidad-seccion acciones">
           <h2 className="detalle-seccion-titulo">Acciones</h2>
           <div className="detalle-incapacidad-acciones">
-            <button type="button" className="btn-detalle btn-detalle-primario">
-              Finalizar Incapacidad
-            </button>
-            <button
-              type="button"
-              className="btn-detalle btn-detalle-secundario"
-              onClick={() => navegar('/incapacidades')}
-            >
+            <button type="button" className="btn-detalle btn-detalle-secundario" onClick={() => navegar('/incapacidades')}>
               Volver al listado
             </button>
           </div>
         </section>
       </div>
+
+      <ModalIncapacidad
+        mostrar={mostrarModal}
+        cerrar={() => setMostrarModal(false)}
+        datosIncapacidad={registro}
+        empleados={empleados}
+        alExito={async () => {
+          await cargar();
+          setMostrarModal(false);
+        }}
+      />
     </ContenedorPrincipal>
   );
 }
 
 export default DetallesIncapacidad;
-
-

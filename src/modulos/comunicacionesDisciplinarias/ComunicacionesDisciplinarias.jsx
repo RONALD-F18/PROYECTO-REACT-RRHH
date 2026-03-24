@@ -46,6 +46,7 @@ function IcoEditarDoc() {
   );
 }
 
+// TODO: Cambiar los servicios por los módulos del sistema
 function IcoVerDoc() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>

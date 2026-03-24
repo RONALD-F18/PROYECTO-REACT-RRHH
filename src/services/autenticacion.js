@@ -1,4 +1,4 @@
-import api from './api';
+import api, { API_REQUEST_TIMEOUT_MS } from './api';
 import {
   CLAVE_SESION_LOCAL,
   leerPayloadSesion,
@@ -57,6 +57,30 @@ function esRolAdminTexto(rol) {
   return s.includes('admin') || s.includes('administrador');
 }
 
+/**
+ * `cod_usuario` del usuario autenticado (login). Útil cuando no se puede listar `/usuarios` (funcionario).
+ */
+export function codUsuarioSesionLocal() {
+  try {
+    const almacenado = leerPayloadSesion();
+    if (!almacenado) return null;
+    const respuestaLogin = almacenado.raw ?? {};
+    const user =
+      (almacenado.user && typeof almacenado.user === 'object' ? almacenado.user : null) ??
+      (respuestaLogin.user && typeof respuestaLogin.user === 'object' ? respuestaLogin.user : null) ??
+      (respuestaLogin.data?.user && typeof respuestaLogin.data.user === 'object'
+        ? respuestaLogin.data.user
+        : null);
+    if (!user || typeof user !== 'object') return null;
+    const c = user.cod_usuario ?? user.id ?? user.user_id;
+    if (c == null || c === '') return null;
+    const n = Number(c);
+    return Number.isFinite(n) ? n : c;
+  } catch {
+    return null;
+  }
+}
+
 export function esAdminSesionLocal() {
   try {
     const almacenado = leerPayloadSesion();
@@ -69,12 +93,23 @@ export function esAdminSesionLocal() {
         ? respuestaLogin.data.user
         : null);
 
-    const rolRaiz = respuestaLogin?.role ?? respuestaLogin?.rol ?? respuestaLogin?.nombre_rol;
+    const rolRaiz =
+      respuestaLogin?.role ??
+      respuestaLogin?.rol ??
+      respuestaLogin?.nombre_rol ??
+      respuestaLogin?.data?.role ??
+      respuestaLogin?.data?.rol;
+    if (rolRaiz && typeof rolRaiz === 'object' && typeof rolRaiz.nombre_rol === 'string') {
+      if (esRolAdminTexto(rolRaiz.nombre_rol)) return true;
+    }
     if (esRolAdminTexto(rolRaiz)) return true;
+    if (respuestaLogin?.es_admin === true || respuestaLogin?.es_admin === 1) return true;
+    if (respuestaLogin?.data?.es_admin === true || respuestaLogin?.data?.es_admin === 1) return true;
 
     if (user) {
       if (user.esAdmin === true) return true;
       if (user.is_admin === true) return true;
+      if (user.es_admin === true || user.es_admin === 1) return true;
       const rolUsuario = nombreRolDesdeUsuario(user);
       if (esRolAdminTexto(rolUsuario)) return true;
     }
@@ -102,7 +137,7 @@ export async function cerrarSesion() {
   const bearer = obtenerTokenBearerDesdeSesion();
   limpiarAlmacenSesionCliente();
   try {
-    const config = { timeout: 8000 };
+    const config = { timeout: Math.min(60_000, API_REQUEST_TIMEOUT_MS) };
     if (bearer) {
       config.headers = { Authorization: `Bearer ${bearer}` };
     }

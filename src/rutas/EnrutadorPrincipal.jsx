@@ -15,8 +15,22 @@ import {
   DetallesAfiliacion,
   Contratos,
   DetallesContrato,
+  ComunicacionesDisciplinarias,
 } from "../modulos";
 import { esAdminSesionLocal } from "../services/autenticacion";
+
+/**
+ * La comprobación debe ocurrir al renderizar la ruta (no al armar el árbol de <Route>),
+ * para que siempre lea la sesión actual y no quede memoizada una rama Navigate → /dashboard
+ * (p. ej. con React Compiler + localStorage).
+ */
+function RutaUsuariosProtegida() {
+  "use no memo";
+  if (!esAdminSesionLocal()) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Usuarios />;
+}
 
 // Rutas públicas
 export const rutasPublicas = [
@@ -37,24 +51,24 @@ export const rutasPrivadas = [
   { ruta: "/prestaciones/:id", componente: DetallesPrestaciones },
   { ruta: "/incapacidades", componente: Incapacidades },
   { ruta: "/incapacidades/:id", componente: DetallesIncapacidad },
-  { ruta: "/incapacidades/:id/editar", componente: DetallesIncapacidad },
   { ruta: "/afiliaciones", componente: Afiliaciones },
   { ruta: "/afiliaciones/:id", componente: DetallesAfiliacion },
+  { ruta: "/comunicaciones-disciplinarias", componente: ComunicacionesDisciplinarias },
 ];
 
 function EnrutadorPrincipal() {
-  const esAdmin = esAdminSesionLocal();
   return (
     <Routes>
       {rutasPublicas.map(({ ruta, componente: Componente }) => (
         <Route key={ruta} path={ruta} element={<Componente />} />
       ))}
-      {rutasPrivadas.map(({ ruta, componente: Componente }) => {
-        if (ruta === "/usuarios" && !esAdmin) {
-          return <Route key={ruta} path={ruta} element={<Navigate to="/dashboard" replace />} />;
-        }
-        return <Route key={ruta} path={ruta} element={<Componente />} />;
-      })}
+      {rutasPrivadas.map(({ ruta, componente: Componente }) =>
+        ruta === "/usuarios" ? (
+          <Route key={ruta} path={ruta} element={<RutaUsuariosProtegida />} />
+        ) : (
+          <Route key={ruta} path={ruta} element={<Componente />} />
+        ),
+      )}
     </Routes>
   );
 }

@@ -17,7 +17,7 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
     { ruta: '/afiliaciones', etiqueta: 'Afiliaciones', icono: '' },
     { ruta: '/contratos', etiqueta: 'Contratos', icono: '' },
     { ruta: '/certificacion', etiqueta: 'Certificación', icono: '' },
-    { ruta: '/memorandos', etiqueta: 'Memorandos', icono: '' },
+    { ruta: '/comunicaciones-disciplinarias', etiqueta: 'Comunicaciones Disciplinarias', icono: '' },
     { ruta: '/inasistencias', etiqueta: 'Inasistencias', icono: '' },
     { ruta: '/actividades', etiqueta: 'Actividades', icono: '' },
     { ruta: '/reportes', etiqueta: 'Reportes', icono: '' },

@@ -9,17 +9,35 @@ const cabecerasJson = {
   Accept: 'application/json',
 };
 
+/** Por defecto 2 min: Laravel en Docker / primer arranque / listados pesados suelen superar 60s. */
+const TIMEOUT_MIN_MS = 10_000;
+const TIMEOUT_DEFAULT_MS = 120_000;
+const TIMEOUT_MAX_MS = 600_000;
+
+/**
+ * Tiempo máximo de espera por petición (todas las rutas que usan `api` / `apiPublica`).
+ * Configura `VITE_API_TIMEOUT_MS` en `.env` (p. ej. 180000). Valores inválidos usan el default.
+ */
+export function leerTimeoutApiMs() {
+  const raw = import.meta.env.VITE_API_TIMEOUT_MS;
+  if (raw === '' || raw === undefined || raw === null) return TIMEOUT_DEFAULT_MS;
+  const n = Number(String(raw).trim());
+  if (!Number.isFinite(n)) return TIMEOUT_DEFAULT_MS;
+  if (n < TIMEOUT_MIN_MS) return TIMEOUT_DEFAULT_MS;
+  return Math.min(n, TIMEOUT_MAX_MS);
+}
+
+export const API_REQUEST_TIMEOUT_MS = leerTimeoutApiMs();
+
 /**
  * Sesión: cookies (Sanctum) y/o Bearer si el login guardó token en localStorage.
  * Timeout global evita peticiones colgadas que bloquean logout u otras acciones.
  */
-const tiempoEsperaMs = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 60000;
-
 const api = axios.create({
   baseURL: baseNormalizada,
   withCredentials: true,
   headers: cabecerasJson,
-  timeout: tiempoEsperaMs,
+  timeout: API_REQUEST_TIMEOUT_MS,
 });
 
 api.interceptors.request.use((config) => {
@@ -58,7 +76,7 @@ export const apiPublica = axios.create({
   baseURL: baseNormalizada,
   withCredentials: false,
   headers: cabecerasJson,
-  timeout: tiempoEsperaMs,
+  timeout: API_REQUEST_TIMEOUT_MS,
 });
 
 export default api;

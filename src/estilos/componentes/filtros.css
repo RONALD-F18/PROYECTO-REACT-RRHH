@@ -33,6 +33,12 @@
   min-width: 0;
 }
 
+/* Sin etiqueta visible: una sola fila para que el <select> no quede en la franja de 18px */
+.filtro-select-grupo--sin-etiqueta {
+  grid-template-rows: minmax(0, auto);
+  align-items: stretch;
+}
+
 .filtro-select-grupo--busqueda .caja-busqueda {
   min-width: 0;
   margin: 0;
@@ -127,19 +133,27 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
+  min-height: 44px;
   padding: 12px 14px;
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-lg);
   background: var(--color-fondo-tarjeta);
   font-size: var(--texto-sm);
-  color: var(--color-texto);
+  color: var(--color-texto-oscuro);
   cursor: pointer;
   transition: border-color var(--transicion-rapida);
+}
+
+.filtro-select option {
+  color: var(--color-texto-oscuro);
+  background: var(--color-fondo-tarjeta);
 }
 
 .filtro-select:focus {
   outline: none;
   border-color: var(--color-primario);
+  color: var(--color-texto-oscuro);
+  background: var(--color-fondo-tarjeta);
 }
 
 @media (max-width: 1024px) {

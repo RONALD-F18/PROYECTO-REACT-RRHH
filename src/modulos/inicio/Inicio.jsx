@@ -59,6 +59,7 @@ function Inicio() {
   const claseRev = (id) =>
     `inicio-reveal ${revelado.has(id) ? "inicio-reveal-vis" : ""}`;
 
+  // TODO: Cambiar los servicios por los módulos del sistema
   const servicios = [
     {
       titulo: "Empleados",

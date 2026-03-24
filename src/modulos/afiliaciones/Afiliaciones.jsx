@@ -1,104 +1,234 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ContenedorPrincipal, EncabezadoModulo, FiltrosBusqueda, TarjetasResumen, SinDatos } from '../../componentes';
 import { ModalAfiliacion } from './componentes';
+import {
+  getAfiliaciones,
+  getAfiliacionById,
+  deleteAfiliacion,
+  extraerFilasAfiliaciones,
+  codigoAfiliacionDesde,
+  obtenerCatalogosAfiliacion,
+} from '../../services/afiliaciones';
+import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
+import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { etiquetaEstadoAfiliacion } from '../../utils/afiliacionEstado';
 import '../../estilos/modulos/afiliaciones.css';
+
+function mapaPorCod(lista, clave) {
+  const m = new Map();
+  if (!Array.isArray(lista)) return m;
+  for (const row of lista) {
+    if (row && typeof row === 'object') {
+      const k = row[clave];
+      if (k != null && k !== '') m.set(Number(k), row);
+    }
+  }
+  return m;
+}
+
+function formatearSoloFecha(valor) {
+  if (!valor) return '—';
+  const t = String(valor).trim().slice(0, 10);
+  const m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return t;
+}
+
+function tipoRegimenMostrar(v) {
+  const u = String(v || '').toUpperCase();
+  if (u === 'SUBSIDIADO') return 'Subsidiado';
+  if (u === 'CONTRIBUTIVO') return 'Contributivo';
+  return v ? String(v) : '—';
+}
 
 function Afiliaciones() {
   const navegar = useNavigate();
+  const [lista, setLista] = useState([]);
+  const [empleados, setEmpleados] = useState([]);
+  const [catalogos, setCatalogos] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [mensajeLista, setMensajeLista] = useState('');
+  const [mensajeExito, setMensajeExito] = useState('');
   const [mostrarModal, setMostrarModal] = useState(false);
   const [afiliacionEditar, setAfiliacionEditar] = useState(null);
+  const [criteriosFiltro, setCriteriosFiltro] = useState({
+    busqueda: '',
+    estado: '',
+    eps: '',
+  });
 
-  const tarjetasResumen = [
-    {
-      etiqueta: 'Total',
-      valor: '2',
-      color: 'azul',
-      icono: ''
-    },
-    {
-      etiqueta: 'Aprovadas',
-      valor: '2',
-      color: 'verde',
-      icono: ''
-    },
-    {
-      etiqueta: 'Pendientes',
-      valor: '2',
-      color: 'azul',
-      icono: ''
-    },
-    {
-      etiqueta: 'En Proceso',
-      valor: '2',
-      color: 'amarillo',
-      icono: ''
+  const mapas = useMemo(() => {
+    if (!catalogos) return null;
+    return {
+      empleados: (() => {
+        const m = new Map();
+        for (const e of empleados) {
+          const c = codigoEmpleadoDesde(e);
+          if (c != null) m.set(Number(c), e);
+        }
+        return m;
+      })(),
+      eps: mapaPorCod(catalogos.eps, 'cod_eps'),
+      arls: mapaPorCod(catalogos.arls, 'cod_arl'),
+      pensiones: mapaPorCod(catalogos.pensiones, 'cod_fondo_pensiones'),
+      cesantias: mapaPorCod(catalogos.cesantias, 'cod_fondo_cesantias'),
+      compensaciones: mapaPorCod(catalogos.compensaciones, 'cod_caja_compensacion'),
+    };
+  }, [catalogos, empleados]);
+
+  const filasVista = useMemo(() => {
+    if (!mapas) return [];
+    return lista.map((row) => {
+      if (!row || typeof row !== 'object') return row;
+      const codEmp = row.cod_empleado != null ? Number(row.cod_empleado) : null;
+      const emp = codEmp != null && Number.isFinite(codEmp) ? mapas.empleados.get(codEmp) : null;
+      const eps = mapas.eps.get(Number(row.cod_eps));
+      const estadoEt = etiquetaEstadoAfiliacion(row.estado_afiliacion);
+      const codAf = codigoAfiliacionDesde(row);
+      return {
+        ...row,
+        _empleado: emp ? nombreCompletoEmpleado(emp) : '—',
+        _documento: emp ? String(emp.doc_iden ?? '—') : '—',
+        _eps: eps?.nombre_eps ?? '—',
+        _estadoEtiqueta: estadoEt,
+        _codigoUi: codAf != null ? `AF-${codAf}` : '—',
+        _fechaSolicitud: formatearSoloFecha(row.fecha_afiliacion_eps),
+        _tipoRegimen: tipoRegimenMostrar(row.tipo_regimen),
+      };
+    });
+  }, [lista, mapas]);
+
+  const filasFiltradas = useMemo(() => {
+    const q = (criteriosFiltro.busqueda || '').trim().toLowerCase();
+    const est = criteriosFiltro.estado || '';
+    const epsF = criteriosFiltro.eps || '';
+
+    return filasVista.filter((row) => {
+      if (!row || typeof row !== 'object') return false;
+      if (est && String(row._estadoEtiqueta) !== est) return false;
+      if (epsF && String(row.cod_eps) !== epsF) return false;
+      if (q) {
+        const nom = String(row._empleado || '').toLowerCase();
+        const doc = String(row._documento || '').toLowerCase();
+        const cod = String(row._codigoUi || '').toLowerCase();
+        if (!nom.includes(q) && !doc.includes(q) && !cod.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [filasVista, criteriosFiltro]);
+
+  const kpis = useMemo(() => {
+    const u = (s) => String(s || '').toUpperCase().replace(/\s/g, '_');
+    const base = filasFiltradas;
+    return {
+      total: base.length,
+      aprobadas: base.filter((r) => {
+        const e = u(r.estado_afiliacion);
+        return e === 'ACTIVA' || e === 'APROBADA';
+      }).length,
+      pendientes: base.filter((r) => u(r.estado_afiliacion) === 'PENDIENTE').length,
+      enProceso: base.filter((r) => u(r.estado_afiliacion) === 'EN_PROCESO').length,
+    };
+  }, [filasFiltradas]);
+
+  const tarjetasResumen = useMemo(
+    () => [
+      { etiqueta: 'Total', valor: String(kpis.total), color: 'azul', icono: '' },
+      { etiqueta: 'Aprovadas', valor: String(kpis.aprobadas), color: 'verde', icono: '' },
+      { etiqueta: 'Pendientes', valor: String(kpis.pendientes), color: 'azul', icono: '' },
+      { etiqueta: 'En Proceso', valor: String(kpis.enProceso), color: 'amarillo', icono: '' },
+    ],
+    [kpis],
+  );
+
+  const opcionesFiltroEps = useMemo(() => {
+    if (!catalogos?.eps?.length) return [];
+    return catalogos.eps.map((e) => ({
+      valor: String(e.cod_eps),
+      texto: e.nombre_eps ?? `EPS ${e.cod_eps}`,
+    }));
+  }, [catalogos]);
+
+  const recargarLista = useCallback(async () => {
+    setMensajeLista('');
+    setCargando(true);
+    try {
+      const json = await getAfiliaciones();
+      setLista(extraerFilasAfiliaciones(json));
+    } catch (e) {
+      setLista([]);
+      setMensajeLista(mensajeErrorApi(e));
+    } finally {
+      setCargando(false);
     }
-  ];
+  }, []);
 
-  const afiliaciones = [
-    {
-      id: 1,
-      empleado: 'Carlos Andrés Martínez',
-      documento: '1001234567',
-      codigo: 'AF 2024-001',
-      eps: 'Sanitas EPS',
-      fechaSolicitud: '15-10-2024',
-      tipoRegimen: 'Nueva/Contributivo',
-      estado: 'Aprovada'
-    }
-  ];
-
+  useEffect(() => {
+    let activo = true;
+    (async () => {
+      setMensajeLista('');
+      setCargando(true);
+      try {
+        const [ja, je, cat] = await Promise.all([getAfiliaciones(), getEmpleados(), obtenerCatalogosAfiliacion()]);
+        if (!activo) return;
+        setLista(extraerFilasAfiliaciones(ja));
+        setEmpleados(extraerFilasEmpleados(je));
+        setCatalogos(cat);
+      } catch (e) {
+        if (!activo) return;
+        setLista([]);
+        setMensajeLista(mensajeErrorApi(e));
+      } finally {
+        if (activo) setCargando(false);
+      }
+    })();
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   const manejarNuevaAfiliacion = () => {
     setAfiliacionEditar(null);
     setMostrarModal(true);
   };
 
-  const manejarModificar = (id) => {
-    const afiliacion = afiliaciones.find(aff => aff.id === id);
-    if (afiliacion) {
-      // Convertir datos de la lista al formato del modal
-      setAfiliacionEditar({
-        documento: afiliacion.documento,
-        nombre: afiliacion.empleado,
-        codigoAfiliacion: afiliacion.codigo,
-        eps: afiliacion.eps,
-        tipoAfiliacion: afiliacion.tipoRegimen?.includes('Contributivo') ? 'Contributivo' : 'Subsidiado',
-        fechaAfiliacionEPS: '',
-        fondoPensiones: '',
-        fechaAfiliacionPensiones: '',
-        fondoCesantias: '',
-        fechaAfiliacionCesantias: '',
-        arl: '',
-        claseRiesgo: '',
-        fechaAfiliacionARL: '',
-        cajaCompensacion: '',
-        fechaAfiliacionCaja: '',
-        descripcion: ''
-      });
+  const manejarModificar = async (fila) => {
+    const cod = codigoAfiliacionDesde(fila);
+    if (cod == null) return;
+    try {
+      const json = await getAfiliacionById(cod);
+      setAfiliacionEditar(json?.data ?? json);
       setMostrarModal(true);
+    } catch (err) {
+      window.alert(mensajeErrorApi(err));
     }
   };
 
-  const manejarGuardarAfiliacion = (datos) => {
-    // Solo registrar en consola - el backend manejará la persistencia
-    if (afiliacionEditar) {
-      console.log('Actualizar afiliación:', datos);
-    } else {
-      console.log('Registrar nueva afiliación:', datos);
+  const confirmarEliminar = async (fila) => {
+    const cod = codigoAfiliacionDesde(fila);
+    if (cod == null) return;
+    if (!window.confirm('¿Eliminar esta afiliación? Esta acción no se puede deshacer.')) return;
+    try {
+      await deleteAfiliacion(cod);
+      await recargarLista();
+      setMensajeExito('Afiliación eliminada correctamente.');
+      window.setTimeout(() => setMensajeExito(''), 3000);
+    } catch (e) {
+      window.alert(mensajeErrorApi(e));
     }
-    setMostrarModal(false);
+  };
+
+  const alExitoGuardado = async () => {
+    await recargarLista();
+    setMensajeExito('Cambios guardados correctamente.');
+    window.setTimeout(() => setMensajeExito(''), 3000);
     setAfiliacionEditar(null);
   };
 
-  const manejarVerDetalles = (id) => {
-    navegar(`/afiliaciones/${id}`);
-  };
-
-
-  const manejarFiltrar = (filtros) => {
-    console.log('Filtrar afiliaciones:', filtros);
+  const manejarVerDetalles = (fila) => {
+    const cod = codigoAfiliacionDesde(fila);
+    if (cod != null) navegar(`/afiliaciones/${cod}`);
   };
 
   return (
@@ -111,88 +241,97 @@ function Afiliaciones() {
       />
 
       <div className="afiliaciones-contenido">
-        {/* Tarjetas de resumen */}
+        {mensajeLista ? (
+          <div className="login-alerta login-alerta--error" style={{ marginBottom: 16 }} role="alert">
+            <p className="login-alerta-mensaje">{mensajeLista}</p>
+          </div>
+        ) : null}
+        {mensajeExito ? (
+          <div className="login-alerta login-alerta--exito" style={{ marginBottom: 16 }} role="status">
+            <p className="login-alerta-mensaje">{mensajeExito}</p>
+          </div>
+        ) : null}
+        {cargando ? <p className="contrato-pagina-cargando">Cargando afiliaciones…</p> : null}
+
         <TarjetasResumen tarjetas={tarjetasResumen} />
 
-        {/* Filtros - Separados del contenedor principal */}
         <FiltrosBusqueda
           placeholderBusqueda="Buscar por empleado, documento o código..."
           filtrosSelect={[
             {
               nombre: 'estado',
               placeholder: 'Todos los Estados',
-              opciones: ['Aprovada', 'Pendiente', 'En Proceso', 'Rechazada']
+              opciones: ['Aprobada', 'Pendiente', 'En Proceso', 'Rechazada'],
             },
             {
               nombre: 'eps',
               placeholder: 'Todas las EPS',
-              opciones: ['Sanitas EPS', 'SURA', 'Nueva EPS', 'Coomeva']
-            }
+              opciones: opcionesFiltroEps,
+            },
           ]}
-          onFiltrar={manejarFiltrar}
+          onFiltrar={(filtros) =>
+            setCriteriosFiltro({
+              busqueda: filtros.busqueda || '',
+              estado: filtros.estado || '',
+              eps: filtros.eps || '',
+            })
+          }
         />
 
-        {/* Contenedor principal con lista de afiliaciones */}
         <div className="afiliaciones-contenedor-principal">
           <h2 className="afiliaciones-titulo-seccion">Afiliaciones Registradas</h2>
 
-          {/* Lista de afiliaciones */}
           <div className="lista-afiliaciones">
-            {afiliaciones.length === 0 ? (
+            {filasFiltradas.length === 0 && !cargando ? (
               <SinDatos mensaje="No se encontraron afiliaciones" />
             ) : (
-              afiliaciones.map((afiliacion) => (
-                <div key={afiliacion.id} className="tarjeta-afiliacion">
+              filasFiltradas.map((afiliacion) => (
+                <div key={String(codigoAfiliacionDesde(afiliacion))} className="tarjeta-afiliacion">
                   <div className="tarjeta-afiliacion-header">
                     <div className="tarjeta-afiliacion-info">
-                      <h3 className="tarjeta-afiliacion-nombre">{afiliacion.empleado}</h3>
-                      <p className="tarjeta-afiliacion-documento">Documento: {afiliacion.documento}</p>
+                      <h3 className="tarjeta-afiliacion-nombre">{afiliacion._empleado}</h3>
+                      <p className="tarjeta-afiliacion-documento">Documento: {afiliacion._documento}</p>
                     </div>
                     <div className="tarjeta-afiliacion-estado">
-                      <span className="etiqueta etiqueta-verde">{afiliacion.estado}</span>
+                      <span className="etiqueta etiqueta-verde">{afiliacion._estadoEtiqueta}</span>
                     </div>
                   </div>
-                  
+
                   <div className="tarjeta-afiliacion-detalles">
                     <div className="detalle-fila">
                       <div className="detalle-item">
                         <span className="detalle-etiqueta">Código:</span>
-                        <span className="detalle-valor">{afiliacion.codigo}</span>
+                        <span className="detalle-valor">{afiliacion._codigoUi}</span>
                       </div>
                       <div className="detalle-item">
                         <span className="detalle-etiqueta">EPS:</span>
-                        <span className="detalle-valor">{afiliacion.eps}</span>
+                        <span className="detalle-valor">{afiliacion._eps}</span>
                       </div>
                     </div>
                     <div className="detalle-fila">
                       <div className="detalle-item">
                         <span className="detalle-etiqueta">Fecha solicitud:</span>
-                        <span className="detalle-valor">{afiliacion.fechaSolicitud}</span>
+                        <span className="detalle-valor">{afiliacion._fechaSolicitud}</span>
                       </div>
                       <div className="detalle-item">
                         <span className="detalle-etiqueta">Tipo/Régimen:</span>
-                        <span className="detalle-valor">{afiliacion.tipoRegimen}</span>
+                        <span className="detalle-valor">{afiliacion._tipoRegimen}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="tarjeta-afiliacion-acciones">
                     <button
+                      type="button"
                       className="btn-accion-afiliacion btn-eliminar"
-                      onClick={() => console.log('Eliminar afiliación:', afiliacion.id)}
+                      onClick={() => confirmarEliminar(afiliacion)}
                     >
                       Eliminar
                     </button>
-                    <button
-                      className="btn-accion-afiliacion btn-modificar"
-                      onClick={() => manejarModificar(afiliacion.id)}
-                    >
+                    <button type="button" className="btn-accion-afiliacion btn-modificar" onClick={() => manejarModificar(afiliacion)}>
                       Modificar
                     </button>
-                    <button
-                      className="btn-accion-afiliacion btn-ver-detalles"
-                      onClick={() => manejarVerDetalles(afiliacion.id)}
-                    >
+                    <button type="button" className="btn-accion-afiliacion btn-ver-detalles" onClick={() => manejarVerDetalles(afiliacion)}>
                       Ver Detalles
                     </button>
                   </div>
@@ -210,11 +349,12 @@ function Afiliaciones() {
           setAfiliacionEditar(null);
         }}
         datosAfiliacion={afiliacionEditar}
-        onGuardar={manejarGuardarAfiliacion}
+        empleados={empleados}
+        catalogos={catalogos}
+        alExito={alExitoGuardado}
       />
     </ContenedorPrincipal>
   );
 }
 
 export default Afiliaciones;
-

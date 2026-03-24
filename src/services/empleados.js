@@ -41,6 +41,12 @@ export function nombreCompletoEmpleado(e) {
   return n || '—';
 }
 
+export function empleadoPorDocumento(empleados, doc) {
+  const d = String(doc ?? '').trim();
+  if (!d || !Array.isArray(empleados)) return null;
+  return empleados.find((e) => String(e.doc_iden ?? '').trim() === d) ?? null;
+}
+
 export async function getEmpleados() {
   const { data } = await api.get('/empleados');
   return data;

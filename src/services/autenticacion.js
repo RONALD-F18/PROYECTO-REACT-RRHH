@@ -1,4 +1,4 @@
-import api from './api';
+import api, { API_REQUEST_TIMEOUT_MS } from './api';
 import {
   CLAVE_SESION_LOCAL,
   leerPayloadSesion,
@@ -69,12 +69,23 @@ export function esAdminSesionLocal() {
         ? respuestaLogin.data.user
         : null);
 
-    const rolRaiz = respuestaLogin?.role ?? respuestaLogin?.rol ?? respuestaLogin?.nombre_rol;
+    const rolRaiz =
+      respuestaLogin?.role ??
+      respuestaLogin?.rol ??
+      respuestaLogin?.nombre_rol ??
+      respuestaLogin?.data?.role ??
+      respuestaLogin?.data?.rol;
+    if (rolRaiz && typeof rolRaiz === 'object' && typeof rolRaiz.nombre_rol === 'string') {
+      if (esRolAdminTexto(rolRaiz.nombre_rol)) return true;
+    }
     if (esRolAdminTexto(rolRaiz)) return true;
+    if (respuestaLogin?.es_admin === true || respuestaLogin?.es_admin === 1) return true;
+    if (respuestaLogin?.data?.es_admin === true || respuestaLogin?.data?.es_admin === 1) return true;
 
     if (user) {
       if (user.esAdmin === true) return true;
       if (user.is_admin === true) return true;
+      if (user.es_admin === true || user.es_admin === 1) return true;
       const rolUsuario = nombreRolDesdeUsuario(user);
       if (esRolAdminTexto(rolUsuario)) return true;
     }
@@ -102,7 +113,7 @@ export async function cerrarSesion() {
   const bearer = obtenerTokenBearerDesdeSesion();
   limpiarAlmacenSesionCliente();
   try {
-    const config = { timeout: 8000 };
+    const config = { timeout: Math.min(60_000, API_REQUEST_TIMEOUT_MS) };
     if (bearer) {
       config.headers = { Authorization: `Bearer ${bearer}` };
     }

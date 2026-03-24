@@ -25,6 +25,8 @@ function formatearSoloFecha(valor) {
   return String(valor);
 }
 
+
+//Formatear el salario del contrato.....
 function formatearSalarioCO(n) {
   if (n == null || n === '') return '—';
   const num = Number(n);

@@ -106,7 +106,7 @@ function Inicio() {
       descripcion: "Certificados laborales y documentos para empleados o terceros.",
     },
     {
-      titulo: "Comunicaciones disciplinarias",
+      titulo: "Comunicaciones Disciplinarias",
       descripcion: "Registro de comunicados y actuaciones disciplinarias.",
     },
     {

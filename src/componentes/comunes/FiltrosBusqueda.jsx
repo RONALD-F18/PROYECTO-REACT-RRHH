@@ -68,7 +68,10 @@ function FiltrosBusqueda({
           </div>
         </div>
         {filtrosSelect.map((filtro, indice) => (
-          <div key={indice} className="filtro-select-grupo">
+          <div
+            key={indice}
+            className={`filtro-select-grupo${filtro.etiqueta ? '' : ' filtro-select-grupo--sin-etiqueta'}`}
+          >
             {filtro.etiqueta ? (
               <label className="filtro-select-etiqueta" htmlFor={`filtro-select-${indice}`}>
                 {filtro.etiqueta}

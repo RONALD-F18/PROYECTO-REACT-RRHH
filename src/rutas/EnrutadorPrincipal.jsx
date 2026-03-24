@@ -15,6 +15,7 @@ import {
   DetallesAfiliacion,
   Contratos,
   DetallesContrato,
+  ComunicacionesDisciplinarias,
 } from "../modulos";
 import { esAdminSesionLocal } from "../services/autenticacion";
 
@@ -52,6 +53,7 @@ export const rutasPrivadas = [
   { ruta: "/incapacidades/:id", componente: DetallesIncapacidad },
   { ruta: "/afiliaciones", componente: Afiliaciones },
   { ruta: "/afiliaciones/:id", componente: DetallesAfiliacion },
+  { ruta: "/comunicaciones-disciplinarias", componente: ComunicacionesDisciplinarias },
 ];
 
 function EnrutadorPrincipal() {

@@ -47,6 +47,33 @@ export function empleadoPorDocumento(empleados, doc) {
   return empleados.find((e) => String(e.doc_iden ?? '').trim() === d) ?? null;
 }
 
+/** Normaliza documento para comparar (sin espacios ni separadores comunes). */
+export function normalizarDocumentoBusqueda(doc) {
+  return String(doc ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[.\-]/g, '');
+}
+
+/**
+ * Busca empleado por número de documento (coincidencia exacta o solo dígitos/letras normalizados).
+ */
+export function buscarEmpleadoPorDocumento(empleados, docIngresado) {
+  const raw = String(docIngresado ?? '').trim();
+  if (!raw || !Array.isArray(empleados)) return null;
+  const porExacto = empleadoPorDocumento(empleados, raw);
+  if (porExacto) return porExacto;
+  const n = normalizarDocumentoBusqueda(raw);
+  if (!n) return null;
+  return (
+    empleados.find((e) => {
+      const d = normalizarDocumentoBusqueda(e.doc_iden ?? '');
+      return d && d === n;
+    }) ?? null
+  );
+}
+
 export async function getEmpleados() {
   const { data } = await api.get('/empleados');
   return data;

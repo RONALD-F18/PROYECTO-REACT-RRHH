@@ -57,6 +57,30 @@ function esRolAdminTexto(rol) {
   return s.includes('admin') || s.includes('administrador');
 }
 
+/**
+ * `cod_usuario` del usuario autenticado (login). Útil cuando no se puede listar `/usuarios` (funcionario).
+ */
+export function codUsuarioSesionLocal() {
+  try {
+    const almacenado = leerPayloadSesion();
+    if (!almacenado) return null;
+    const respuestaLogin = almacenado.raw ?? {};
+    const user =
+      (almacenado.user && typeof almacenado.user === 'object' ? almacenado.user : null) ??
+      (respuestaLogin.user && typeof respuestaLogin.user === 'object' ? respuestaLogin.user : null) ??
+      (respuestaLogin.data?.user && typeof respuestaLogin.data.user === 'object'
+        ? respuestaLogin.data.user
+        : null);
+    if (!user || typeof user !== 'object') return null;
+    const c = user.cod_usuario ?? user.id ?? user.user_id;
+    if (c == null || c === '') return null;
+    const n = Number(c);
+    return Number.isFinite(n) ? n : c;
+  } catch {
+    return null;
+  }
+}
+
 export function esAdminSesionLocal() {
   try {
     const almacenado = leerPayloadSesion();

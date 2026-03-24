@@ -7,6 +7,10 @@
 }
 
 .tab-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 12px 24px;
   background: transparent;
   border: none;
@@ -18,6 +22,15 @@
   transition: all var(--transicion-rapida);
   position: relative;
   bottom: -2px;
+}
+
+.tab-item-icono {
+  line-height: 1;
+  font-size: 1.05em;
+}
+
+.tab-item-etiqueta {
+  line-height: 1.2;
 }
 
 .tab-item:hover {

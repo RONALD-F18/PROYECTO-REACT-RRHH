@@ -15,6 +15,8 @@ import { getCargos, extraerFilasCargos, nombreCargoDesde, codigoCargoDesde } fro
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { etiquetaEstadoContrato } from './contratoEnums';
 
+
+//Formatear la fecha de inicio del contrato.....
 function formatearSoloFecha(valor) {
   if (!valor) return '—';
   const t = String(valor).trim().slice(0, 10);

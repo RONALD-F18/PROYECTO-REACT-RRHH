@@ -13,6 +13,8 @@ import {
   DetallesIncapacidad,
   Afiliaciones,
   DetallesAfiliacion,
+  Contratos,
+  DetallesContrato,
 } from "../modulos";
 import { esAdminSesionLocal } from "../services/autenticacion";
 
@@ -28,6 +30,8 @@ export const rutasPrivadas = [
   { ruta: "/dashboard", componente: Panel },
   { ruta: "/empleados", componente: Empleados },
   { ruta: "/empleados/:id", componente: DetallesEmpleado },
+  { ruta: "/contratos", componente: Contratos },
+  { ruta: "/contratos/:id", componente: DetallesContrato },
   { ruta: "/usuarios", componente: Usuarios },
   { ruta: "/prestaciones", componente: PrestacionesSociales },
   { ruta: "/prestaciones/:id", componente: DetallesPrestaciones },

@@ -9,6 +9,7 @@ function esRegistroUsuario(u) {
   return u != null && typeof u === 'object' && !Array.isArray(u);
 }
 
+//Nombre del usuario.....
 function nombreFila(u) {
   if (!esRegistroUsuario(u)) return '—';
   const v = u.nombre_usuario ?? u.nombre;

@@ -30,6 +30,7 @@ function diasEntre(fechaInicio, fechaFin) {
   return Math.ceil((b - a) / 86400000) + 1;
 }
 
+// Determina la entidad pagadora según el tipo de incapacidad
 function entidadPagadoraPorTipo(tipo) {
   const t = String(tipo || '').toLowerCase();
   if (t.includes('accidente') || t.includes('laboral')) return 'ARL';

@@ -60,6 +60,7 @@ const ESTADOS_SELECT = [
   { valor: 'Cancelada', etiqueta: 'Cancelada' },
 ];
 
+// Componente para mostrar los detalles de una incapacidad
 function DetallesIncapacidad() {
   const { id } = useParams();
   const navegar = useNavigate();

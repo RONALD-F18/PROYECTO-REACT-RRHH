@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ContenedorPrincipal, EncabezadoModulo, TablaDatos, FiltrosBusqueda } from '../../componentes';
 import { ModalEmpleado } from './componentes';
+import Swal from 'sweetalert2';
 import {
   getEmpleados,
   getEmpleadoById,
@@ -121,7 +122,16 @@ function Empleados() {
   const confirmarEliminar = async (fila) => {
     const cod = codigoEmpleadoDesde(fila);
     if (cod == null) return;
-    if (!window.confirm('¿Eliminar este empleado?')) return;
+    const res = await Swal.fire({
+      title: '¿Eliminar este empleado?',
+      text: 'Esta acción no se puede deshacer.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+    });
+    if (!res.isConfirmed) return;
     try {
       await deleteEmpleado(cod);
       await recargarLista();

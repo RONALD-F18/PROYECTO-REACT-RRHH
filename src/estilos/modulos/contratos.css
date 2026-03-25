@@ -87,17 +87,135 @@
   max-width: 960px;
 }
 
-.formulario-contrato-api .formulario-contrato-seccion {
-  margin: 0 0 10px;
-  font-size: var(--texto-sm);
-  font-weight: 600;
-  color: var(--color-texto-claro);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.formulario-contrato-api .formulario-contrato-grid.formulario-grid-doble {
+  grid-template-columns: 1fr;
+  gap: 0;
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  align-items: stretch;
 }
 
-.formulario-contrato-api .formulario-contrato-grid {
-  align-items: flex-start;
+.formulario-contrato-api .formulario-contrato-grid .columna-izquierda,
+.formulario-contrato-api .formulario-contrato-grid .columna-derecha {
+  display: none;
+  min-width: 0;
+}
+
+.formulario-contrato-api .formulario-contrato-grid .columna-izquierda--contrato-activa {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px 20px;
+}
+
+@media (min-width: 640px) {
+  .formulario-contrato-api .formulario-contrato-grid .columna-izquierda--contrato-activa {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .formulario-contrato-api
+    .formulario-contrato-grid
+    .columna-izquierda--contrato-activa
+    > .campo-formulario:nth-child(1),
+  .formulario-contrato-api
+    .formulario-contrato-grid
+    .columna-izquierda--contrato-activa
+    > .campo-formulario:nth-child(2),
+  .formulario-contrato-api
+    .formulario-contrato-grid
+    .columna-izquierda--contrato-activa
+    > .campo-formulario:nth-child(3),
+  .formulario-contrato-api
+    .formulario-contrato-grid
+    .columna-izquierda--contrato-activa
+    > .formulario-contrato-fechas {
+    grid-column: 1 / -1;
+  }
+}
+
+.formulario-contrato-api .formulario-contrato-grid .columna-derecha--contrato-activa {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (min-width: 640px) {
+  .formulario-contrato-api .formulario-contrato-grid .columna-derecha--contrato-activa {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 20px;
+  }
+
+  .formulario-contrato-api
+    .formulario-contrato-grid
+    .columna-derecha--contrato-activa
+    > .formulario-contrato-bloque-doble {
+    grid-column: 1 / -1;
+  }
+
+  .formulario-contrato-api
+    .formulario-contrato-grid
+    .columna-derecha--contrato-activa
+    > .campo-formulario--checkbox,
+  .formulario-contrato-api
+    .formulario-contrato-grid
+    .columna-derecha--contrato-activa
+    > .campo-formulario--ancho,
+  .formulario-contrato-api
+    .formulario-contrato-grid
+    .columna-derecha--contrato-activa
+    > .campo-formulario-contrato-estado {
+    grid-column: 1 / -1;
+  }
+}
+
+.formulario-contrato-api .formulario-pasos > .seccion-formulario-header {
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.formulario-contrato-api .formulario-pasos .seccion-formulario-numero {
+  width: 32px;
+  height: 32px;
+  font-size: var(--texto-sm);
+  box-shadow: none;
+}
+
+.formulario-contrato-api .formulario-pasos .seccion-formulario-titulo {
+  font-size: var(--texto-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.formulario-contrato-api .formulario-contrato-fechas {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr;
+  margin-top: 4px;
+}
+
+.formulario-contrato-api .formulario-contrato-bloque-doble {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr;
+  margin-bottom: 2px;
+}
+
+@media (min-width: 480px) {
+  .formulario-contrato-api .formulario-contrato-fechas,
+  .formulario-contrato-api .formulario-contrato-bloque-doble {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 16px;
+  }
+}
+
+.formulario-contrato-api .campo-formulario--ancho textarea {
+  min-height: 7rem;
+  line-height: 1.45;
+}
+
+.formulario-contrato-api .formulario-pasos .formulario-pasos-contenido {
+  margin-top: 6px;
 }
 
 .formulario-contrato-api .campo-ayuda {

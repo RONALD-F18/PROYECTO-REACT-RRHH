@@ -1,2 +1,1 @@
-export { default as ModalEditarPeriodo } from './ModalEditarPeriodo';
-
+export { default as ModalGestionarPrestacion } from './ModalGestionarPrestacion';

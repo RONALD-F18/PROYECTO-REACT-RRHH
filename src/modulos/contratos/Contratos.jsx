@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ContenedorPrincipal, EncabezadoModulo, TablaDatos, FiltrosBusqueda } from '../../componentes';
 import { ModalContrato } from './componentes';
+import Swal from 'sweetalert2';
 import {
   getContratos,
   getContratoById,
@@ -173,7 +174,16 @@ function Contratos() {
   const confirmarEliminar = async (fila) => {
     const cod = codigoContratoDesde(fila);
     if (cod == null) return;
-    if (!window.confirm('¿Eliminar este contrato? Esta acción no se puede deshacer.')) return;
+    const res = await Swal.fire({
+      title: '¿Eliminar este contrato?',
+      text: 'Esta acción no se puede deshacer.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+    });
+    if (!res.isConfirmed) return;
     try {
       await deleteContrato(cod);
       await recargarLista();
@@ -191,7 +201,16 @@ function Contratos() {
       window.alert('Este contrato ya está finalizado.');
       return;
     }
-    if (!window.confirm('¿Marcar este contrato como finalizado (inactivo)?')) return;
+    const res = await Swal.fire({
+      title: 'Finalizar contrato',
+      text: '¿Marcar este contrato como finalizado (inactivo)?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, finalizar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+    });
+    if (!res.isConfirmed) return;
     try {
       await patchContrato(cod, { estado_contrato: 'INACTIVO' });
       await recargarLista();

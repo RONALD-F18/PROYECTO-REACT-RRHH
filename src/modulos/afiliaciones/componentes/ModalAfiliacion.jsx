@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
 import FormularioSecciones from '../../../componentes/comunes/FormularioSecciones';
+import FormularioPasos from '../../../componentes/comunes/FormularioPasos';
 import { validarNumeroDocumento, validarNombres } from '../../../utils/validaciones';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 import { createAfiliacion, updateAfiliacion, normalizarRegistroAfiliacion, codigoAfiliacionDesde } from '../../../services/afiliaciones';
@@ -99,6 +100,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
   const [enviando, setEnviando] = useState(false);
   const [errorGeneral, setErrorGeneral] = useState('');
   const [estadoBdEdicion, setEstadoBdEdicion] = useState('ACTIVA');
+  const [pasoActual, setPasoActual] = useState(0);
 
   const opcionesEPS = useMemo(
     () =>
@@ -152,6 +154,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
   useEffect(() => {
     if (!mostrar) return;
     setErrorGeneral('');
+    setPasoActual(0);
     if (datosAfiliacion && codigoAfiliacionDesde(datosAfiliacion) != null) {
       const r = normalizarRegistroAfiliacion(datosAfiliacion) ?? datosAfiliacion;
       setFormulario(afiliacionApiAFormulario(r, empleados));
@@ -194,6 +197,36 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
     }
   };
 
+  const validarAntesDeSiguiente = useCallback(
+    (idx) => {
+      const grupos = [
+        ['documento', 'nombre'],
+        ['eps', 'tipoAfiliacion', 'fechaAfiliacionEPS'],
+        ['fondoPensiones', 'fechaAfiliacionPensiones'],
+        ['fondoCesantias', 'fechaAfiliacionCesantias'],
+        ['arl', 'claseRiesgo', 'fechaAfiliacionARL'],
+        ['cajaCompensacion', 'fechaAfiliacionCaja'],
+      ];
+      if (idx < 0 || idx >= grupos.length) return true;
+
+      const campos = grupos[idx];
+      const todosTocados = {};
+      const nuevosErrores = {};
+      for (const c of campos) {
+        todosTocados[c] = true;
+        const err = validarCampo(c, formulario[c]);
+        if (err) nuevosErrores[c] = err;
+      }
+      if (idx === 0 && !formulario.cod_empleado) {
+        nuevosErrores.documento = nuevosErrores.documento || 'No hay empleado con ese documento.';
+      }
+      setCamposTocados((p) => ({ ...p, ...todosTocados }));
+      setErrores(nuevosErrores);
+      return Object.keys(nuevosErrores).length === 0;
+    },
+    [formulario],
+  );
+
   const manejarCambio = (e) => {
     const { name, value } = e.target;
     setFormulario((prev) => {
@@ -218,7 +251,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
     setErrores((prev) => ({ ...prev, [name]: validarCampo(name, value) }));
   };
 
-  const validarFormulario = () => {
+  const calcularErroresAfiliacion = () => {
     const nuevosErrores = {};
     const todosTocados = {};
     const campos = [
@@ -245,15 +278,39 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
     if (!formulario.cod_empleado) {
       nuevosErrores.documento = nuevosErrores.documento || 'No hay empleado con ese documento.';
     }
+    return { nuevosErrores, todosTocados };
+  };
+
+  const pasoPorErroresAfili = (errs) => {
+    const grupos = [
+      ['documento', 'nombre'],
+      ['eps', 'tipoAfiliacion', 'fechaAfiliacionEPS'],
+      ['fondoPensiones', 'fechaAfiliacionPensiones'],
+      ['fondoCesantias', 'fechaAfiliacionCesantias'],
+      ['arl', 'claseRiesgo', 'fechaAfiliacionARL'],
+      ['cajaCompensacion', 'fechaAfiliacionCaja'],
+    ];
+    for (let i = 0; i < grupos.length; i++) {
+      if (grupos[i].some((c) => errs[c])) return i;
+    }
+    return 6;
+  };
+
+  const aplicarValidacionAfili = () => {
+    const { nuevosErrores, todosTocados } = calcularErroresAfiliacion();
     setCamposTocados(todosTocados);
     setErrores(nuevosErrores);
-    return Object.keys(nuevosErrores).length === 0;
+    return nuevosErrores;
   };
 
   const manejarGuardar = async (e) => {
     e.preventDefault();
     setErrorGeneral('');
-    if (!validarFormulario()) return;
+    const nuevosErrores = aplicarValidacionAfili();
+    if (Object.keys(nuevosErrores).length > 0) {
+      setPasoActual(pasoPorErroresAfili(nuevosErrores));
+      return;
+    }
 
     const payload = construirPayloadAfiliacion(formulario, esEdicion ? estadoBdEdicion : 'ACTIVA');
     setEnviando(true);
@@ -455,51 +512,66 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
           </div>
         ) : null}
 
-        <FormularioSecciones
-          secciones={secciones}
-          valores={formulario}
-          errores={errores}
-          camposTocados={camposTocados}
-          onChange={manejarCambio}
-          onBlur={manejarBlur}
-          obtenerClaseCampo={obtenerClaseCampo}
-          mostrarMensaje={mostrarMensaje}
-        />
+        <FormularioPasos
+          pasos={[
+            { numero: 1, titulo: 'Identificación del Empleado', color: 'morado' },
+            { numero: 2, titulo: 'Entidad Promotora de Salud EPS', color: 'azul' },
+            { numero: 3, titulo: 'Fondo de Pensiones', color: 'verde' },
+            { numero: 4, titulo: 'Fondo Cesantías', color: 'rosa' },
+            { numero: 5, titulo: 'Aseguradora de Riesgos Laborales (ARL)', color: 'rojo' },
+            { numero: 6, titulo: 'Caja de Compensación Familiar', color: 'amarillo' },
+            { numero: 7, titulo: 'Observaciones y resumen', color: 'verde' },
+          ]}
+          pasoActual={pasoActual}
+          setPasoActual={setPasoActual}
+          onCancelar={cerrar}
+          enviando={enviando}
+          validarAntesDeSiguiente={validarAntesDeSiguiente}
+          textoGuardar={esEdicion ? 'Actualizar Afiliación' : 'Registrar Afiliación'}
+        >
+          {pasoActual < 6 ? (
+            <FormularioSecciones
+              ocultarEncabezadosSeccion
+              secciones={[secciones[pasoActual]]}
+              valores={formulario}
+              errores={errores}
+              camposTocados={camposTocados}
+              onChange={manejarCambio}
+              onBlur={manejarBlur}
+              obtenerClaseCampo={obtenerClaseCampo}
+              mostrarMensaje={mostrarMensaje}
+            />
+          ) : null}
+          {pasoActual === 6 ? (
+            <>
+              <div className="seccion-descripcion">
+                <div className="seccion-descripcion-header">
+                  <h3 className="seccion-descripcion-titulo">Descripción y Notas</h3>
+                </div>
+                <p className="seccion-descripcion-instruccion">
+                  Obligatoria en API (máx. 200 caracteres). Si la deja vacía, se envía un texto por defecto.
+                </p>
+                <textarea
+                  name="descripcion"
+                  value={formulario.descripcion}
+                  onChange={manejarCambio}
+                  placeholder="Observaciones (opcional en pantalla)…"
+                  rows="4"
+                  maxLength={200}
+                />
+              </div>
 
-        <div className="seccion-descripcion">
-          <div className="seccion-descripcion-header">
-            <h3 className="seccion-descripcion-titulo">Descripción y Notas</h3>
-          </div>
-          <p className="seccion-descripcion-instruccion">
-            Obligatoria en API (máx. 200 caracteres). Si la deja vacía, se envía un texto por defecto.
-          </p>
-          <textarea
-            name="descripcion"
-            value={formulario.descripcion}
-            onChange={manejarCambio}
-            placeholder="Observaciones (opcional en pantalla)…"
-            rows="4"
-            maxLength={200}
-          />
-        </div>
-
-        <div className="seccion-informacion">
-          <h4 className="seccion-informacion-titulo">Información Importante</h4>
-          <ul className="seccion-informacion-lista">
-            <li>Verifique que todos los datos estén correctos antes de registrar.</li>
-            <li>Los campos marcados con * son obligatorios.</li>
-            <li>Clase de riesgo corresponde al catálogo de riesgos laborales del API.</li>
-          </ul>
-        </div>
-
-        <div className="modal-acciones">
-          <button type="button" className="btn-cancelar" onClick={cerrar} disabled={enviando}>
-            Cancelar
-          </button>
-          <button type="submit" className="btn-guardar" disabled={enviando}>
-            {enviando ? 'Guardando…' : esEdicion ? 'Actualizar Afiliación' : 'Registrar Afiliación'}
-          </button>
-        </div>
+              <div className="seccion-informacion">
+                <h4 className="seccion-informacion-titulo">Información Importante</h4>
+                <ul className="seccion-informacion-lista">
+                  <li>Verifique que todos los datos estén correctos antes de registrar.</li>
+                  <li>Los campos marcados con * son obligatorios.</li>
+                  <li>Clase de riesgo corresponde al catálogo de riesgos laborales del API.</li>
+                </ul>
+              </div>
+            </>
+          ) : null}
+        </FormularioPasos>
       </form>
     </Modal>
   );

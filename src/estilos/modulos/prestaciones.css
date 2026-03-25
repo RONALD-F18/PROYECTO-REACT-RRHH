@@ -212,3 +212,166 @@
   border-bottom: 2px solid var(--color-borde);
 }
 
+.prestaciones-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.prestaciones-tab {
+  border: 1px solid var(--color-borde);
+  background: var(--color-fondo-tarjeta);
+  color: var(--color-texto-oscuro);
+  padding: 10px 18px;
+  border-radius: var(--radio-lg);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transicion-rapida);
+}
+
+.prestaciones-tab:hover {
+  border-color: var(--color-primario);
+  color: var(--color-primario);
+}
+
+.prestaciones-tab--activa {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #fff;
+  border-color: transparent;
+}
+
+.prestaciones-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.prestaciones-pill {
+  border: 1px solid var(--color-borde);
+  background: var(--color-fondo-tarjeta);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.prestaciones-pill--activa {
+  background: #ede9fe;
+  border-color: #8b5cf6;
+  color: #5b21b6;
+}
+
+.prestaciones-nota-api,
+.prestaciones-modal-subtitulo {
+  font-size: var(--texto-sm);
+  color: var(--gris-600);
+  margin: 0 0 12px;
+}
+
+.prestaciones-meta-tabla {
+  font-size: var(--texto-sm);
+  color: var(--gris-600);
+  margin: -8px 0 16px;
+}
+
+.badge-estado {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: var(--texto-xs);
+  font-weight: 700;
+}
+
+.badge-pendiente {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.badge-pagado {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.badge-trasladado {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.prestaciones-tarjeta-info {
+  background: var(--gris-50);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.prestaciones-tarjeta-info--accion {
+  background: var(--color-fondo-tarjeta);
+}
+
+.prestaciones-tarjeta-info-titulo {
+  margin: 0 0 12px;
+  font-size: var(--texto-base);
+  font-weight: 700;
+  color: var(--color-texto-oscuro);
+}
+
+.prestaciones-grid-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.prestaciones-montos-inline {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-borde);
+}
+
+.prestaciones-etiqueta-mini {
+  display: block;
+  font-size: var(--texto-xs);
+  font-weight: 600;
+  color: var(--gris-500);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+
+.prestaciones-valor-mini {
+  margin: 0;
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  color: var(--color-texto-oscuro);
+}
+
+.prestaciones-select-ancho {
+  min-width: 100%;
+  max-width: 320px;
+  margin-top: 8px;
+}
+
+.prestaciones-modal-botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+.modal-contenido.modal-contenido--ancho-medio {
+  max-width: 560px;
+  width: 100%;
+}
+
+.btn-accion-tabla:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+

@@ -1,3 +1,33 @@
+/* Wizard reutilizable (modal) */
+.formulario-pasos {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.formulario-pasos-contenido {
+  margin-top: 4px;
+}
+
+.formulario-pasos-contenido .formulario-secciones .seccion-formulario {
+  padding-bottom: 8px;
+}
+
+.formulario-pasos-contenido .formulario-secciones .seccion-formulario:not(:last-child) {
+  margin-bottom: 16px;
+}
+
+.formulario-secciones--solo-campos .seccion-formulario--sin-encabezado {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.modal-acciones--formulario-pasos {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 /* Formulario con Secciones Numeradas */
 .formulario-secciones {
   display: flex;

@@ -17,7 +17,19 @@ import {
   DetallesContrato,
   ComunicacionesDisciplinarias,
 } from "../modulos";
-import { esAdminSesionLocal } from "../services/autenticacion";
+import { esAdminSesionLocal, haySesionLocalActiva } from "../services/autenticacion";
+
+/**
+ * Bloquea rutas privadas sin sesión en localStorage (lectura síncrona: no hay flash del módulo
+ * ni espera a un 401 del API).
+ */
+function RutaPrivada({ children }) {
+  "use no memo";
+  if (!haySesionLocalActiva()) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
 
 /**
  * La comprobación debe ocurrir al renderizar la ruta (no al armar el árbol de <Route>),
@@ -26,6 +38,9 @@ import { esAdminSesionLocal } from "../services/autenticacion";
  */
 function RutaUsuariosProtegida() {
   "use no memo";
+  if (!haySesionLocalActiva()) {
+    return <Navigate to="/login" replace />;
+  }
   if (!esAdminSesionLocal()) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -66,7 +81,15 @@ function EnrutadorPrincipal() {
         ruta === "/usuarios" ? (
           <Route key={ruta} path={ruta} element={<RutaUsuariosProtegida />} />
         ) : (
-          <Route key={ruta} path={ruta} element={<Componente />} />
+          <Route
+            key={ruta}
+            path={ruta}
+            element={
+              <RutaPrivada>
+                <Componente />
+              </RutaPrivada>
+            }
+          />
         ),
       )}
     </Routes>

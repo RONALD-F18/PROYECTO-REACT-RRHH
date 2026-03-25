@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 # Cliente HTTP del front (src/services/api.js); refuerzo explícito por si el lock cambia en el host
-RUN npm install axios@^1.13.6 --no-audit --no-fund
+RUN npm install axios@^1.13.6 sweetalert2@^11.26.24 --no-audit --no-fund
 
 EXPOSE 5173
 

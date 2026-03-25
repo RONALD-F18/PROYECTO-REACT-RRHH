@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
+import FormularioPasos from '../../../componentes/comunes/FormularioPasos';
 import {
   validarNumeroDocumento,
   prevenirSiNoEsDigito,
@@ -29,9 +30,76 @@ import {
   GRUPO_SANGUINEO,
 } from '../empleadoEnums';
 
+import '../../../estilos/componentes/formulario-secciones.css';
+
 const TELEFONO_CO = /^3[0-9]{9}$/;
 const CUENTA_DIGITOS = /^\d{8,20}$/;
 const NACIONALIDAD_OK = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/u;
+
+function mismoDia(fechaA, fechaB) {
+  if (!fechaA || !fechaB) return false;
+  return (
+    fechaA.getFullYear() === fechaB.getFullYear() &&
+    fechaA.getMonth() === fechaB.getMonth() &&
+    fechaA.getDate() === fechaB.getDate()
+  );
+}
+
+function parseFechaLocal(fechaISO) {
+  const t = String(fechaISO ?? '').trim().slice(0, 10);
+  const m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  const dt = new Date(y, mo - 1, d);
+  // Validación robusta: evita fechas inexistentes como 2026-02-31
+  if (Number.isNaN(dt.getTime())) return null;
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+  dt.setHours(0, 0, 0, 0);
+  return dt;
+}
+
+function validarFechaNacimientoColombia(valor) {
+  const f = parseFechaLocal(valor);
+  if (!f) return 'La fecha de nacimiento es inválida.';
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const manana = new Date(hoy);
+  manana.setDate(hoy.getDate() + 1);
+
+  if (mismoDia(f, hoy)) return 'La fecha de nacimiento no puede ser hoy.';
+  if (mismoDia(f, manana)) return 'La fecha de nacimiento no puede ser mañana.';
+  if (f > hoy) return 'La fecha de nacimiento no puede ser futura.';
+
+  // Rango extremo razonable para evitar inconsistencias (permite aprendices menores).
+  const hace120 = new Date(hoy);
+  hace120.setFullYear(hace120.getFullYear() - 120);
+  if (f < hace120) return 'La fecha de nacimiento excede el rango permitido.';
+
+  return null;
+}
+
+function validarDocPorTipo(tipoDocumento, doc) {
+  const d = String(doc ?? '').trim();
+  if (!d) return 'El documento es obligatorio.';
+
+  if (String(tipoDocumento || '').toUpperCase() === 'PASAPORTE') {
+    if (d.length < 3) return 'Ingrese el número de pasaporte.';
+    if (d.length > 50) return 'El pasaporte no puede superar 50 caracteres.';
+    if (!/^[A-Za-z0-9-]+$/.test(d)) return 'Pasaporte inválido.';
+    return null;
+  }
+
+  // CC / CE / TI: solo dígitos y longitud (Colombia varía; rango práctico 5-10).
+  if (!/^\d+$/.test(d)) return 'El documento debe ser numérico para este tipo.';
+  const len = d.length;
+  const min = 5;
+  const max = 10;
+  if (len < min || len > max) return `El documento debe tener entre ${min} y ${max} dígitos para ${tipoDocumento}.`;
+  return null;
+}
 
 function estadoInicialVacio() {
   return {
@@ -141,18 +209,13 @@ function validarCampoEmpleado(campo, f) {
       return null;
     case 'doc_iden':
       if (!f.doc_iden.trim()) return 'El documento es obligatorio.';
-      if (f.tipo_documento === 'PASAPORTE') {
-        if (f.doc_iden.trim().length < 3) return 'Ingrese el número de pasaporte.';
-        return null;
-      }
-      if (f.tipo_documento) {
-        return validarNumeroDocumento(f.doc_iden.trim());
-      }
-      return null;
+      if (!f.tipo_documento) return 'Seleccione el tipo de documento.';
+      return validarDocPorTipo(f.tipo_documento, f.doc_iden.trim());
     case 'tipo_documento':
       return f.tipo_documento ? null : 'Seleccione el tipo de documento.';
     case 'fecha_nac':
-      return f.fecha_nac ? null : 'La fecha de nacimiento es obligatoria.';
+      if (!f.fecha_nac) return 'La fecha de nacimiento es obligatoria.';
+      return validarFechaNacimientoColombia(f.fecha_nac);
     case 'direccion':
       return f.direccion.trim() ? null : 'La dirección es obligatoria.';
     case 'numero_telefono':
@@ -235,6 +298,43 @@ function validar(formulario) {
   return err;
 }
 
+const CAMPOS_POR_PASO_EMPLEADO = [
+  [
+    'doc_iden',
+    'tipo_documento',
+    'nombre_empleado',
+    'apellidos_empleado',
+    'fecha_nac',
+    'fec_exp_doc',
+    'numero_telefono',
+    'direccion',
+    'nacionalidad',
+    'estado_civil',
+  ],
+  ['cod_banco', 'numero_cuenta', 'tipo_cuenta', 'profesion'],
+  ['grupo_sanguineo', 'discapacidad', 'descripcion'],
+];
+
+function campoTieneErrorApi(campo, erroresApi) {
+  const x = erroresApi?.[campo];
+  if (x == null) return false;
+  if (Array.isArray(x)) return x.some((m) => m != null && String(m).trim() !== '');
+  if (typeof x === 'string') return x.trim().length > 0;
+  return true;
+}
+
+function primerPasoConErroresEmpleado(erroresCliente, erroresApi) {
+  const tiene = (c) => Boolean(erroresCliente?.[c]) || campoTieneErrorApi(c, erroresApi);
+  for (let i = 0; i < CAMPOS_POR_PASO_EMPLEADO.length; i++) {
+    if (CAMPOS_POR_PASO_EMPLEADO[i].some(tiene)) return i;
+  }
+  const keys = new Set([...Object.keys(erroresCliente || {}), ...Object.keys(erroresApi || {})]);
+  for (const k of keys) {
+    if (tiene(k)) return 0;
+  }
+  return 0;
+}
+
 function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alExito }) {
   const registroEdicion = datosEmpleado ? normalizarRegistroEmpleado(datosEmpleado) : null;
   const codEdicion = codigoEmpleadoDesde(registroEdicion);
@@ -244,6 +344,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
   const [erroresApi, setErroresApi] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [errorGeneral, setErrorGeneral] = useState('');
+  const [pasoActual, setPasoActual] = useState(0);
   const formRef = useRef(formulario);
   formRef.current = formulario;
   /** Payload al abrir el modal en edición (para PATCH solo con cambios). */
@@ -282,6 +383,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
     setErrores({});
     setErroresApi({});
     setErrorGeneral('');
+    setPasoActual(0);
   }, [datosEmpleado]);
 
   useEffect(() => {
@@ -358,13 +460,44 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
 
   const mensajeCampo = (campo) => errores[campo] || (erroresApi[campo] && erroresApi[campo][0]);
 
+  const validarAntesDeSiguiente = (idx) => {
+    const camposPorPaso = [
+      [
+        'doc_iden',
+        'tipo_documento',
+        'nombre_empleado',
+        'apellidos_empleado',
+        'fecha_nac',
+        'fec_exp_doc',
+        'numero_telefono',
+        'direccion',
+        'nacionalidad',
+        'estado_civil',
+      ],
+      ['cod_banco', 'numero_cuenta', 'tipo_cuenta', 'profesion'],
+      ['grupo_sanguineo', 'discapacidad', 'descripcion'],
+    ];
+
+    const campos = camposPorPaso[idx] ?? [];
+    const nuevosErrores = {};
+    for (const c of campos) {
+      const m = validarCampoEmpleado(c, formulario);
+      if (m) nuevosErrores[c] = m;
+    }
+    setErrores(nuevosErrores);
+    return Object.keys(nuevosErrores).length === 0;
+  };
+
   const manejarGuardar = async (e) => {
     e.preventDefault();
     setErrorGeneral('');
     setErroresApi({});
     const v = validar(formulario);
     setErrores(v);
-    if (Object.keys(v).length > 0) return;
+    if (Object.keys(v).length > 0) {
+      setPasoActual(primerPasoConErroresEmpleado(v, {}));
+      return;
+    }
 
     setEnviando(true);
     try {
@@ -387,6 +520,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
       if (err.response?.status === 422 && data?.errors && typeof data.errors === 'object') {
         setErroresApi(data.errors);
         setErrorGeneral('Revisa los campos marcados.');
+        setPasoActual(primerPasoConErroresEmpleado({}, data.errors));
       } else {
         setErrorGeneral(mensajeErrorApi(err));
       }
@@ -410,9 +544,23 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
           </div>
         ) : null}
 
-        <div className="formulario-grid-doble formulario-empleado-grid">
-          <div className="columna-izquierda">
-            <h3 className="formulario-empleado-seccion">Identificación</h3>
+        <FormularioPasos
+          pasos={[
+            { numero: 1, titulo: 'Identificación del Empleado', color: 'morado' },
+            { numero: 2, titulo: 'Bancario y laboral', color: 'azul' },
+            { numero: 3, titulo: 'Salud y descripción', color: 'verde' },
+          ]}
+          pasoActual={pasoActual}
+          setPasoActual={setPasoActual}
+          onCancelar={cerrar}
+          enviando={enviando}
+          textoGuardar={esEdicion ? 'Actualizar' : 'Guardar'}
+          validarAntesDeSiguiente={validarAntesDeSiguiente}
+        >
+          <div className="formulario-grid-doble formulario-empleado-grid">
+          <div className="columna-izquierda" style={{ display: pasoActual === 0 ? 'flex' : 'none' }}>
+            {pasoActual === 0 ? (
+              <>
             <div className="campo-formulario">
               <label htmlFor="emp-doc_iden">Número de documento *</label>
               <input
@@ -585,10 +733,13 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 <span className="mensaje-error">{mensajeCampo('estado_civil')}</span>
               ) : null}
             </div>
+              </>
+            ) : null}
           </div>
 
-          <div className="columna-derecha">
-            <h3 className="formulario-empleado-seccion">Bancario y laboral</h3>
+          <div className="columna-derecha" style={{ display: pasoActual !== 0 ? 'flex' : 'none' }}>
+            {pasoActual === 1 ? (
+              <>
             <div className="campo-formulario">
               <label htmlFor="emp-cod_banco">Banco *</label>
               <select
@@ -682,7 +833,11 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
               ) : null}
             </div>
 
-            <h3 className="formulario-empleado-seccion">Salud</h3>
+              </>
+            ) : null}
+
+            {pasoActual === 2 ? (
+              <>
             <div className="campo-formulario">
               <label htmlFor="emp-grupo_sanguineo">Grupo sanguíneo (incluye RH) *</label>
               <select
@@ -725,7 +880,6 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
               ) : null}
             </div>
 
-            <h3 className="formulario-empleado-seccion">Descripción</h3>
             <div className="campo-formulario campo-formulario--ancho">
               <label htmlFor="emp-descripcion">Descripción / perfil *</label>
               <textarea
@@ -742,17 +896,12 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 <span className="mensaje-error">{mensajeCampo('descripcion')}</span>
               ) : null}
             </div>
+              </>
+            ) : null}
           </div>
         </div>
 
-        <div className="modal-acciones">
-          <button type="button" className="btn-cancelar" onClick={cerrar} disabled={enviando}>
-            Cancelar
-          </button>
-          <button type="submit" className="btn-guardar" disabled={enviando}>
-            {enviando ? 'Guardando…' : esEdicion ? 'Actualizar' : 'Guardar'}
-          </button>
-        </div>
+      </FormularioPasos>
       </form>
     </Modal>
   );

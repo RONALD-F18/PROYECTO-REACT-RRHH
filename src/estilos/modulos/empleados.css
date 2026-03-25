@@ -343,17 +343,59 @@
   max-width: 960px;
 }
 
-.formulario-empleado-api .formulario-empleado-seccion {
-  margin: 0 0 10px;
-  font-size: var(--texto-sm);
-  font-weight: 600;
-  color: var(--color-texto-claro);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.formulario-empleado-api .formulario-empleado-grid.formulario-grid-doble {
+  grid-template-columns: 1fr;
+  gap: 0;
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  align-items: stretch;
 }
 
-.formulario-empleado-api .formulario-empleado-grid {
-  align-items: flex-start;
+.formulario-empleado-api .formulario-empleado-grid .columna-izquierda,
+.formulario-empleado-api .formulario-empleado-grid .columna-derecha {
+  flex-direction: column;
+  gap: 13px;
+  min-width: 0;
+}
+
+.formulario-empleado-api .campo-formulario label {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+}
+
+.formulario-empleado-api .campo-formulario input:not([type='checkbox']),
+.formulario-empleado-api .campo-formulario select,
+.formulario-empleado-api .campo-formulario textarea {
+  background: var(--color-fondo-tarjeta, #fff);
+}
+
+.formulario-empleado-api .campo-formulario textarea {
+  min-height: 6.5rem;
+  line-height: 1.45;
+}
+
+.formulario-empleado-api .formulario-pasos .formulario-pasos-contenido {
+  margin-top: 6px;
+}
+
+.formulario-empleado-api .formulario-pasos > .seccion-formulario-header {
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.formulario-empleado-api .formulario-pasos .seccion-formulario-numero {
+  width: 32px;
+  height: 32px;
+  font-size: var(--texto-sm);
+  box-shadow: none;
+}
+
+.formulario-empleado-api .formulario-pasos .seccion-formulario-titulo {
+  font-size: var(--texto-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .formulario-empleado-api .empleado-modal-alerta {

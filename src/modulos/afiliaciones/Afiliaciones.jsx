@@ -59,16 +59,26 @@ function Afiliaciones() {
   });
 
   const mapas = useMemo(() => {
-    if (!catalogos) return null;
+    const empleadosMap = (() => {
+      const m = new Map();
+      for (const e of empleados) {
+        const c = codigoEmpleadoDesde(e);
+        if (c != null) m.set(Number(c), e);
+      }
+      return m;
+    })();
+    if (!catalogos) {
+      return {
+        empleados: empleadosMap,
+        eps: new Map(),
+        arls: new Map(),
+        pensiones: new Map(),
+        cesantias: new Map(),
+        compensaciones: new Map(),
+      };
+    }
     return {
-      empleados: (() => {
-        const m = new Map();
-        for (const e of empleados) {
-          const c = codigoEmpleadoDesde(e);
-          if (c != null) m.set(Number(c), e);
-        }
-        return m;
-      })(),
+      empleados: empleadosMap,
       eps: mapaPorCod(catalogos.eps, 'cod_eps'),
       arls: mapaPorCod(catalogos.arls, 'cod_arl'),
       pensiones: mapaPorCod(catalogos.pensiones, 'cod_fondo_pensiones'),
@@ -170,17 +180,33 @@ function Afiliaciones() {
       setMensajeLista('');
       setCargando(true);
       try {
-        const [ja, je, cat] = await Promise.all([getAfiliaciones(), getEmpleados(), obtenerCatalogosAfiliacion()]);
+        const [ja, je] = await Promise.all([getAfiliaciones(), getEmpleados()]);
         if (!activo) return;
         setLista(extraerFilasAfiliaciones(ja));
         setEmpleados(extraerFilasEmpleados(je));
-        setCatalogos(cat);
       } catch (e) {
         if (!activo) return;
         setLista([]);
         setMensajeLista(mensajeErrorApi(e));
       } finally {
         if (activo) setCargando(false);
+      }
+
+      if (!activo) return;
+      try {
+        const cat = await obtenerCatalogosAfiliacion();
+        if (!activo) return;
+        setCatalogos(cat);
+      } catch {
+        if (!activo) return;
+        setCatalogos({
+          eps: [],
+          riesgos: [],
+          arls: [],
+          pensiones: [],
+          cesantias: [],
+          compensaciones: [],
+        });
       }
     })();
     return () => {

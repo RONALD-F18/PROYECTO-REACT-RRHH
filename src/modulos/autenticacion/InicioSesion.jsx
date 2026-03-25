@@ -89,7 +89,7 @@ function InicioSesion() {
         email_usuario: usuarioCorreo.trim(),
         contrasena_usuario: contrasena,
       });
-      navegar('/dashboard');
+      navegar('/dashboard', { replace: true });
     } catch (e) {
       setErrorServidor(mensajeErrorApi(e));
     } finally {

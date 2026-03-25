@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
 import FormularioSecciones from '../../../componentes/comunes/FormularioSecciones';
+import FormularioPasos from '../../../componentes/comunes/FormularioPasos';
 import { validarNumeroDocumento, validarNombres } from '../../../utils/validaciones';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 import {
@@ -120,6 +121,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
   const [camposTocados, setCamposTocados] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [errorGeneral, setErrorGeneral] = useState('');
+  const [pasoActual, setPasoActual] = useState(0);
 
   const codEdicion = useMemo(() => (esEdicion ? codigoIncapacidadDesde(datosIncapacidad) : null), [esEdicion, datosIncapacidad]);
 
@@ -161,6 +163,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
   useEffect(() => {
     if (!mostrar) return;
     setErrorGeneral('');
+    setPasoActual(0);
     if (datosIncapacidad && codigoIncapacidadDesde(datosIncapacidad) != null) {
       setFormulario(incapacidadApiAFormulario(datosIncapacidad, empleados));
     } else {
@@ -218,6 +221,34 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     }
   };
 
+  const validarAntesDeSiguiente = useCallback(
+    (idx) => {
+      const grupos = [
+        ['documento', 'nombre'],
+        ['tipoIncapacidad', 'fechaInicio', 'fechaFin'],
+        ['diagnostico'],
+      ];
+      if (idx < 0 || idx >= grupos.length) return true;
+
+      const campos = grupos[idx];
+      const todosTocados = {};
+      const nuevosErrores = {};
+      for (const c of campos) {
+        todosTocados[c] = true;
+        const err = validarCampo(c, formulario[c]);
+        if (err) nuevosErrores[c] = err;
+      }
+      if (idx === 2) {
+        const comb = combinarDescripcionParaApi(formulario.diagnostico, formulario.descripcion);
+        if (!comb.ok) nuevosErrores.diagnostico = comb.error;
+      }
+      setCamposTocados((p) => ({ ...p, ...todosTocados }));
+      setErrores(nuevosErrores);
+      return Object.keys(nuevosErrores).length === 0;
+    },
+    [formulario],
+  );
+
   const manejarCambio = (e) => {
     const { name, value } = e.target;
     setFormulario((prev) => {
@@ -242,7 +273,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     setErrores((prev) => ({ ...prev, [name]: error }));
   };
 
-  const validarFormulario = () => {
+  const calcularErroresIncapacidad = () => {
     const nuevosErrores = {};
     const todosTocados = {};
     const campos = [
@@ -260,16 +291,32 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     }
     const comb = combinarDescripcionParaApi(formulario.diagnostico, formulario.descripcion);
     if (!comb.ok) nuevosErrores.diagnostico = comb.error;
+    return { nuevosErrores, todosTocados };
+  };
 
+  const pasoPorErroresIncap = (errs) => {
+    const grupos = [['documento', 'nombre'], ['tipoIncapacidad', 'fechaInicio', 'fechaFin'], ['diagnostico']];
+    for (let i = 0; i < grupos.length; i++) {
+      if (grupos[i].some((c) => errs[c])) return i;
+    }
+    return 3;
+  };
+
+  const aplicarValidacionIncap = () => {
+    const { nuevosErrores, todosTocados } = calcularErroresIncapacidad();
     setCamposTocados((prev) => ({ ...prev, ...todosTocados }));
     setErrores(nuevosErrores);
-    return Object.keys(nuevosErrores).length === 0;
+    return nuevosErrores;
   };
 
   const manejarGuardar = async (e) => {
     e.preventDefault();
     setErrorGeneral('');
-    if (!validarFormulario()) return;
+    const nuevosErrores = aplicarValidacionIncap();
+    if (Object.keys(nuevosErrores).length > 0) {
+      setPasoActual(pasoPorErroresIncap(nuevosErrores));
+      return;
+    }
 
     const emp = buscarEmpleadoPorDocumento(empleados, formulario.documento);
     const codEmp = emp ? codigoEmpleadoDesde(emp) : null;
@@ -432,90 +479,128 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
           </div>
         ) : null}
 
-        <FormularioSecciones
-          secciones={secciones}
-          valores={formulario}
-          errores={errores}
-          camposTocados={camposTocados}
-          onChange={manejarCambio}
-          onBlur={manejarBlur}
-          obtenerClaseCampo={obtenerClaseCampo}
-          mostrarMensaje={mostrarMensaje}
-        />
+        <FormularioPasos
+          pasos={[
+            { numero: 1, titulo: 'Identificación del Empleado', color: 'morado' },
+            { numero: 2, titulo: 'Información de la Incapacidad', color: 'naranja' },
+            { numero: 3, titulo: 'Diagnóstico médico', color: 'morado' },
+            { numero: 4, titulo: 'Notas y referencia de pagos', color: 'azul' },
+          ]}
+          pasoActual={pasoActual}
+          setPasoActual={setPasoActual}
+          onCancelar={cerrar}
+          enviando={enviando}
+          validarAntesDeSiguiente={validarAntesDeSiguiente}
+          textoGuardar={esEdicion ? 'Actualizar Incapacidad' : 'Registrar Incapacidad'}
+        >
+          {pasoActual === 0 ? (
+            <FormularioSecciones
+              ocultarEncabezadosSeccion
+              secciones={[secciones[0]]}
+              valores={formulario}
+              errores={errores}
+              camposTocados={camposTocados}
+              onChange={manejarCambio}
+              onBlur={manejarBlur}
+              obtenerClaseCampo={obtenerClaseCampo}
+              mostrarMensaje={mostrarMensaje}
+            />
+          ) : null}
+          {pasoActual === 1 ? (
+            <FormularioSecciones
+              ocultarEncabezadosSeccion
+              secciones={[secciones[1]]}
+              valores={formulario}
+              errores={errores}
+              camposTocados={camposTocados}
+              onChange={manejarCambio}
+              onBlur={manejarBlur}
+              obtenerClaseCampo={obtenerClaseCampo}
+              mostrarMensaje={mostrarMensaje}
+            />
+          ) : null}
+          {pasoActual === 2 ? (
+            <FormularioSecciones
+              ocultarEncabezadosSeccion
+              secciones={[secciones[2]]}
+              valores={formulario}
+              errores={errores}
+              camposTocados={camposTocados}
+              onChange={manejarCambio}
+              onBlur={manejarBlur}
+              obtenerClaseCampo={obtenerClaseCampo}
+              mostrarMensaje={mostrarMensaje}
+            />
+          ) : null}
+          {pasoActual === 3 ? (
+            <>
+              <div className="seccion-descripcion">
+                <div className="seccion-descripcion-header">
+                  <h3 className="seccion-descripcion-titulo">Descripción y Notas</h3>
+                </div>
+                <p className="seccion-descripcion-instruccion">
+                  Información adicional; se concatena con el diagnóstico en un solo campo descripcion (máx.{' '}
+                  {DESCRIPCION_MAX} caracteres en total).
+                </p>
+                <textarea
+                  name="descripcion"
+                  value={formulario.descripcion}
+                  onChange={manejarCambio}
+                  placeholder="Agregue alguna información adicional...."
+                  rows="4"
+                />
+              </div>
 
-        <div className="seccion-descripcion">
-          <div className="seccion-descripcion-header">
-            <h3 className="seccion-descripcion-titulo">Descripción y Notas</h3>
-          </div>
-          <p className="seccion-descripcion-instruccion">
-            Información adicional; se concatena con el diagnóstico en un solo campo descripcion (máx. {DESCRIPCION_MAX}{' '}
-            caracteres en total).
-          </p>
-          <textarea
-            name="descripcion"
-            value={formulario.descripcion}
-            onChange={manejarCambio}
-            placeholder="Agregue alguna información adicional...."
-            rows="4"
-          />
-        </div>
-
-        <div className="seccion-informacion">
-          <h4 className="seccion-informacion-titulo">Información sobre Pagos de Incapacidades</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginTop: '16px' }}>
-            <div>
-              <h5 style={{ color: '#10b981', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
-                Enfermedad General (Origen Común):
-              </h5>
-              <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
-                <li>Días 1-2: Empresa paga 100%</li>
-                <li>Días 3-90: EPS paga 66.67%</li>
-                <li>Días 91-180: EPS paga 50%</li>
-                <li>Más de 180 días: Evaluación de invalidez</li>
-              </ul>
-            </div>
-            <div>
-              <h5 style={{ color: '#ff6a3a', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
-                Accidente/Enfermedad Laboral:
-              </h5>
-              <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
-                <li>Todos los días: ARL paga 100%</li>
-                <li>Desde el día 1 hasta recuperación</li>
-                <li>Sin límite de días</li>
-              </ul>
-            </div>
-            <div>
-              <h5 style={{ color: '#ef4444', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
-                Licencia de Maternidad:
-              </h5>
-              <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
-                <li>18 semanas (126 días)</li>
-                <li>EPS paga 100%</li>
-              </ul>
-            </div>
-            <div>
-              <h5 style={{ color: '#3b82f6', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
-                Licencia de Paternidad:
-              </h5>
-              <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
-                <li>2 semanas (14 días)</li>
-                <li>EPS paga 100%</li>
-              </ul>
-            </div>
-          </div>
-          <p style={{ marginTop: '16px', fontSize: '13px', color: '#374151', fontWeight: 500 }}>
-            Los cálculos se realizan automáticamente según la normativa colombiana vigente
-          </p>
-        </div>
-
-        <div className="modal-acciones">
-          <button type="button" className="btn-cancelar" onClick={cerrar} disabled={enviando}>
-            Cancelar
-          </button>
-          <button type="submit" className="btn-guardar" disabled={enviando}>
-            {enviando ? 'Guardando…' : esEdicion ? 'Actualizar Incapacidad' : 'Registrar Incapacidad'}
-          </button>
-        </div>
+              <div className="seccion-informacion">
+                <h4 className="seccion-informacion-titulo">Información sobre Pagos de Incapacidades</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginTop: '16px' }}>
+                  <div>
+                    <h5 style={{ color: '#10b981', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
+                      Enfermedad General (Origen Común):
+                    </h5>
+                    <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
+                      <li>Días 1-2: Empresa paga 100%</li>
+                      <li>Días 3-90: EPS paga 66.67%</li>
+                      <li>Días 91-180: EPS paga 50%</li>
+                      <li>Más de 180 días: Evaluación de invalidez</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 style={{ color: '#ff6a3a', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
+                      Accidente/Enfermedad Laboral:
+                    </h5>
+                    <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
+                      <li>Todos los días: ARL paga 100%</li>
+                      <li>Desde el día 1 hasta recuperación</li>
+                      <li>Sin límite de días</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 style={{ color: '#ef4444', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
+                      Licencia de Maternidad:
+                    </h5>
+                    <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
+                      <li>18 semanas (126 días)</li>
+                      <li>EPS paga 100%</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 style={{ color: '#3b82f6', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
+                      Licencia de Paternidad:
+                    </h5>
+                    <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
+                      <li>2 semanas (14 días)</li>
+                      <li>EPS paga 100%</li>
+                    </ul>
+                  </div>
+                </div>
+                <p style={{ marginTop: '16px', fontSize: '13px', color: '#374151', fontWeight: 500 }}>
+                  Los cálculos se realizan automáticamente según la normativa colombiana vigente
+                </p>
+              </div>
+            </>
+          ) : null}
+        </FormularioPasos>
       </form>
     </Modal>
   );

@@ -7,6 +7,8 @@ import {
   deleteIncapacidad,
   patchIncapacidad,
   normalizarRegistroIncapacidad,
+  parseDetalleIncapacidad,
+  nombreTipoIncapacidadDesdeFila,
   codigoIncapacidadDesde,
 } from '../../services/incapacidades';
 import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
@@ -52,16 +54,16 @@ function formatearCOP(n) {
 }
 
 const ESTADOS_SELECT = [
-  { valor: 'ACTIVA', etiqueta: 'Activa' },
-  { valor: 'FINALIZADA', etiqueta: 'Finalizada' },
-  { valor: 'CANCELADA', etiqueta: 'Cancelada' },
-  { valor: 'EN_REVISION', etiqueta: 'En Revisión' },
+  { valor: 'Activa', etiqueta: 'Activa' },
+  { valor: 'Finalizada', etiqueta: 'Finalizada' },
+  { valor: 'Cancelada', etiqueta: 'Cancelada' },
 ];
 
 function DetallesIncapacidad() {
   const { id } = useParams();
   const navegar = useNavigate();
   const [registro, setRegistro] = useState(null);
+  const [distribucionPagos, setDistribucionPagos] = useState(null);
   const [empleados, setEmpleados] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -74,16 +76,20 @@ function DetallesIncapacidad() {
     setCargando(true);
     try {
       const raw = await getIncapacidadById(id);
-      const r = normalizarRegistroIncapacidad(raw) ?? raw?.data ?? raw;
+      const { incapacidad: incApi, distribucion_pagos } = parseDetalleIncapacidad(raw);
+      const r = incApi ?? normalizarRegistroIncapacidad(raw) ?? raw?.data;
       const cod = codigoIncapacidadDesde(r);
       if (!r || cod == null) {
         setRegistro(null);
+        setDistribucionPagos(null);
         setError('No se encontró la incapacidad.');
         return;
       }
       setRegistro(r);
+      setDistribucionPagos(distribucion_pagos);
     } catch (e) {
       setRegistro(null);
+      setDistribucionPagos(null);
       setError(mensajeErrorApi(e));
     } finally {
       setCargando(false);
@@ -121,12 +127,21 @@ function DetallesIncapacidad() {
     }
     const nombreEmp = emp ? nombreCompletoEmpleado(emp) : '—';
     const docEmp = emp ? String(emp.doc_iden ?? '—') : '—';
-    const tipo = registro.tipo_incapacidad ?? registro.tipo ?? '—';
+    const tipo = nombreTipoIncapacidadDesdeFila(registro);
     const fi = registro.fecha_inicio ?? registro.fechaInicio;
     const ff = registro.fecha_fin ?? registro.fechaFin;
     const dias = registro.dias_incapacidad ?? registro.dias ?? diasEntre(fi, ff);
-    const pagador = registro.entidad_pagadora ?? entidadPagadoraPorTipo(tipo);
-    const estadoVal = String(registro.estado_incapacidad || registro.estado || 'ACTIVA').toUpperCase().replace(/\s+/g, '_');
+    const dp = distribucionPagos;
+    const pagador = dp?.entidad_responsable ?? registro.entidad_responsable ?? registro.entidad_pagadora ?? entidadPagadoraPorTipo(tipo);
+    const estadoRaw = String(registro.estado_incapacidad || '').trim();
+    const estadoVal = ESTADOS_SELECT.some((o) => o.valor === estadoRaw) ? estadoRaw : 'Activa';
+
+    const desc = registro.descripcion != null && String(registro.descripcion).trim() !== '' ? String(registro.descripcion) : '—';
+    const cieObj = registro.clasificacionEnfermedad;
+    const codigoEnfermedad =
+      cieObj && typeof cieObj === 'object'
+        ? String(cieObj.codigo_cie10 ?? '—')
+        : '—';
 
     return {
       nombreEmp,
@@ -139,21 +154,21 @@ function DetallesIncapacidad() {
       fechaFin: formatearSoloFecha(ff),
       pagador,
       porcentajePagador: registro.porcentaje_pagador ? `${registro.porcentaje_pagador}%` : pagador === 'ARL' ? '100%' : '—',
-      descripcionDiagnostico: registro.diagnostico ?? registro.descripcion_diagnostico ?? '—',
-      codigoEnfermedad: registro.codigo_enfermedad ?? registro.codigo_cie ?? '—',
-      diasEmpresa: registro.dias_empresa ?? 0,
-      valorEmpresa: formatearCOP(registro.valor_empresa),
-      diasEps: registro.dias_eps ?? 0,
-      valorEps: formatearCOP(registro.valor_eps),
-      diasArl: registro.dias_arl ?? 0,
-      valorArl: formatearCOP(registro.valor_arl),
-      totalPagado: formatearCOP(registro.total_pagado ?? registro.valor_total),
-      salarioBase: formatearCOP(registro.salario_base),
-      salarioDiario: formatearCOP(registro.salario_diario),
-      observaciones: registro.observaciones ?? registro.descripcion ?? '—',
+      descripcionDiagnostico: desc,
+      codigoEnfermedad,
+      diasEmpresa: dp?.dias_empresa ?? registro.dias_empresa ?? 0,
+      valorEmpresa: formatearCOP(dp?.monto_empresa ?? registro.valor_empresa),
+      diasEps: dp?.dias_eps ?? registro.dias_eps ?? 0,
+      valorEps: formatearCOP(dp?.monto_eps ?? registro.valor_eps),
+      diasArl: dp?.dias_arl ?? registro.dias_arl ?? 0,
+      valorArl: formatearCOP(dp?.monto_arl ?? registro.valor_arl),
+      totalPagado: formatearCOP(dp?.total_pagado ?? registro.total_pagado ?? registro.valor_total),
+      salarioBase: formatearCOP(dp?.salario_base ?? registro.salario_base),
+      salarioDiario: formatearCOP(dp?.salario_diario ?? registro.salario_diario),
+      observaciones: desc,
       estadoSelect: estadoVal,
     };
-  }, [registro, empleados]);
+  }, [registro, empleados, distribucionPagos]);
 
   const manejarCambioEstado = async (nuevoEstado) => {
     const cod = registro ? codigoIncapacidadDesde(registro) : null;

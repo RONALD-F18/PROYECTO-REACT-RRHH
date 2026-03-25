@@ -5,8 +5,15 @@ import { ModalIncapacidad } from './componentes';
 import {
   getIncapacidades,
   getIncapacidadById,
+  getResumenIncapacidades,
+  getTiposIncapacidad,
   deleteIncapacidad,
   extraerFilasIncapacidades,
+  extraerFilasCatalogo,
+  extraerResumenIncapacidades,
+  nombreTipoIncapacidadDesdeFila,
+  normalizarRegistroIncapacidad,
+  parseDetalleIncapacidad,
   codigoIncapacidadDesde,
 } from '../../services/incapacidades';
 import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
@@ -25,13 +32,6 @@ function entidadPagadoraPorTipo(tipo) {
   if (t.toLowerCase().includes('accidente') || t.toLowerCase().includes('laboral')) return 'ARL';
   if (t.toLowerCase().includes('licencia')) return 'EPS';
   return 'EPS';
-}
-
-function incapacidadActiva(row) {
-  if (!row || typeof row !== 'object') return false;
-  if (row.activa === true || row.activa === 1 || row.activa === '1') return true;
-  const e = String(row.estado_incapacidad || '').toUpperCase();
-  return e === 'ACTIVA' || e === 'EN_REVISION' || e === 'EN REVISIÓN';
 }
 
 function formatearPeriodo(fi, ff) {
@@ -57,6 +57,8 @@ function Incapacidades() {
   const navegar = useNavigate();
   const [lista, setLista] = useState([]);
   const [empleados, setEmpleados] = useState([]);
+  const [resumenApi, setResumenApi] = useState(null);
+  const [tiposCatalogo, setTiposCatalogo] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [mensajeLista, setMensajeLista] = useState('');
   const [mensajeExito, setMensajeExito] = useState('');
@@ -81,8 +83,13 @@ function Incapacidades() {
     return lista.map((row) => {
       if (!row || typeof row !== 'object') return row;
       const codEmp = row.cod_empleado != null ? Number(row.cod_empleado) : null;
-      const emp = codEmp != null && Number.isFinite(codEmp) ? mapaEmpleados.get(codEmp) : null;
-      const tipo = row.tipo_incapacidad ?? row.tipo ?? '—';
+      const emp =
+        row.empleado && typeof row.empleado === 'object'
+          ? row.empleado
+          : codEmp != null && Number.isFinite(codEmp)
+            ? mapaEmpleados.get(codEmp)
+            : null;
+      const nombreTipo = nombreTipoIncapacidadDesdeFila(row);
       const fi = row.fecha_inicio ?? row.fechaInicio;
       const ff = row.fecha_fin ?? row.fechaFin;
       const dias = row.dias_incapacidad ?? row.dias ?? diasEntre(fi, ff);
@@ -90,11 +97,11 @@ function Incapacidades() {
         ...row,
         _empleado: emp ? nombreCompletoEmpleado(emp) : '—',
         _documento: emp ? String(emp.doc_iden ?? '—') : '—',
-        _tipo: String(tipo),
+        _tipo: nombreTipo,
         _periodo: formatearPeriodo(fi, ff),
         _dias: dias,
-        _entidad: row.entidad_pagadora ?? entidadPagadoraPorTipo(tipo),
-        _activa: incapacidadActiva(row),
+        _entidad: row.entidad_responsable ?? row.entidad_pagadora ?? entidadPagadoraPorTipo(nombreTipo),
+        _estado: String(row.estado_incapacidad || '').trim() || '—',
         _codigoMostrar: codigoIncapacidadDesde(row) ?? '—',
       };
     });
@@ -108,8 +115,9 @@ function Incapacidades() {
     return filasVista.filter((row) => {
       if (!row || typeof row !== 'object') return false;
       if (tipoF && String(row._tipo) !== tipoF) return false;
-      if (est === 'Activa' && !row._activa) return false;
-      if (est === 'Inactiva' && row._activa) return false;
+      if (est === 'Activa' && row._estado !== 'Activa') return false;
+      if (est === 'Finalizada' && row._estado !== 'Finalizada') return false;
+      if (est === 'Cancelada' && row._estado !== 'Cancelada') return false;
       if (q) {
         const nom = String(row._empleado || '').toLowerCase();
         const doc = String(row._documento || '').toLowerCase();
@@ -121,31 +129,44 @@ function Incapacidades() {
   }, [filasVista, criteriosFiltro]);
 
   const kpis = useMemo(() => {
-    const base = filasFiltradas;
-    let totalDias = 0;
-    let costo = 0;
-    for (const r of base) {
-      totalDias += Number(r._dias) || 0;
-      const v = r.valor_total ?? r.costo_incapacidad;
-      const fc = formatearCOP(v);
-      if (fc && v != null) costo += Number(v) || 0;
+    const r = resumenApi;
+    if (!r) {
+      return {
+        total: 0,
+        activas: 0,
+        origenComun: 0,
+        laboral: 0,
+        totalDias: 0,
+        costoTotal: '—',
+      };
     }
+    const ct = r.costo_total;
     return {
-      total: base.length,
-      activas: base.filter((r) => r._activa).length,
-      origenComun: base.filter((r) => String(r._tipo).toLowerCase().includes('enfermedad')).length,
-      laboral: base.filter((r) => String(r._tipo).toLowerCase().includes('accidente')).length,
-      totalDias,
-      costoTotal: costo > 0 ? formatearCOP(costo) : null,
+      total: Number(r.total) || 0,
+      activas: Number(r.activas) || 0,
+      origenComun: Number(r.origen_comun) || 0,
+      laboral: Number(r.laboral) || 0,
+      totalDias: Number(r.total_dias) || 0,
+      costoTotal: ct == null || ct === '' ? '—' : formatearCOP(ct),
     };
-  }, [filasFiltradas]);
+  }, [resumenApi]);
+
+  const opcionesFiltroTipo = useMemo(() => {
+    const nCat = tiposCatalogo
+      .map((t) => (t?.nombre_tipo != null ? String(t.nombre_tipo).trim() : ''))
+      .filter(Boolean);
+    if (nCat.length > 0) return [...new Set(nCat)];
+    const fromLista = lista.map((row) => nombreTipoIncapacidadDesdeFila(row)).filter((t) => t && t !== '—');
+    return [...new Set(fromLista)];
+  }, [tiposCatalogo, lista]);
 
   const recargarLista = useCallback(async () => {
     setMensajeLista('');
     setCargando(true);
     try {
-      const json = await getIncapacidades();
+      const [json, jr] = await Promise.all([getIncapacidades(), getResumenIncapacidades()]);
       setLista(extraerFilasIncapacidades(json));
+      setResumenApi(extraerResumenIncapacidades(jr));
     } catch (e) {
       setLista([]);
       setMensajeLista(mensajeErrorApi(e));
@@ -160,10 +181,17 @@ function Incapacidades() {
       setMensajeLista('');
       setCargando(true);
       try {
-        const [ji, je] = await Promise.all([getIncapacidades(), getEmpleados()]);
+        const [ji, je, jt, jr] = await Promise.all([
+          getIncapacidades(),
+          getEmpleados(),
+          getTiposIncapacidad(),
+          getResumenIncapacidades(),
+        ]);
         if (!activo) return;
         setLista(extraerFilasIncapacidades(ji));
         setEmpleados(extraerFilasEmpleados(je));
+        setTiposCatalogo(extraerFilasCatalogo(jt));
+        setResumenApi(extraerResumenIncapacidades(jr));
       } catch (e) {
         if (!activo) return;
         setLista([]);
@@ -187,7 +215,8 @@ function Incapacidades() {
     if (cod == null) return;
     try {
       const json = await getIncapacidadById(cod);
-      const raw = json?.data ?? json;
+      const { incapacidad } = parseDetalleIncapacidad(json);
+      const raw = incapacidad ?? normalizarRegistroIncapacidad(json) ?? json?.data;
       setIncapacidadEditar(raw);
       setMostrarModal(true);
     } catch (err) {
@@ -274,7 +303,7 @@ function Incapacidades() {
         <div className="tarjeta-costo-total">
           <div className="tarjeta-costo-contenido">
             <span className="tarjeta-costo-etiqueta">Costo Total de Incapacidades</span>
-            <span className="tarjeta-costo-valor">{kpis.costoTotal ?? '—'}</span>
+            <span className="tarjeta-costo-valor">{kpis.costoTotal}</span>
           </div>
           <div className="tarjeta-costo-icono">$</div>
         </div>
@@ -285,12 +314,12 @@ function Incapacidades() {
             {
               nombre: 'estado',
               placeholder: 'Todos los Estados',
-              opciones: ['Activa', 'Inactiva'],
+              opciones: ['Activa', 'Finalizada', 'Cancelada'],
             },
             {
               nombre: 'tipo',
               placeholder: 'Todos los Tipos',
-              opciones: ['Enfermedad General', 'Accidente Laboral', 'Licencia Maternidad', 'Licencia Paternidad'],
+              opciones: opcionesFiltroTipo,
             },
           ]}
           onFiltrar={(filtros) =>
@@ -362,9 +391,11 @@ function Incapacidades() {
                     <span className="detalle-valor">{incapacidad._entidad}</span>
                   </div>
                   <div className="detalle-item">
-                    <span className="detalle-etiqueta">Activa</span>
-                    <span className={`etiqueta ${incapacidad._activa ? 'etiqueta-verde' : 'etiqueta-gris'}`}>
-                      {incapacidad._activa ? 'Activa' : 'Inactiva'}
+                    <span className="detalle-etiqueta">Estado</span>
+                    <span
+                      className={`etiqueta ${incapacidad._estado === 'Activa' ? 'etiqueta-verde' : 'etiqueta-gris'}`}
+                    >
+                      {incapacidad._estado}
                     </span>
                   </div>
                 </div>

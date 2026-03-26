@@ -5,6 +5,7 @@ export * from './empleados';
 export * from './usuarios';
 export * from './prestaciones';
 export * from './incapacidades';
+export * from './inasistencias';
 export * from './afiliaciones';
 export * from './contratos';
 export * from './certificaciones';

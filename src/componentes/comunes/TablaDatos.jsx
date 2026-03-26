@@ -4,8 +4,27 @@
  * @param {Array} datos - Array de objetos con los datos
  * @param {boolean} acciones - Mostrar columna de acciones
  * @param {function} renderAcciones - Función para renderizar acciones personalizadas
+ * @param {'start' | 'end' | 'center'} accionesAlineacion - Alineación de la columna Acciones (por defecto start)
  */
-function TablaDatos({ columnas, datos, acciones = true, renderAcciones }) {
+function TablaDatos({ columnas, datos, acciones = true, renderAcciones, accionesAlineacion = 'start' }) {
+  const clThAcciones =
+    accionesAlineacion === 'end'
+      ? 'tabla-th-acciones-derecha'
+      : accionesAlineacion === 'center'
+        ? 'tabla-th-acciones-centro'
+        : undefined;
+  const clTdAcciones =
+    accionesAlineacion === 'end'
+      ? 'tabla-td-acciones-derecha'
+      : accionesAlineacion === 'center'
+        ? 'tabla-td-acciones-centro'
+        : undefined;
+  const clAcciones =
+    accionesAlineacion === 'end'
+      ? 'tabla-acciones tabla-acciones--fin'
+      : accionesAlineacion === 'center'
+        ? 'tabla-acciones tabla-acciones--centro'
+        : 'tabla-acciones';
   return (
     <div className="contenedor-tabla">
       <table className="tabla-datos">
@@ -14,7 +33,7 @@ function TablaDatos({ columnas, datos, acciones = true, renderAcciones }) {
             {columnas.map((col, indice) => (
               <th key={indice}>{col.encabezado}</th>
             ))}
-            {acciones && <th>Acciones</th>}
+            {acciones && <th className={clThAcciones}>Acciones</th>}
           </tr>
         </thead>
         <tbody>
@@ -30,6 +49,7 @@ function TablaDatos({ columnas, datos, acciones = true, renderAcciones }) {
               return (
               <tr
                 key={
+                  fila.cod_certificacion ??
                   fila.cod_contrato ??
                   fila.cod_empleado ??
                   fila.id ??
@@ -50,8 +70,8 @@ function TablaDatos({ columnas, datos, acciones = true, renderAcciones }) {
                   </td>
                 ))}
                 {acciones && (
-                  <td>
-                    <div className="tabla-acciones">
+                  <td className={clTdAcciones}>
+                    <div className={clAcciones}>
                       {renderAcciones ? (
                         renderAcciones(fila)
                       ) : (

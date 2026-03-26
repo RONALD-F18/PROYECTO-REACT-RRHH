@@ -7,5 +7,6 @@ export * from './prestaciones';
 export * from './incapacidades';
 export * from './afiliaciones';
 export * from './contratos';
+export * from './certificaciones';
 export * from './comunicacionesDisciplinarias';
 export * from './inicio';

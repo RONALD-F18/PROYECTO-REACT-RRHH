@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 /**
  * Componente reutilizable para formularios por pasos.
@@ -17,9 +17,12 @@ function FormularioPasos({
   textoGuardar = 'Guardar',
   enviando = false,
   validarAntesDeSiguiente,
+  prevenirSubmitConEnter = true,
   children,
 }) {
   const [pasoActualState, setPasoActualState] = useState(pasoInicial);
+  const [navegandoPaso, setNavegandoPaso] = useState(false);
+  const [bloqueoSubmitTransicion, setBloqueoSubmitTransicion] = useState(false);
   const pasoActual = pasoActualProp ?? pasoActualState;
   const setPasoActual = setPasoActualProp ?? setPasoActualState;
 
@@ -29,25 +32,52 @@ function FormularioPasos({
 
   const paso = useMemo(() => pasos[pasoActual] ?? null, [pasos, pasoActual]);
 
-  const irSiguiente = async () => {
-    if (enviando) return;
-    if (!paso) return;
-    if (validarAntesDeSiguiente) {
-      const ok = await validarAntesDeSiguiente(pasoActual);
-      if (!ok) return;
+  useEffect(() => {
+    if (!esUltimo) {
+      setBloqueoSubmitTransicion(false);
+      return;
     }
-    if (!esUltimo) setPasoActual((p) => p + 1);
+    // Evita que clics muy rapidos en "Siguiente" disparen submit al entrar al ultimo paso.
+    setBloqueoSubmitTransicion(true);
+    const timer = setTimeout(() => setBloqueoSubmitTransicion(false), 450);
+    return () => clearTimeout(timer);
+  }, [esUltimo, pasoActual]);
+
+  const manejarKeyDownCapture = (e) => {
+    if (!prevenirSubmitConEnter) return;
+    if (e.key !== 'Enter') return;
+    if (e.shiftKey) return;
+    const target = e.target;
+    const tag = target?.tagName?.toLowerCase?.();
+    if (tag === 'textarea') return;
+    if (target?.isContentEditable) return;
+    e.preventDefault();
+  };
+
+  const irSiguiente = async () => {
+    if (enviando || navegandoPaso) return;
+    if (!paso) return;
+    setNavegandoPaso(true);
+    try {
+      if (validarAntesDeSiguiente) {
+        const ok = await validarAntesDeSiguiente(pasoActual);
+        if (!ok) return;
+      }
+      if (!esUltimo) setPasoActual((p) => p + 1);
+    } finally {
+      setTimeout(() => setNavegandoPaso(false), 120);
+    }
   };
 
   const irAnterior = () => {
-    if (enviando) return;
+    if (enviando || navegandoPaso) return;
     if (!esPrimero) setPasoActual((p) => p - 1);
   };
 
   if (!paso) return null;
 
   return (
-    <div className="formulario-pasos">
+    <div className="formulario-pasos" onKeyDownCapture={manejarKeyDownCapture}>
       <div className="seccion-formulario-header" style={{ marginTop: 0 }}>
         <div className={`seccion-formulario-numero ${paso.color || 'morado'}`}>{paso.numero}</div>
         <h3 className="seccion-formulario-titulo">{paso.titulo}</h3>
@@ -62,16 +92,16 @@ function FormularioPasos({
 
         <div className="formulario-pasos-navegacion" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {!esPrimero ? (
-            <button type="button" className="btn-cancelar" onClick={irAnterior} disabled={enviando}>
+            <button type="button" className="btn-cancelar" onClick={irAnterior} disabled={enviando || navegandoPaso}>
               {textoAnterior}
             </button>
           ) : null}
           {esUltimo ? (
-            <button type="submit" className="btn-guardar" disabled={enviando}>
+            <button type="submit" className="btn-guardar" disabled={enviando || navegandoPaso || bloqueoSubmitTransicion}>
               {enviando ? 'Guardando…' : textoGuardar}
             </button>
           ) : (
-            <button type="button" className="btn-guardar" onClick={irSiguiente} disabled={enviando}>
+            <button type="button" className="btn-guardar" onClick={irSiguiente} disabled={enviando || navegandoPaso}>
               {textoSiguiente}
             </button>
           )}

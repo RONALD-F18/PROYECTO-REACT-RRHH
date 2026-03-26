@@ -84,6 +84,16 @@
   color: #fff;
 }
 
+.btn-danger {
+  background: var(--color-error);
+  color: #fff;
+  border: none;
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
 /* Botones de acceso rápido (Dashboard) */
 .btn-accion-rapida {
   display: flex;

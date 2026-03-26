@@ -15,6 +15,8 @@ import {
   DetallesAfiliacion,
   Contratos,
   DetallesContrato,
+  Certificaciones,
+  DetalleCertificacion,
   ComunicacionesDisciplinarias,
 } from "../modulos";
 import { esAdminSesionLocal, haySesionLocalActiva } from "../services/autenticacion";
@@ -61,6 +63,8 @@ export const rutasPrivadas = [
   { ruta: "/empleados/:id", componente: DetallesEmpleado },
   { ruta: "/contratos", componente: Contratos },
   { ruta: "/contratos/:id", componente: DetallesContrato },
+  { ruta: "/certificaciones", componente: Certificaciones },
+  { ruta: "/certificaciones/:id", componente: DetalleCertificacion },
   { ruta: "/usuarios", componente: Usuarios },
   { ruta: "/prestaciones", componente: PrestacionesSociales },
   { ruta: "/prestaciones/:id", componente: DetallesPrestaciones },

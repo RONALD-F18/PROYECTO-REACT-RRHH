@@ -1,0 +1,411 @@
+.certificaciones-contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.detalle-certificacion-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Botón descarga PDF: mismo tamaño que otros btn-accion-tabla, ícono blanco */
+.btn-accion-tabla-cert-pdf {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--color-primario), var(--color-acento-morado)) !important;
+}
+
+.btn-accion-tabla.btn-accion-tabla-cert-pdf:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--color-primario), var(--color-acento-morado)) !important;
+  filter: brightness(1.06);
+}
+
+.btn-accion-tabla-cert-pdf:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cert-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cert-step-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.cert-step-grid--full {
+  grid-column: 1 / -1;
+}
+
+.cert-step-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cert-label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.cert-input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #d8e0ee;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.cert-input.cert-input--error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.15);
+}
+
+.cert-campo-ayuda {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Panel único de filtros (listado certificaciones) */
+.cert-filtros-unificado.bloque-filtros h2.cert-filtros-unificado-titulo {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e3a5f;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cert-filtros-unificado-cabecera {
+  margin-bottom: 16px;
+}
+
+.cert-filtros-unificado-sub {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.45;
+}
+
+.cert-filtros-unificado-sub strong {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.cert-filtros-unificado-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr) minmax(0, 160px) minmax(0, 160px);
+  gap: 14px 16px;
+  align-items: end;
+}
+
+.cert-filtros-fecha-grupo {
+  display: grid;
+  grid-template-rows: 18px minmax(0, 1fr);
+  row-gap: 6px;
+  min-width: 0;
+}
+
+.cert-filtros-fecha-input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--color-borde, #d8e0ee);
+  border-radius: var(--radio-lg, 12px);
+  padding: 10px 12px;
+  font-size: 15px;
+  color: #0f172a;
+  background: var(--gris-50, #f8fafc);
+  box-sizing: border-box;
+}
+
+.cert-filtros-fecha-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.cert-filtros-acciones {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 18px;
+  margin-top: 10px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.cert-filtros-btn-primario.btn-filtrar {
+  margin-left: 2px;
+}
+
+.cert-filtros-btn-secundario {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cert-filtros-btn-secundario:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.cert-filtros-btn-secundario--muted {
+  color: #64748b;
+  border-color: #e8ecf1;
+}
+
+@media (max-width: 1024px) {
+  .cert-filtros-unificado-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .cert-filtros-unificado-grid .filtro-select-grupo--busqueda {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .cert-filtros-unificado-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cert-types-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.cert-type-card {
+  border: 1px solid #d5dceb;
+  border-radius: 16px;
+  padding: 16px;
+  text-align: left;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cert-type-card--active {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 1px #4f46e5 inset;
+}
+
+.cert-ref-grid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.cert-employee-preview {
+  grid-column: 1 / -1;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.cert-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cert-filtros-fechas {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Paso 1 — empleado por documento */
+.cert-paso-empleado {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 100%;
+}
+
+.cert-paso-empleado-fila {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(220px, 1.2fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .cert-paso-empleado-fila {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cert-paso-empleado-resumen {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.cert-paso-empleado-resumen-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cert-paso-empleado-nombre {
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+
+.cert-paso-empleado-contrato-auto {
+  margin: 0;
+  padding: 12px 14px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.cert-paso-empleado-sin-contrato {
+  margin: 0;
+}
+
+.cert-paso-empleado-aviso-doc {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.cert-input:disabled {
+  background: #f1f5f9;
+  color: #475569;
+  cursor: not-allowed;
+}
+
+.cert-label--inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+/* Paso detalles */
+.cert-detalles-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.cert-detalles-bloque {
+  padding: 16px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.cert-detalles-bloque--salario {
+  background: #fafafa;
+}
+
+.cert-detalles-subtitulo {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #334155;
+}
+
+.cert-detalles-instruccion {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.cert-salario-contrato {
+  margin-top: 12px;
+}
+
+.cert-salario-valor {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cert-salario-ayuda {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.cert-afiliacion-toggle-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.cert-afiliacion-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.cert-afiliacion-toggle--on {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+
+.cert-afiliacion-toggle input {
+  margin-top: 3px;
+}
+
+.cert-afiliacion-toggle-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cert-afiliacion-toggle-titulo {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.cert-afiliacion-toggle-detalle {
+  font-size: 12px;
+  color: #64748b;
+}

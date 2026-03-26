@@ -47,6 +47,42 @@
 .tabla-acciones {
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+
+/* Especificidad: supera .tabla-datos th { text-align: left } */
+.tabla-datos th.tabla-th-acciones-derecha {
+  text-align: right;
+}
+
+.tabla-datos td.tabla-td-acciones-derecha {
+  text-align: right;
+  vertical-align: middle;
+}
+
+.tabla-datos th.tabla-th-acciones-centro {
+  text-align: center;
+}
+
+.tabla-datos td.tabla-td-acciones-centro {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.tabla-acciones--fin {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.tabla-acciones--centro {
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  width: 100%;
+  min-width: 0;
 }
 
 .btn-accion-tabla {

@@ -26,7 +26,7 @@ function PanelNavegacion() {
     { ruta: '/prestaciones', etiqueta: 'Prestaciones Sociales', descripcion: 'Prestaciones y beneficios' },
     { ruta: '/afiliaciones', etiqueta: 'Afiliaciones', descripcion: 'Seguridad social' },
     { ruta: '/contratos', etiqueta: 'Contratos', descripcion: 'Gestión de contratos' },
-    { ruta: '/certificacion', etiqueta: 'Certificación', descripcion: 'Certificados laborales' },
+    { ruta: '/certificaciones', etiqueta: 'Certificaciones', descripcion: 'Certificados laborales y afiliaciones' },
     {
       ruta: '/comunicaciones-disciplinarias',
       etiqueta: 'Comunicaciones Disciplinarias',

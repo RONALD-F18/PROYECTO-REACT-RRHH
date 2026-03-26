@@ -413,7 +413,7 @@ function PrestacionesSociales() {
                         if (cod != null) navegar(`/prestaciones/${cod}`);
                       }}
                     >
-                      Ver contrato
+                      Ver prestaciones
                     </button>
                   );
                 }}

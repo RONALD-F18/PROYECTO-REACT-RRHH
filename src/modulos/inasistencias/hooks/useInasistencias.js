@@ -7,11 +7,13 @@ import {
   eliminarInasistenciaApi,
   extraerInasistenciasApi,
 } from '../../../services/api/inasistenciasApi';
+import { getContratos, extraerFilasContratos } from '../../../services/contratos';
 import { calcularKpisInasistencias, filtrarInasistencias } from '../utils/inasistencias.mapper';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 
 export function useInasistencias() {
   const [empleados, setEmpleados] = useState([]);
+  const [contratos, setContratos] = useState([]);
   const [inasistencias, setInasistencias] = useState([]);
   const [filtros, setFiltros] = useState({
     codEmpleado: '',
@@ -26,9 +28,17 @@ export function useInasistencias() {
     setError('');
     setCargando(true);
     try {
-      const [empJson, inaJson] = await Promise.all([listarEmpleadosApi(), listarInasistenciasApi()]);
-      setEmpleados(extraerEmpleadosApi(empJson));
-      setInasistencias(extraerInasistenciasApi(inaJson));
+      const [empRes, inaRes, ctrRes] = await Promise.allSettled([
+        listarEmpleadosApi(),
+        listarInasistenciasApi(),
+        getContratos(),
+      ]);
+      setEmpleados(empRes.status === 'fulfilled' ? extraerEmpleadosApi(empRes.value) : []);
+      setInasistencias(inaRes.status === 'fulfilled' ? extraerInasistenciasApi(inaRes.value) : []);
+      setContratos(ctrRes.status === 'fulfilled' ? extraerFilasContratos(ctrRes.value) : []);
+      if (empRes.status !== 'fulfilled' && inaRes.status !== 'fulfilled' && ctrRes.status !== 'fulfilled') {
+        throw empRes.reason || inaRes.reason || ctrRes.reason;
+      }
     } catch (e) {
       setError(mensajeErrorApi(e));
     } finally {
@@ -72,6 +82,8 @@ export function useInasistencias() {
 
   return {
     empleados,
+    contratos,
+    inasistenciasTodas: inasistencias,
     inasistencias: inasistenciasFiltradas,
     kpis,
     filtros,

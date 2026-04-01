@@ -5,6 +5,20 @@ export const ESTADO_UI = {
   LIBRE: 'libre',
 };
 
+export const CALENDAR_STATUS = {
+  PRESENTE: 'presente',
+  INASISTENCIA: 'inasistencia',
+  NO_APLICA: 'no_aplica',
+  PENDIENTE: 'pendiente',
+};
+
+const PREFIJO_POR_ESTADO = {
+  [ESTADO_UI.AUSENTE]: '',
+  [ESTADO_UI.TARDE]: 'Tardanza',
+  [ESTADO_UI.PRESENTE]: 'Presente',
+  [ESTADO_UI.LIBRE]: 'Dia libre',
+};
+
 export function obtenerCodigoEmpleado(empleado) {
   if (!empleado || typeof empleado !== 'object') return null;
   return empleado.cod_empleado ?? empleado.id ?? null;
@@ -25,10 +39,31 @@ export function inicialesEmpleado(empleado) {
 export function estadoUiDesdeMotivo(motivo) {
   const v = String(motivo || '').toLowerCase();
   if (!v) return ESTADO_UI.AUSENTE;
+  if (v.startsWith('tardanza')) return ESTADO_UI.TARDE;
+  if (v.startsWith('presente')) return ESTADO_UI.PRESENTE;
+  if (v.startsWith('dia libre')) return ESTADO_UI.LIBRE;
   if (v.includes('tarde') || v.includes('retardo') || v.includes('tard')) return ESTADO_UI.TARDE;
   if (v.includes('presente') || v.includes('asistencia')) return ESTADO_UI.PRESENTE;
   if (v.includes('libre') || v.includes('descanso') || v.includes('wo')) return ESTADO_UI.LIBRE;
   return ESTADO_UI.AUSENTE;
+}
+
+export function limpiarMotivoPersistido(motivo) {
+  const txt = String(motivo || '').trim();
+  if (!txt) return '';
+  return txt
+    .replace(/^tardanza\s*-\s*/i, '')
+    .replace(/^presente\s*-\s*/i, '')
+    .replace(/^dia libre\s*-\s*/i, '')
+    .trim();
+}
+
+function construirMotivoPersistido(formulario) {
+  const estado = String(formulario?.estado || ESTADO_UI.AUSENTE);
+  const base = limpiarMotivoPersistido(formulario?.motivo);
+  const prefijo = PREFIJO_POR_ESTADO[estado] || '';
+  if (!prefijo) return base;
+  return `${prefijo}${base ? ` - ${base}` : ''}`.trim();
 }
 
 export function extraerMensajeValidacion(error, campo) {
@@ -39,7 +74,7 @@ export function extraerMensajeValidacion(error, campo) {
 
 export function construirPayloadInasistencia(formulario) {
   return {
-    motivo_inasistencia: String(formulario.motivo || '').trim(),
+    motivo_inasistencia: construirMotivoPersistido(formulario).slice(0, 50),
     fecha_inasistencia: formulario.fecha,
     cod_empleado: Number(formulario.cod_empleado),
     observaciones: String(formulario.observaciones || '').trim() || null,
@@ -73,6 +108,86 @@ export function filtrarInasistencias(lista, filtros) {
     }
     return true;
   });
+}
+
+function ymdDesdeValor(valor) {
+  if (!valor) return '';
+  if (valor instanceof Date) {
+    const y = valor.getFullYear();
+    const m = String(valor.getMonth() + 1).padStart(2, '0');
+    const d = String(valor.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  const t = String(valor).trim().slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : '';
+}
+
+function isoDesdePartes(year, month, day) {
+  return `${String(year)}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function esFinDeSemana(year, month, day) {
+  const d = new Date(Number(year), Number(month) - 1, Number(day));
+  const dow = d.getDay();
+  return dow === 0 || dow === 6;
+}
+
+/**
+ * Construye el calendario mensual de asistencia con reglas de negocio:
+ * - antes de ingreso => no_aplica
+ * - después de hoy => pendiente
+ * - día válido con novedad => inasistencia
+ * - día válido sin novedad => presente
+ */
+export function buildAttendanceCalendar({ year, month, fechaIngreso, inasistencias = [], today = new Date(), onlyBusinessDays = false }) {
+  const y = Number(year);
+  const m = Number(month);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
+    return {
+      days: [],
+      totals: { presentes: 0, inasistencias: 0, noAplica: 0, pendientes: 0 },
+    };
+  }
+
+  const todayYmd = ymdDesdeValor(today);
+  const ingresoYmd = ymdDesdeValor(fechaIngreso);
+  const diasMes = new Date(y, m, 0).getDate();
+  const novedadesPorFecha = new Map();
+
+  for (const item of inasistencias || []) {
+    const fecha = ymdDesdeValor(item?.fecha_inasistencia ?? item?.date ?? item);
+    if (!fecha) continue;
+    if (novedadesPorFecha.has(fecha)) continue; // dedupe por fecha
+    novedadesPorFecha.set(fecha, estadoUiDesdeMotivo(item?.motivo_inasistencia));
+  }
+
+  const totals = { presentes: 0, inasistencias: 0, noAplica: 0, pendientes: 0 };
+  const days = [];
+
+  for (let day = 1; day <= diasMes; day += 1) {
+    const date = isoDesdePartes(y, m, day);
+    const inasistenciaTipo = novedadesPorFecha.get(date) || null;
+    let status = CALENDAR_STATUS.PRESENTE;
+
+    if (ingresoYmd && date < ingresoYmd) {
+      status = CALENDAR_STATUS.NO_APLICA;
+    } else if (todayYmd && date > todayYmd) {
+      status = CALENDAR_STATUS.PENDIENTE;
+    } else if (onlyBusinessDays && esFinDeSemana(y, m, day) && !inasistenciaTipo) {
+      status = CALENDAR_STATUS.NO_APLICA;
+    } else if (inasistenciaTipo) {
+      status = CALENDAR_STATUS.INASISTENCIA;
+    }
+
+    if (status === CALENDAR_STATUS.PRESENTE) totals.presentes += 1;
+    else if (status === CALENDAR_STATUS.INASISTENCIA) totals.inasistencias += 1;
+    else if (status === CALENDAR_STATUS.NO_APLICA) totals.noAplica += 1;
+    else if (status === CALENDAR_STATUS.PENDIENTE) totals.pendientes += 1;
+
+    days.push({ date, status, inasistenciaTipo });
+  }
+
+  return { days, totals };
 }
 
 export function calcularKpisInasistencias(lista, empleados) {

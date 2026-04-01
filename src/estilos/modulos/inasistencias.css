@@ -38,36 +38,51 @@
   margin: 10px 0 14px;
 }
 
-.inasistencias-kpis article.kpi {
+.inasistencia-kpi-card {
   background: #ffffff;
   border-radius: 16px;
-  padding: 12px 14px;
+  padding: 12px 14px 10px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: center;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  border: 1px solid #ebe8fb;
+  min-height: 84px;
 }
 
-.inasistencias-kpis article.kpi strong {
-  font-size: 30px;
-  font-weight: 700;
-  color: #7b5ea7;
-}
-
-.inasistencias-kpis article.kpi span {
-  color: #7b5ea7;
+.inasistencia-kpi-label {
+  color: #667085;
   font-weight: 600;
   font-size: 12px;
-  text-align: center;
+  line-height: 1.25;
+  margin-bottom: 8px;
 }
 
-.kpi-total strong { color: #7b5ea7; }
-.kpi-ausente strong { color: #cc3333; }
-.kpi-tarde strong { color: #cc8800; }
-.kpi-justificadas strong { color: #2f9e44; }
-.kpi-empleados strong { color: #7b5ea7; }
-.kpi-justificadas span { color: #7b5ea7; }
+.inasistencia-kpi-value {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.inasistencia-kpi-card--total .inasistencia-kpi-value { color: #7b5ea7; }
+.inasistencia-kpi-card--ausencias .inasistencia-kpi-value { color: #d94848; }
+.inasistencia-kpi-card--retardos .inasistencia-kpi-value { color: #d97706; }
+.inasistencia-kpi-card--justificadas .inasistencia-kpi-value { color: #16a34a; }
+.inasistencia-kpi-card--empleados .inasistencia-kpi-value { color: #6366f1; }
+
+@media (max-width: 1200px) {
+  .inasistencias-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .inasistencias-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 
 .inasistencias-filtros {
   display: grid;
@@ -1385,9 +1400,24 @@
   color: #888888;
 }
 
+.day-na {
+  background: #eef2f7;
+  color: #94a3b8;
+}
+
+.day-pe {
+  background: #ffffff;
+  color: #cbd5e1;
+  border: 1px dashed #e2e8f0;
+}
+
 .day-sel {
   outline: 2.5px solid #6B4FD8;
   outline-offset: -1px;
+}
+
+.day-muted {
+  opacity: 0.33;
 }
 
 .legend {
@@ -1429,6 +1459,11 @@
   flex-shrink: 0;
 }
 
+.leg-dot-all {
+  background: #eef2ff;
+  border: 1.5px solid #c7d2fe;
+}
+
 .leg-dot-p {
   background: #ECEEFF;
   border: 1.5px solid #C8C8FF;
@@ -1447,6 +1482,16 @@
 .leg-dot-wo {
   background: #F0F0F0;
   border: 1.5px solid #ddd;
+}
+
+.leg-dot-na {
+  background: #eef2f7;
+  border: 1.5px solid #cbd5e1;
+}
+
+.leg-dot-pe {
+  background: #ffffff;
+  border: 1.5px dashed #cbd5e1;
 }
 
 .summary-grid {

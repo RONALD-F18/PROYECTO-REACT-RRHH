@@ -49,7 +49,7 @@ export const MODULOS_NAVEGACION = [
     descripcion: "Tipos, clasificación e incapacidades",
   },
   {
-    ruta: "/calendario",
+    ruta: "/actividades",
     etiqueta: "Calendario",
     descripcion: "Actividades y eventos",
   },

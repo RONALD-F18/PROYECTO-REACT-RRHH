@@ -4,16 +4,10 @@ import {
   construirPayloadInasistencia,
   extraerMensajeValidacion,
   estadoUiDesdeMotivo,
+  limpiarMotivoPersistido,
   ESTADO_UI,
 } from '../utils/inasistencias.mapper';
 import { alertaError } from '../../../utils/alertas';
-
-const MOTIVOS_POR_ESTADO = {
-  [ESTADO_UI.AUSENTE]: ['Enfermedad', 'Permiso', 'Calamidad', 'Ausencia injustificada'],
-  [ESTADO_UI.TARDE]: ['Llegada tarde', 'Transporte', 'Cita medica'],
-  [ESTADO_UI.PRESENTE]: ['Asistencia'],
-  [ESTADO_UI.LIBRE]: ['Dia libre'],
-};
 
 function estadoInicial(registro, fechaPreseleccionada, codEmpleadoPreseleccionado) {
   if (!registro) {
@@ -31,7 +25,7 @@ function estadoInicial(registro, fechaPreseleccionada, codEmpleadoPreseleccionad
     fecha: String(registro.fecha_inasistencia || '').slice(0, 10),
     cod_empleado: String(registro.cod_empleado || ''),
     estado: estadoUiDesdeMotivo(registro.motivo_inasistencia),
-    motivo: registro.motivo_inasistencia || '',
+    motivo: limpiarMotivoPersistido(registro.motivo_inasistencia || ''),
     justificado: String(registro.justificado || '').toUpperCase() === 'SI',
     observaciones: registro.observaciones || '',
   };
@@ -59,7 +53,6 @@ function ModalInasistencia({
     setErrores({});
   }, [mostrar, registroEditar, fechaPreseleccionada, codEmpleadoPreseleccionado]);
 
-  const opcionesMotivo = useMemo(() => MOTIVOS_POR_ESTADO[formulario.estado] || [], [formulario.estado]);
   const codigoUi = useMemo(() => {
     const n = registroEditar?.cod_inasistencias ?? null;
     return n != null && n !== '' ? `INS-${n}` : 'INS-5355';
@@ -218,14 +211,14 @@ function ModalInasistencia({
 
           <label className="inasistencia-label-motivo">
             <span>MOTIVO *</span>
-            <select value={formulario.motivo} onChange={(e) => setFormulario((p) => ({ ...p, motivo: e.target.value }))}>
-              <option value="">Seleccione el tipo...</option>
-              {opcionesMotivo.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
+            <input
+              type="text"
+              value={formulario.motivo}
+              maxLength={50}
+              onChange={(e) => setFormulario((p) => ({ ...p, motivo: e.target.value }))}
+              placeholder="Escribe el motivo..."
+            />
+            <small className="contador-texto">{formulario.motivo.length}/50</small>
             {errores.motivo ? <small className="campo-seccion-error">{errores.motivo}</small> : null}
           </label>
         </section>

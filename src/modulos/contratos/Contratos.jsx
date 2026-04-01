@@ -154,6 +154,17 @@ function Contratos() {
     });
   }, [filasEnriquecidas, criteriosFiltro, mapaEmpleados]);
 
+  const resumenContratos = useMemo(() => {
+    const total = filasFiltradas.length;
+    const activos = filasFiltradas.filter((x) => estadoContratoActivo(x.estado_contrato)).length;
+    const finalizados = total - activos;
+    const porTipo = (tipo) =>
+      filasFiltradas.filter((x) => String(x.tipo_contrato || '').trim().toUpperCase() === tipo).length;
+    const indefinidos = porTipo('INDEFINIDO');
+    const fijos = porTipo('TERMINO FIJO') + porTipo('TÉRMINO FIJO') + porTipo('FIJO');
+    return { total, activos, finalizados, indefinidos, fijos };
+  }, [filasFiltradas]);
+
   const abrirNuevo = () => {
     setContratoEditar(null);
     setMostrarModal(true);
@@ -251,6 +262,29 @@ function Contratos() {
           </div>
         ) : null}
         {cargando ? <p className="contrato-pagina-cargando">Cargando contratos…</p> : null}
+
+        <section className="contratos-kpis">
+          <article className="contrato-kpi contrato-kpi--total">
+            <span>Total</span>
+            <strong>{resumenContratos.total}</strong>
+          </article>
+          <article className="contrato-kpi contrato-kpi--activos">
+            <span>Activos</span>
+            <strong>{resumenContratos.activos}</strong>
+          </article>
+          <article className="contrato-kpi contrato-kpi--finalizados">
+            <span>Finalizados</span>
+            <strong>{resumenContratos.finalizados}</strong>
+          </article>
+          <article className="contrato-kpi contrato-kpi--indefinido">
+            <span>Indefinidos</span>
+            <strong>{resumenContratos.indefinidos}</strong>
+          </article>
+          <article className="contrato-kpi contrato-kpi--fijo">
+            <span>Término fijo</span>
+            <strong>{resumenContratos.fijos}</strong>
+          </article>
+        </section>
 
         <FiltrosBusqueda
           titulo="Contratos registrados"

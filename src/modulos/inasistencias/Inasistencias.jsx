@@ -3,9 +3,12 @@ import { ContenedorPrincipal, EncabezadoModulo, SinDatos } from '../../component
 import { useInasistencias } from './hooks/useInasistencias';
 import ModalInasistencia from './componentes/ModalInasistencia';
 import {
+  buildAttendanceCalendar,
+  CALENDAR_STATUS,
   ESTADO_UI,
   formatearFechaCorta,
   inicialesEmpleado,
+  limpiarMotivoPersistido,
   nombreCompleto,
   obtenerCodigoEmpleado,
   estadoUiDesdeMotivo,
@@ -19,13 +22,6 @@ function colorEstado(estado) {
   return 'gris';
 }
 
-function fechaIsoLocal(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
 function isoDesdeYMD(y, m, d) {
   const yy = String(y);
   const mm = String(m).padStart(2, '0');
@@ -34,7 +30,19 @@ function isoDesdeYMD(y, m, d) {
 }
 
 function Inasistencias() {
-  const { empleados, inasistencias, kpis, filtros, setFiltros, cargando, error, guardarInasistencia, borrarInasistencia } =
+  const {
+    empleados,
+    contratos,
+    inasistenciasTodas,
+    inasistencias,
+    kpis,
+    filtros,
+    setFiltros,
+    cargando,
+    error,
+    guardarInasistencia,
+    borrarInasistencia,
+  } =
     useInasistencias();
   const [modalAbierto, setModalAbierto] = useState(false);
   const [registroEditar, setRegistroEditar] = useState(null);
@@ -58,59 +66,10 @@ function Inasistencias() {
   );
 
   const registrosEmpleado = useMemo(() => {
-    if (!empleadoSeleccionado) return inasistencias;
+    if (!empleadoSeleccionado) return inasistenciasTodas;
     const cod = String(obtenerCodigoEmpleado(empleadoSeleccionado));
-    return inasistencias.filter((x) => String(x.cod_empleado) === cod);
-  }, [inasistencias, empleadoSeleccionado]);
-
-  const resumenEmpleado = useMemo(() => {
-    const presentes = registrosEmpleado.filter(
-      (x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.PRESENTE,
-    ).length;
-    const ausentes = registrosEmpleado.filter(
-      (x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.AUSENTE,
-    ).length;
-    const tardes = registrosEmpleado.filter(
-      (x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.TARDE,
-    ).length;
-    const libres = registrosEmpleado.filter(
-      (x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.LIBRE,
-    ).length;
-    return { presentes, ausentes, tardes, libres, total: registrosEmpleado.length };
-  }, [registrosEmpleado]);
-
-  const fechasEstado = useMemo(() => {
-    const parseFecha = (s) => {
-      const t = String(s || '').slice(0, 10);
-      if (!t) return null;
-      const d = new Date(`${t}T12:00:00`);
-      return Number.isNaN(d.getTime()) ? null : d;
-    };
-    const base = { presente: [], ausente: [], tarde: [], libre: [] };
-    for (const item of registrosEmpleado) {
-      const fecha = parseFecha(item.fecha_inasistencia);
-      if (!fecha) continue;
-      const estado = estadoUiDesdeMotivo(item.motivo_inasistencia);
-      if (estado === ESTADO_UI.PRESENTE) base.presente.push(fecha);
-      else if (estado === ESTADO_UI.TARDE) base.tarde.push(fecha);
-      else if (estado === ESTADO_UI.LIBRE) base.libre.push(fecha);
-      else base.ausente.push(fecha);
-    }
-    return base;
-  }, [registrosEmpleado]);
-
-  const estadoPorFecha = useMemo(() => {
-    const map = new Map();
-    for (const item of registrosEmpleado) {
-      const f = String(item.fecha_inasistencia || '').slice(0, 10);
-      if (!f) continue;
-      const estado = estadoUiDesdeMotivo(item.motivo_inasistencia);
-      const codigo =
-        estado === ESTADO_UI.PRESENTE ? 'P' : estado === ESTADO_UI.AUSENTE ? 'A' : estado === ESTADO_UI.TARDE ? 'L' : 'Wo';
-      map.set(f, { codigo, estado });
-    }
-    return map;
-  }, [registrosEmpleado]);
+    return inasistenciasTodas.filter((x) => String(x.cod_empleado) === cod);
+  }, [inasistenciasTodas, empleadoSeleccionado]);
 
   const vistaCalendario = useMemo(() => {
     const mesN = Number(filtros.mes);
@@ -139,19 +98,63 @@ function Inasistencias() {
     return { y, m, diasMes, offset, monthLabel: `${monthNames[m - 1]} ${y}` };
   }, [filtros.mes, filtros.anio]);
 
-  const countsCalendar = useMemo(() => {
-    const ausentes = registrosEmpleado.filter(
-      (x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.AUSENTE,
-    ).length;
-    const tardes = registrosEmpleado.filter(
-      (x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.TARDE,
-    ).length;
-    const libres = registrosEmpleado.filter(
-      (x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.LIBRE,
-    ).length;
-    const presentes = Math.max(0, vistaCalendario.diasMes - ausentes - tardes - libres);
-    return { presentes, ausentes, tardes, libres };
-  }, [registrosEmpleado, vistaCalendario.diasMes]);
+  const fechaIngresoEmpleado = useMemo(() => {
+    if (!empleadoSeleccionado) return '';
+    const cod = String(obtenerCodigoEmpleado(empleadoSeleccionado));
+    const fechas = (contratos || [])
+      .filter((c) => String(c.cod_empleado ?? '') === cod)
+      .map((c) => String(c.fecha_ingreso || '').slice(0, 10))
+      .filter((f) => /^\d{4}-\d{2}-\d{2}$/.test(f))
+      .sort();
+    return fechas[0] || '';
+  }, [contratos, empleadoSeleccionado]);
+
+  const registrosEmpleadoListado = useMemo(() => {
+    if (!empleadoSeleccionado) return inasistencias;
+    const cod = String(obtenerCodigoEmpleado(empleadoSeleccionado));
+    return inasistencias.filter((x) => String(x.cod_empleado) === cod);
+  }, [inasistencias, empleadoSeleccionado]);
+
+  const conteoNovedades = useMemo(() => {
+    const tardanzas = registrosEmpleado.filter((x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.TARDE).length;
+    const libres = registrosEmpleado.filter((x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.LIBRE).length;
+    return { tardanzas, libres };
+  }, [registrosEmpleado]);
+
+  const calendarioAsistencia = useMemo(
+    () =>
+      buildAttendanceCalendar({
+        year: vistaCalendario.y,
+        month: vistaCalendario.m,
+        fechaIngreso: fechaIngresoEmpleado,
+        inasistencias: registrosEmpleado,
+        today: new Date(),
+      }),
+    [vistaCalendario.y, vistaCalendario.m, fechaIngresoEmpleado, registrosEmpleado],
+  );
+
+  const estadoPorFecha = useMemo(() => {
+    const map = new Map();
+    for (const day of calendarioAsistencia.days) {
+      let codigo = '';
+      let estado = '';
+      if (day.status === CALENDAR_STATUS.PRESENTE) {
+        codigo = 'P';
+        estado = ESTADO_UI.PRESENTE;
+      } else if (day.status === CALENDAR_STATUS.INASISTENCIA) {
+        estado = day.inasistenciaTipo || ESTADO_UI.AUSENTE;
+        codigo = estado === ESTADO_UI.TARDE ? 'L' : estado === ESTADO_UI.LIBRE ? 'Wo' : 'A';
+      } else if (day.status === CALENDAR_STATUS.NO_APLICA) {
+        codigo = '';
+        estado = CALENDAR_STATUS.NO_APLICA;
+      } else if (day.status === CALENDAR_STATUS.PENDIENTE) {
+        codigo = '';
+        estado = CALENDAR_STATUS.PENDIENTE;
+      }
+      map.set(day.date, { codigo, estado, status: day.status });
+    }
+    return map;
+  }, [calendarioAsistencia.days]);
 
   // Mantener filtrosDraft sincronizado con filtros "reales"
   useEffect(() => {
@@ -193,25 +196,25 @@ function Inasistencias() {
         />
 
         <section className="inasistencias-kpis">
-          <article>
-            <strong>{kpis.total}</strong>
-            <span>Total registros</span>
+          <article className="inasistencia-kpi-card inasistencia-kpi-card--total">
+            <span className="inasistencia-kpi-label">Total registros</span>
+            <strong className="inasistencia-kpi-value">{kpis.total}</strong>
           </article>
-          <article>
-            <strong>{kpis.ausencias}</strong>
-            <span>Ausencias</span>
+          <article className="inasistencia-kpi-card inasistencia-kpi-card--ausencias">
+            <span className="inasistencia-kpi-label">Ausencias</span>
+            <strong className="inasistencia-kpi-value">{kpis.ausencias}</strong>
           </article>
-          <article>
-            <strong>{kpis.retardos}</strong>
-            <span>Retardos</span>
+          <article className="inasistencia-kpi-card inasistencia-kpi-card--retardos">
+            <span className="inasistencia-kpi-label">Retardos</span>
+            <strong className="inasistencia-kpi-value">{kpis.retardos}</strong>
           </article>
-          <article>
-            <strong>{kpis.justificadas}</strong>
-            <span>Justificadas</span>
+          <article className="inasistencia-kpi-card inasistencia-kpi-card--justificadas">
+            <span className="inasistencia-kpi-label">Justificadas</span>
+            <strong className="inasistencia-kpi-value">{kpis.justificadas}</strong>
           </article>
-          <article>
-            <strong>{kpis.empleados}</strong>
-            <span>Empleados</span>
+          <article className="inasistencia-kpi-card inasistencia-kpi-card--empleados">
+            <span className="inasistencia-kpi-label">Empleados</span>
+            <strong className="inasistencia-kpi-value">{kpis.empleados}</strong>
           </article>
         </section>
 
@@ -229,7 +232,7 @@ function Inasistencias() {
               value={filtrosDraft.tipo}
               onChange={(e) => setFiltrosDraft((p) => ({ ...p, tipo: e.target.value }))}
             >
-              <option value="">Todos los estados</option>
+              <option value="">Todos los tipos</option>
               <option value={ESTADO_UI.AUSENTE}>Ausente</option>
               <option value={ESTADO_UI.TARDE}>Tardanza</option>
               <option value={ESTADO_UI.PRESENTE}>Presente</option>
@@ -299,7 +302,7 @@ function Inasistencias() {
               {empleadosFiltrados.map((emp) => {
                 const cod = obtenerCodigoEmpleado(emp);
                 const activo = String(cod) === String(filtros.codEmpleado);
-                const totalEmp = inasistencias.filter((x) => String(x.cod_empleado) === String(cod)).length;
+                const totalEmp = inasistenciasTodas.filter((x) => String(x.cod_empleado) === String(cod)).length;
                 return (
                   <button
                     key={String(cod)}
@@ -336,17 +339,6 @@ function Inasistencias() {
                   <div className="tarjeta-empleado-acciones">
                     <button type="button" className="btn-link-limpiar" onClick={() => setFiltros((p) => ({ ...p, codEmpleado: '' }))}>
                       Limpiar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-link-registrar"
-                      onClick={() => {
-                        setRegistroEditar(null);
-                        setFechaPreseleccionada('');
-                        setModalAbierto(true);
-                      }}
-                    >
-                      + Registrar
                     </button>
                   </div>
                 </header>
@@ -459,7 +451,14 @@ function Inasistencias() {
                         const day = idx + 1;
                         const iso = isoDesdeYMD(vistaCalendario.y, vistaCalendario.m, day);
                         const info = estadoPorFecha.get(iso);
-                        const codigo = info?.codigo || 'P';
+                        const codigo = info?.codigo || '';
+                        const statusDia = info?.status || '';
+                        const coincideTipo =
+                          !filtros.tipo ||
+                          (filtros.tipo === ESTADO_UI.PRESENTE && codigo === 'P') ||
+                          (filtros.tipo === ESTADO_UI.AUSENTE && codigo === 'A') ||
+                          (filtros.tipo === ESTADO_UI.TARDE && codigo === 'L') ||
+                          (filtros.tipo === ESTADO_UI.LIBRE && codigo === 'Wo');
                         const selected = fechaPreseleccionada === iso;
                         const classEstado =
                           codigo === 'A'
@@ -468,13 +467,19 @@ function Inasistencias() {
                               ? 'day-l'
                               : codigo === 'Wo'
                                 ? 'day-wo'
-                                : 'day-p';
+                                : codigo === 'P'
+                                  ? 'day-p'
+                                  : statusDia === CALENDAR_STATUS.NO_APLICA
+                                    ? 'day-na'
+                                    : statusDia === CALENDAR_STATUS.PENDIENTE
+                                      ? 'day-pe'
+                                      : 'day-pe';
                         return (
                           <div
                             key={iso}
                             role="button"
                             tabIndex={0}
-                            className={`cal-day ${classEstado} ${selected ? 'day-sel' : ''}`.trim()}
+                            className={`cal-day ${classEstado} ${!coincideTipo ? 'day-muted' : ''} ${selected ? 'day-sel' : ''}`.trim()}
                             onClick={() => {
                               const existente = registrosEmpleado.find(
                                 (x) => String(x.fecha_inasistencia || '').slice(0, 10) === iso,
@@ -493,10 +498,10 @@ function Inasistencias() {
                               setFechaPreseleccionada(iso);
                               setModalAbierto(true);
                             }}
-                            aria-label={`Día ${day} - ${codigo}`}
+                            aria-label={codigo ? `Día ${day} - ${codigo}` : `Día ${day} - sin registro`}
                           >
                             <span className="dn">{day}</span>
-                            <span className="ds">{codigo === 'Wo' ? 'Wo' : codigo}</span>
+                            <span className="ds">{!coincideTipo ? '' : codigo === 'Wo' ? 'Wo' : codigo}</span>
                           </div>
                         );
                       })}
@@ -508,7 +513,14 @@ function Inasistencias() {
                         className={`leg-item leg-item-button ${filtros.tipo === '' ? 'activo' : ''}`}
                         onClick={() => setFiltros((p) => ({ ...p, tipo: '' }))}
                       >
-                        <span className="leg-dot leg-dot-p" /> Presente
+                        <span className="leg-dot leg-dot-all" /> Todos
+                      </button>
+                      <button
+                        type="button"
+                        className={`leg-item leg-item-button ${filtros.tipo === ESTADO_UI.PRESENTE ? 'activo' : ''}`}
+                        onClick={() => setFiltros((p) => ({ ...p, tipo: ESTADO_UI.PRESENTE }))}
+                      >
+                        <span className="leg-dot leg-dot-p" /> Presente(P)
                       </button>
                       <button
                         type="button"
@@ -535,27 +547,27 @@ function Inasistencias() {
 
                     <div className="summary-grid">
                       <div className="sum-card sum-p">
-                        <div className="sn">{countsCalendar.presentes}</div>
+                        <div className="sn">{calendarioAsistencia.totals.presentes}</div>
                         <div className="sl">Presentes</div>
                       </div>
                       <div className="sum-card sum-a">
-                        <div className="sn">{countsCalendar.ausentes}</div>
-                        <div className="sl">Ausentes</div>
+                        <div className="sn">{calendarioAsistencia.totals.inasistencias}</div>
+                        <div className="sl">Inasistencias</div>
                       </div>
                       <div className="sum-card sum-l">
-                        <div className="sn">{countsCalendar.tardes}</div>
+                        <div className="sn">{conteoNovedades.tardanzas}</div>
                         <div className="sl">Retardos</div>
                       </div>
                     </div>
 
                     <div className="summary-grid2">
                       <div className="sum-card2">
-                        <div className="sn">{countsCalendar.libres}</div>
+                        <div className="sn">{conteoNovedades.libres}</div>
                         <div className="sl">Días libres</div>
                       </div>
                       <div className="sum-card2 sum-f">
-                        <div className="sn">0</div>
-                        <div className="sl">Festivos</div>
+                        <div className="sn">{registrosEmpleado.length}</div>
+                        <div className="sl">Novedades</div>
                       </div>
                       <div className="sum-card2">
                         <div className="sn">{vistaCalendario.diasMes}</div>
@@ -566,13 +578,13 @@ function Inasistencias() {
                 </div>
 
                 <div className="detalle-lista">
-                  {registrosEmpleado.length === 0 ? <SinDatos mensaje="No hay registros para este filtro." /> : registrosEmpleado.map((item) => {
+                  {registrosEmpleadoListado.length === 0 ? <SinDatos mensaje="No hay registros para este filtro." /> : registrosEmpleadoListado.map((item) => {
                     const estado = estadoUiDesdeMotivo(item.motivo_inasistencia);
                     return (
                       <div key={String(item.cod_inasistencias)} className="detalle-item-inasistencia">
                         <div>
                           <strong>{formatearFechaCorta(item.fecha_inasistencia)}</strong>
-                          <p>{item.motivo_inasistencia}</p>
+                          <p>{limpiarMotivoPersistido(item.motivo_inasistencia)}</p>
                           <span className={`etiqueta etiqueta-${colorEstado(estado)}`}>{estado}</span>
                           <span className="etiqueta etiqueta-gris">{String(item.justificado || 'NO')}</span>
                         </div>

@@ -9,6 +9,55 @@
   margin-top: 20px;
 }
 
+.contratos-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.contrato-kpi {
+  background: #fff;
+  border: 1px solid #e7eaf1;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 84px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.contrato-kpi span {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.contrato-kpi strong {
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.contrato-kpi--total strong { color: #6366f1; }
+.contrato-kpi--activos strong { color: #16a34a; }
+.contrato-kpi--finalizados strong { color: #f97316; }
+.contrato-kpi--indefinido strong { color: #7c3aed; }
+.contrato-kpi--fijo strong { color: #0ea5e9; }
+
+@media (max-width: 1200px) {
+  .contratos-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .contratos-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .tabla-acciones-contrato {
   display: flex;
   flex-wrap: wrap;

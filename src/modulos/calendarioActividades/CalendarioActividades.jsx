@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ContenedorPrincipal, SinDatos } from '../../componentes';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ContenedorPrincipal, EncabezadoModulo, SinDatos, TarjetasResumen } from '../../componentes';
 import Modal from '../../componentes/comunes/Modal';
 import {
   listarCalendarioActividadesApi,
@@ -16,6 +16,7 @@ import { alertaError, alertaExito, confirmarAccion } from '../../utils/alertas';
 import '../../estilos/modulos/calendario-actividades.css';
 
 const TIPOS = ['TAREA', 'REUNION', 'RECORDATORIO'];
+const TIPOS_SUGERIDOS = ['TAREA', 'REUNION', 'RECORDATORIO', 'CAPACITACION', 'SEGUIMIENTO', 'ENTREGA', 'REPORTE'];
 const ESTADOS = ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADA'];
 const PRIORIDADES = ['ALTA', 'MEDIA', 'BAJA'];
 const COLORES = ['#6366F1', '#F97316', '#22C55E', '#EAB308', '#D946EF', '#06B6D4', '#EF4444', '#8B5CF6'];
@@ -59,6 +60,29 @@ function formatearFechaVista(valor) {
   if (!t) return '—';
   const [a, m, d] = t.split('-');
   return `${d}/${m}/${a}`;
+}
+
+function categoriaTipo(tipo) {
+  const t = String(tipo || '').toUpperCase();
+  if (t.includes('REUN')) return 'REUNION';
+  if (t.includes('RECORD') || t.includes('REMIND')) return 'RECORDATORIO';
+  return 'TAREA';
+}
+
+function etiquetaTipo(tipo) {
+  return String(tipo || '')
+    .toLowerCase()
+    .split('_')
+    .map((p) => (p ? `${p.charAt(0).toUpperCase()}${p.slice(1)}` : p))
+    .join(' ');
+}
+
+function etiquetaPascalConEspacios(valor) {
+  return String(valor || '')
+    .toLowerCase()
+    .split('_')
+    .map((p) => (p ? `${p.charAt(0).toUpperCase()}${p.slice(1)}` : p))
+    .join(' ');
 }
 
 function extraerErrorCampo(error, campo) {
@@ -169,6 +193,8 @@ function CalendarioActividades() {
   const [selectorMesAbierto, setSelectorMesAbierto] = useState(false);
   const [anioSelector, setAnioSelector] = useState(() => new Date().getFullYear());
   const [fechaSeleccionadaModal, setFechaSeleccionadaModal] = useState('');
+  const [diaSeleccionadoIso, setDiaSeleccionadoIso] = useState('');
+  const clickDiaTimerRef = useRef(null);
   const codUsuario = codUsuarioSesionLocal();
   const [form, setForm] = useState({
     titulo: '',
@@ -203,6 +229,16 @@ function CalendarioActividades() {
     recargar();
   }, [recargar]);
 
+  useEffect(
+    () => () => {
+      if (clickDiaTimerRef.current) {
+        clearTimeout(clickDiaTimerRef.current);
+        clickDiaTimerRef.current = null;
+      }
+    },
+    [],
+  );
+
   const mesIso = `${vista.anio}-${String(vista.mes).padStart(2, '0')}`;
   const actividadesMes = useMemo(
     () => actividades.filter((a) => String(a.fecha_inicio || '').startsWith(mesIso)),
@@ -211,7 +247,7 @@ function CalendarioActividades() {
 
   const actividadesFiltradas = useMemo(() => {
     return actividadesMes.filter((a) => {
-      if (filtros.tipo && a.tipo !== filtros.tipo) return false;
+      if (filtros.tipo && categoriaTipo(a.tipo) !== filtros.tipo) return false;
       if (filtros.estado && a.estado !== filtros.estado) return false;
       return true;
     });
@@ -219,13 +255,25 @@ function CalendarioActividades() {
 
   const kpis = useMemo(() => {
     const total = actividadesMes.length;
-    const tareas = actividadesMes.filter((a) => a.tipo === 'TAREA').length;
-    const reuniones = actividadesMes.filter((a) => a.tipo === 'REUNION').length;
-    const recordatorios = actividadesMes.filter((a) => a.tipo === 'RECORDATORIO').length;
+    const tareas = actividadesMes.filter((a) => categoriaTipo(a.tipo) === 'TAREA').length;
+    const reuniones = actividadesMes.filter((a) => categoriaTipo(a.tipo) === 'REUNION').length;
+    const recordatorios = actividadesMes.filter((a) => categoriaTipo(a.tipo) === 'RECORDATORIO').length;
     const pendientes = actividadesMes.filter((a) => a.estado === 'PENDIENTE').length;
     const completadas = actividadesMes.filter((a) => a.estado === 'COMPLETADA').length;
     return { total, tareas, reuniones, recordatorios, pendientes, completadas };
   }, [actividadesMes]);
+
+  const tarjetasResumen = useMemo(
+    () => [
+      { etiqueta: 'Total', valor: String(kpis.total), color: 'azul', icono: '' },
+      { etiqueta: 'Tareas', valor: String(kpis.tareas), color: 'morado', icono: '' },
+      { etiqueta: 'Reuniones', valor: String(kpis.reuniones), color: 'verde', icono: '' },
+      { etiqueta: 'Recordatorios', valor: String(kpis.recordatorios), color: 'amarillo', icono: '' },
+      { etiqueta: 'Pendientes', valor: String(kpis.pendientes), color: 'rojo', icono: '' },
+      { etiqueta: 'Completadas', valor: String(kpis.completadas), color: 'verde', icono: '' },
+    ],
+    [kpis],
+  );
 
   const actividadesPorFecha = useMemo(() => {
     const map = new Map();
@@ -244,6 +292,11 @@ function CalendarioActividades() {
     }
     return map;
   }, [actividadesFiltradas]);
+
+  const actividadesPanelDerecho = useMemo(() => {
+    if (!diaSeleccionadoIso) return actividadesFiltradas;
+    return actividadesPorFecha.get(diaSeleccionadoIso) || [];
+  }, [diaSeleccionadoIso, actividadesFiltradas, actividadesPorFecha]);
 
   const vistaCalendario = useMemo(() => {
     const diasMes = new Date(vista.anio, vista.mes, 0).getDate();
@@ -406,21 +459,36 @@ function CalendarioActividades() {
     }
   };
 
+  const manejarClickDia = (iso, enMesActual) => {
+    if (!enMesActual) return;
+    if (clickDiaTimerRef.current) {
+      clearTimeout(clickDiaTimerRef.current);
+      clickDiaTimerRef.current = null;
+    }
+    clickDiaTimerRef.current = setTimeout(() => {
+      setDiaSeleccionadoIso((prev) => (prev === iso ? '' : iso));
+      clickDiaTimerRef.current = null;
+    }, 220);
+  };
+
+  const manejarDobleClickDia = (iso, enMesActual) => {
+    if (!enMesActual) return;
+    if (clickDiaTimerRef.current) {
+      clearTimeout(clickDiaTimerRef.current);
+      clickDiaTimerRef.current = null;
+    }
+    abrirNuevo(iso);
+  };
+
   return (
     <ContenedorPrincipal>
       <div className="cal-act-modulo">
-        <header className="cal-hero">
-          <div className="cal-hero-left">
-            <div className="cal-hero-icon">📅</div>
-            <div>
-              <h1>Actividades</h1>
-              <p>Calendario de tareas, reuniones y recordatorios</p>
-            </div>
-          </div>
-          <button type="button" className="cal-btn-nueva" onClick={() => abrirNuevo()}>
-            + Nueva actividad
-          </button>
-        </header>
+        <EncabezadoModulo
+          titulo="Actividades"
+          subtitulo="Calendario de tareas, reuniones y recordatorios"
+          textoBoton="Nueva actividad"
+          alHacerClic={() => abrirNuevo()}
+        />
 
         {errorLista ? (
           <div className="contrato-pagina-alerta contrato-pagina-alerta--error" role="alert">
@@ -430,48 +498,13 @@ function CalendarioActividades() {
         ) : null}
         {cargando ? <p className="contrato-pagina-cargando">Cargando actividades...</p> : null}
 
-        <section className="cal-act-kpis">
-          <article className="cal-kpi cal-kpi--total"><strong>{kpis.total}</strong><span>Total</span></article>
-          <article className="cal-kpi cal-kpi--tarea"><strong>{kpis.tareas}</strong><span>Tareas</span></article>
-          <article className="cal-kpi cal-kpi--reunion"><strong>{kpis.reuniones}</strong><span>Reuniones</span></article>
-          <article className="cal-kpi cal-kpi--recordatorio"><strong>{kpis.recordatorios}</strong><span>Recordatorios</span></article>
-          <article className="cal-kpi cal-kpi--pendiente"><strong>{kpis.pendientes}</strong><span>Pendientes</span></article>
-          <article className="cal-kpi cal-kpi--completada"><strong>{kpis.completadas}</strong><span>Completadas</span></article>
-        </section>
+        <TarjetasResumen tarjetas={tarjetasResumen} />
 
         <div className="cal-act-filtros">
-          <button
-            type="button"
-            className={`cal-filter-chip ${filtros.tipo === '' ? 'activo activo--all' : ''}`}
-            onClick={() => setFiltros((p) => ({ ...p, tipo: '' }))}
-          >
-            Todos
-          </button>
-          <button
-            type="button"
-            className={`cal-filter-chip ${filtros.tipo === 'TAREA' ? 'activo activo--task' : ''}`}
-            onClick={() => setFiltros((p) => ({ ...p, tipo: 'TAREA' }))}
-          >
-            Tareas
-          </button>
-          <button
-            type="button"
-            className={`cal-filter-chip ${filtros.tipo === 'REUNION' ? 'activo activo--meeting' : ''}`}
-            onClick={() => setFiltros((p) => ({ ...p, tipo: 'REUNION' }))}
-          >
-            Reuniones
-          </button>
-          <button
-            type="button"
-            className={`cal-filter-chip ${filtros.tipo === 'RECORDATORIO' ? 'activo activo--reminder' : ''}`}
-            onClick={() => setFiltros((p) => ({ ...p, tipo: 'RECORDATORIO' }))}
-          >
-            Recordatorios
-          </button>
           <select value={filtros.estado} onChange={(e) => setFiltros((p) => ({ ...p, estado: e.target.value }))}>
             <option value="">Todos los estados</option>
             {ESTADOS.map((e) => (
-              <option key={e} value={e}>{e}</option>
+              <option key={e} value={e}>{etiquetaPascalConEspacios(e)}</option>
             ))}
           </select>
           <button
@@ -480,11 +513,19 @@ function CalendarioActividades() {
             onClick={() => {
               const prev = new Date(vista.anio, vista.mes - 2, 1);
               setVista({ anio: prev.getFullYear(), mes: prev.getMonth() + 1 });
+              setDiaSeleccionadoIso('');
             }}
           >
             &lt;
           </button>
-          <button type="button" className="cal-hoy-btn" onClick={() => setVista({ anio: new Date().getFullYear(), mes: new Date().getMonth() + 1 })}>
+          <button
+            type="button"
+            className="cal-hoy-btn"
+            onClick={() => {
+              setVista({ anio: new Date().getFullYear(), mes: new Date().getMonth() + 1 });
+              setDiaSeleccionadoIso('');
+            }}
+          >
             Hoy
           </button>
           <button
@@ -493,6 +534,7 @@ function CalendarioActividades() {
             onClick={() => {
               const next = new Date(vista.anio, vista.mes, 1);
               setVista({ anio: next.getFullYear(), mes: next.getMonth() + 1 });
+              setDiaSeleccionadoIso('');
             }}
           >
             &gt;
@@ -530,6 +572,7 @@ function CalendarioActividades() {
                       onClick={() => {
                         setVista({ anio: anioSelector, mes: idx + 1 });
                         setSelectorMesAbierto(false);
+                        setDiaSeleccionadoIso('');
                       }}
                     >
                       {nombre.slice(0, 3)}
@@ -545,21 +588,27 @@ function CalendarioActividades() {
               {vistaCalendario.celdas.map((cell) => {
                 const iso = cell.iso;
                 const chips = actividadesPorFecha.get(iso) || [];
+                const seleccionado = diaSeleccionadoIso === iso;
                 return (
                   <button
                     key={iso}
                     type="button"
-                    className={`cal-act-day ${cell.enMesActual ? '' : 'cal-act-day--other'}`.trim()}
-                    onClick={() => {
-                      if (cell.enMesActual) abrirNuevo(iso);
-                    }}
+                    className={`cal-act-day ${cell.enMesActual ? '' : 'cal-act-day--other'} ${seleccionado ? 'cal-act-day--selected' : ''}`.trim()}
+                    onClick={() => manejarClickDia(iso, cell.enMesActual)}
+                    onDoubleClick={() => manejarDobleClickDia(iso, cell.enMesActual)}
                   >
                     <span className="cal-act-day-num">{cell.day}</span>
                     <span className="cal-act-chips">
                       {chips.slice(0, 3).map((a) => (
                         <span
                           key={a.cod_actividad}
-                          className={`cal-chip ${a.tipo === 'REUNION' ? 'cal-chip--meeting' : a.tipo === 'RECORDATORIO' ? 'cal-chip--reminder' : 'cal-chip--task'}`}
+                          className={`cal-chip ${
+                            categoriaTipo(a.tipo) === 'REUNION'
+                              ? 'cal-chip--meeting'
+                              : categoriaTipo(a.tipo) === 'RECORDATORIO'
+                                ? 'cal-chip--reminder'
+                                : 'cal-chip--task'
+                          }`}
                           style={{ borderColor: a.color || '#e5e7eb' }}
                           onClick={(ev) => {
                             ev.stopPropagation();
@@ -578,19 +627,26 @@ function CalendarioActividades() {
           </article>
 
           <aside className="cal-act-lista">
-            <h4>Actividades del mes</h4>
-            {actividadesFiltradas.length === 0 ? (
-              <SinDatos mensaje="No hay actividades para este filtro." />
+            <h4>{diaSeleccionadoIso ? `Actividades del ${formatearFechaVista(diaSeleccionadoIso)}` : 'Actividades del mes'}</h4>
+            {diaSeleccionadoIso ? (
+              <button type="button" className="cal-list-reset" onClick={() => setDiaSeleccionadoIso('')}>
+                Ver todo el mes
+              </button>
+            ) : null}
+            {actividadesPanelDerecho.length === 0 ? (
+              <SinDatos mensaje={diaSeleccionadoIso ? 'No hay actividades registradas en este dia.' : 'No hay actividades para este filtro.'} />
             ) : (
               <div className="cal-act-lista-items">
-                {actividadesFiltradas.map((a) => (
+                {actividadesPanelDerecho.map((a) => (
                   <button key={a.cod_actividad} type="button" className="cal-list-item" onClick={() => abrirEditar(a)}>
                     <span className="cal-list-color" style={{ background: a.color || '#d1d5db' }} />
                     <div className="cal-list-content">
                       <strong>{a.titulo}</strong>
-                      <small>
-                        {a.fecha_inicio} - {a.tipo} - {a.estado}
-                      </small>
+                      <small>{formatearFechaVista(a.fecha_inicio)}</small>
+                      <div className="cal-list-meta">
+                        <span>{a.tipo}</span>
+                        <span>{etiquetaPascalConEspacios(a.estado)}</span>
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -622,11 +678,27 @@ function CalendarioActividades() {
             <div className="cal-act-form-grid">
               <label>
                 <span>Tipo *</span>
-                <select value={form.tipo} onChange={(e) => setForm((p) => ({ ...p, tipo: e.target.value }))}>
-                  {TIPOS.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                <div className="cal-tipo-busqueda">
+                  <span className="cal-tipo-busqueda-icono" aria-hidden>⌕</span>
+                  <input
+                    value={form.tipo}
+                    maxLength={20}
+                    onChange={(e) => setForm((p) => ({ ...p, tipo: e.target.value.toUpperCase() }))}
+                    placeholder="Ej: TAREA, CAPACITACION..."
+                  />
+                </div>
+                <div className="cal-tipo-sugerencias">
+                  {TIPOS_SUGERIDOS.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      className={String(form.tipo || '').toUpperCase() === t ? 'activo' : ''}
+                      onClick={() => setForm((p) => ({ ...p, tipo: t }))}
+                    >
+                      {etiquetaTipo(t)}
+                    </button>
                   ))}
-                </select>
+                </div>
                 {erroresForm.tipo ? <small className="campo-seccion-error">{erroresForm.tipo}</small> : null}
               </label>
               <label>
@@ -709,7 +781,7 @@ function CalendarioActividades() {
                 <span>Estado *</span>
                 <select value={form.estado} onChange={(e) => setForm((p) => ({ ...p, estado: e.target.value }))}>
                   {ESTADOS.map((x) => (
-                    <option key={x} value={x}>{x}</option>
+                    <option key={x} value={x}>{etiquetaPascalConEspacios(x)}</option>
                   ))}
                 </select>
                 {erroresForm.estado ? <small className="campo-seccion-error">{erroresForm.estado}</small> : null}

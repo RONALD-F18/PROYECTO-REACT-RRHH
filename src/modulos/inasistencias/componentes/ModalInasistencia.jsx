@@ -172,7 +172,7 @@ function ModalInasistencia({
             <span className="paso-numero paso-numero--paso2">2</span>Tipo de registro
           </h4>
 
-          <div className="inasistencia-micro-label">ESTADO DEL DÍA</div>
+          <div className="inasistencia-micro-label">Estado Del Día</div>
 
           <div className="inasistencia-estados">
             <button

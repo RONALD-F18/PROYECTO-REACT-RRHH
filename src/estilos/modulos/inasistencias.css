@@ -8,9 +8,9 @@
 }
 
 .inasistencias-encabezado {
-  background: linear-gradient(90deg, #c850c0 0%, #4158d0 100%) !important;
+  background: linear-gradient(90deg, #5b63e6 0%, #3f7ee8 100%) !important;
   border-bottom: none !important;
-  box-shadow: 0 4px 16px rgba(123, 94, 167, 0.1);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.14);
 }
 
 .inasistencias-encabezado .encabezado-modulo-info h1 {
@@ -53,15 +53,15 @@
 
 .inasistencia-kpi-label {
   color: #667085;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 12px;
   line-height: 1.25;
   margin-bottom: 8px;
 }
 
 .inasistencia-kpi-value {
-  font-size: 34px;
-  font-weight: 800;
+  font-size: 30px;
+  font-weight: 700;
   line-height: 1;
   letter-spacing: -0.02em;
 }
@@ -339,6 +339,7 @@
   max-width: 880px;
   background: #ffffff;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+  transform: none;
 }
 
 .rdp-root {
@@ -1247,6 +1248,8 @@
    ============================ */
 .cal-wrap {
   padding: 0;
+  max-width: 420px;
+  margin: 0 auto;
 }
 
 .cal-header {
@@ -1332,13 +1335,13 @@
   gap: 4px;
   padding-bottom: 6px;
   max-width: 360px;
-  margin: 0;
+  margin: 0 auto;
 }
 
 .cal-dow {
   text-align: center;
   font-size: 0.66rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #6B6B8A;
   padding: 4px 0 2px;
 }
@@ -1368,14 +1371,14 @@
 
 .dn {
   font-size: 0.76rem;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
   color: inherit;
 }
 
 .ds {
   font-size: 0.56rem;
-  font-weight: 900;
+  font-weight: 700;
   margin-top: 1px;
   color: inherit;
 }
@@ -1412,7 +1415,7 @@
 }
 
 .day-sel {
-  outline: 2.5px solid #6B4FD8;
+  outline: 2px solid #6b7de5;
   outline-offset: -1px;
 }
 
@@ -1434,7 +1437,7 @@
   gap: 8px;
   font-size: 0.68rem;
   color: #6B6B8A;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .leg-item-button {
@@ -1511,13 +1514,13 @@
 
 .sum-card .sn {
   font-size: 1.6rem;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
 }
 
 .sum-card .sl {
   font-size: 0.6rem;
-  font-weight: 800;
+  font-weight: 600;
   margin-top: 4px;
 }
 
@@ -1565,13 +1568,13 @@
 
 .sum-card2 .sn {
   font-size: 1.25rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .sum-card2 .sl {
   font-size: 0.65rem;
   color: #6B6B8A;
-  font-weight: 700;
+  font-weight: 600;
   margin-top: 4px;
 }
 
@@ -1581,4 +1584,83 @@
 
 .sum-f .sn {
   color: #22C55E !important;
+}
+
+/* ============================
+  Ajuste visual solicitado
+  (menos morado/rosa, menos peso tipografico)
+  ============================ */
+.inasistencia-modal .modal-header {
+  background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%) !important;
+}
+
+.inasistencia-modal .modal-header h2 {
+  color: #ffffff !important;
+  font-size: 19px !important;
+  font-weight: 600 !important;
+}
+
+.inasistencia-modal .paso-numero--paso1 {
+  background: #2563eb !important;
+}
+
+.inasistencia-modal .bloque-form h4 {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+.inasistencia-modal label {
+  color: #3b5a9a !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+.inasistencia-modal .inasistencia-codigo-valor,
+.inasistencia-modal .inasistencia-justificacion-text {
+  color: #2563eb !important;
+  font-weight: 600 !important;
+}
+
+.inasistencia-modal input,
+.inasistencia-modal select,
+.inasistencia-modal textarea {
+  border-bottom: 2px solid #3b82f6 !important;
+  font-size: 13px !important;
+}
+
+.inasistencia-modal .toggle-ios-switch input:checked + .toggle-ios-slider {
+  background: #2563eb !important;
+}
+
+.inasistencia-modal .inasistencia-estados button {
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 10px 14px !important;
+}
+
+.inasistencia-modal .chip-presente {
+  background: #eff6ff !important;
+  border-color: #93c5fd !important;
+  color: #1d4ed8 !important;
+}
+
+.inasistencia-modal .chip-estado.activo,
+.inasistencia-estados button.activo {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16) inset !important;
+  border-color: #2563eb !important;
+}
+
+.inasistencia-micro-label {
+  margin: 10px 0 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #3b5a9a !important;
+  text-transform: none !important;
+  letter-spacing: 0.02em !important;
+}
+
+@media (max-width: 768px) {
+  .calendario-box {
+    transform: none;
+  }
 }

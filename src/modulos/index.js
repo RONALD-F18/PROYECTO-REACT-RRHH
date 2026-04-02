@@ -12,3 +12,4 @@ export * from './contratos';
 export * from './certificaciones';
 export * from './comunicacionesDisciplinarias';
 export * from './inicio';
+export * from './reportes';

@@ -20,6 +20,7 @@ import {
   Certificaciones,
   DetalleCertificacion,
   ComunicacionesDisciplinarias,
+  Reportes,
 } from "../modulos";
 import { esAdminSesionLocal, haySesionLocalActiva } from "../services/autenticacion";
 
@@ -78,6 +79,7 @@ export const rutasPrivadas = [
   { ruta: "/afiliaciones", componente: Afiliaciones },
   { ruta: "/afiliaciones/:id", componente: DetallesAfiliacion },
   { ruta: "/comunicaciones-disciplinarias", componente: ComunicacionesDisciplinarias },
+  { ruta: "/reportes", componente: Reportes },
 ];
 
 function EnrutadorPrincipal() {

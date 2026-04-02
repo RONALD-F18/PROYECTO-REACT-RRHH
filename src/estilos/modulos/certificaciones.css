@@ -12,12 +12,17 @@
 
 /* Botón descarga PDF: mismo tamaño que otros btn-accion-tabla, ícono blanco */
 .btn-accion-tabla-cert-pdf {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
   padding: 0;
   color: #fff !important;
   background: linear-gradient(135deg, var(--color-primario), var(--color-acento-morado)) !important;
+}
+
+.certificaciones-contenido .btn-accion-tabla {
+  width: 34px;
+  height: 34px;
 }
 
 .btn-accion-tabla.btn-accion-tabla-cert-pdf:hover:not(:disabled) {

@@ -14,6 +14,7 @@ export function extraerInasistenciasApi(json) {
   if (!json) return [];
   if (Array.isArray(json)) return json;
   if (Array.isArray(json.data)) return json.data;
+  if (json.data?.data && Array.isArray(json.data.data)) return json.data.data;
   return [];
 }
 

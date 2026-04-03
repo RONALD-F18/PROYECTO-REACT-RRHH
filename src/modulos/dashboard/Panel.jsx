@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ContenedorPrincipal } from '../../componentes';
 import BotonMenu from '../../componentes/comunes/BotonMenu';
+import { esAdminSesionLocal } from '../../services/autenticacion';
 import { obtenerDatosDashboard } from '../../services/dashboardResumen';
 import {
   GraficaBarrasDashboard,
@@ -19,29 +20,6 @@ function saludoPorHora() {
 function formatearHora() {
   return new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
 }
-
-const modulosDestacados = [
-  {
-    ruta: '/reportes',
-    titulo: 'Reportes PDF',
-    detalle: 'Genera informes por módulo y guarda historial.',
-  },
-  {
-    ruta: '/certificaciones',
-    titulo: 'Certificaciones',
-    detalle: 'Laborales y de afiliación con trazabilidad.',
-  },
-  {
-    ruta: '/incapacidades',
-    titulo: 'Incapacidades',
-    detalle: 'Seguimiento de novedades y tipos.',
-  },
-  {
-    ruta: '/comunicaciones-disciplinarias',
-    titulo: 'Comunicaciones',
-    detalle: 'Memorandos y reconocimientos.',
-  },
-];
 
 function Panel() {
   const [cargando, setCargando] = useState(true);
@@ -73,14 +51,19 @@ function Panel() {
     void cargar();
   }, [cargar]);
 
+  const esAdmin = esAdminSesionLocal();
   const accesosRapidos = [
     { ruta: '/empleados', texto: 'Empleados', color: 'btn-amarillo' },
+    ...(esAdmin ? [{ ruta: '/usuarios', texto: 'Usuarios', color: 'btn-rosa' }] : []),
     { ruta: '/contratos', texto: 'Contratos', color: 'btn-rosa' },
     { ruta: '/incapacidades', texto: 'Incapacidades', color: 'btn-naranja' },
     { ruta: '/prestaciones', texto: 'Prestaciones', color: 'btn-naranja' },
     { ruta: '/afiliaciones', texto: 'Afiliaciones', color: 'btn-verde' },
     { ruta: '/certificaciones', texto: 'Certificaciones', color: 'btn-amarillo' },
-    { ruta: '/reportes', texto: 'Reportes', color: 'btn-rosa' },
+    { ruta: '/comunicaciones-disciplinarias', texto: 'Comunicaciones disciplinarias', color: 'btn-rosa' },
+    { ruta: '/inasistencias', texto: 'Inasistencias', color: 'btn-verde' },
+    { ruta: '/actividades', texto: 'Calendario de actividades', color: 'btn-naranja' },
+    { ruta: '/reportes', texto: 'Reportes', color: 'btn-amarillo' },
   ];
 
   const obtenerFecha = () =>
@@ -202,7 +185,7 @@ function Panel() {
 
           <div className="dashboard-zona-graficas">
             <div className="dashboard-graficas-principal">
-              <div className="dashboard-grafica dashboard-tarjeta">
+              <div className="dashboard-grafica dashboard-tarjeta dashboard-grafica--volumen">
                 <h3 className="dashboard-grafica-titulo">Volumen por área</h3>
                 <p className="dashboard-grafica-sub">Conteos clave al día de hoy</p>
                 <div className="dashboard-grafica-chart">
@@ -214,59 +197,33 @@ function Panel() {
                 </div>
               </div>
 
-              <div className="dashboard-grafica dashboard-tarjeta">
-                <h3 className="dashboard-grafica-titulo">Inasistencias (6 meses)</h3>
-                <p className="dashboard-grafica-sub">Registros por mes · eje Y = cantidad</p>
-                <div className="dashboard-grafica-chart">
-                  {serieIna.length > 0 ? (
-                    <GraficaLineaInasistencias datos={serieIna} />
-                  ) : (
-                    <p className="dashboard-grafica-vacio">Sin registros de inasistencias.</p>
-                  )}
+              <div className="dashboard-graficas-fila-inferior">
+                <div className="dashboard-grafica dashboard-tarjeta">
+                  <h3 className="dashboard-grafica-titulo">Inasistencias (6 meses)</h3>
+                  <p className="dashboard-grafica-sub">Registros por mes · eje Y = cantidad</p>
+                  <div className="dashboard-grafica-chart">
+                    {serieIna.length > 0 ? (
+                      <GraficaLineaInasistencias datos={serieIna} />
+                    ) : (
+                      <p className="dashboard-grafica-vacio">Sin registros de inasistencias.</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="dashboard-graficas-lateral">
-              <div className="dashboard-grafica dashboard-tarjeta dashboard-tarjeta--contratos">
-                <h3 className="dashboard-grafica-titulo">Contratos</h3>
-                <p className="dashboard-grafica-sub">Vigentes frente al resto</p>
-                <div className="dashboard-grafica-chart dashboard-grafica-chart--pie">
-                  {pieTotal > 0 ? (
-                    <GraficaDonutContratos items={pieContratos} total={pieTotal} />
-                  ) : (
-                    <p className="dashboard-grafica-vacio">No hay contratos registrados aún.</p>
-                  )}
+                <div className="dashboard-grafica dashboard-tarjeta dashboard-tarjeta--contratos">
+                  <h3 className="dashboard-grafica-titulo">Contratos</h3>
+                  <p className="dashboard-grafica-sub">Vigentes frente al resto</p>
+                  <div className="dashboard-grafica-chart dashboard-grafica-chart--pie">
+                    {pieTotal > 0 ? (
+                      <GraficaDonutContratos items={pieContratos} total={pieTotal} />
+                    ) : (
+                      <p className="dashboard-grafica-vacio">No hay contratos registrados aún.</p>
+                    )}
+                  </div>
+                  <Link to="/contratos" className="dashboard-grafica-enlace-modulo">
+                    Ir a contratos →
+                  </Link>
                 </div>
-                <Link to="/contratos" className="dashboard-grafica-enlace-modulo">
-                  Ir a contratos →
-                </Link>
-              </div>
-
-              <div className="dashboard-tarjeta dashboard-modulos-destacados">
-                <h3 className="dashboard-modulos-destacados-titulo">Módulos que suelen usarse</h3>
-                <p className="dashboard-modulos-destacados-sub">Accesos con contexto</p>
-                <ul className="dashboard-modulos-destacados-lista">
-                  {modulosDestacados.map((m) => (
-                    <li key={m.ruta}>
-                      <Link to={m.ruta} className="dashboard-modulos-destacados-enlace">
-                        <span className="dashboard-modulos-destacados-flecha">→</span>
-                        <span>
-                          <strong>{m.titulo}</strong>
-                          <small>{m.detalle}</small>
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="dashboard-sugerencia">
-                <strong>Sugerencia</strong>
-                <p>
-                  Revisa periódicamente <Link to="/contratos">contratos</Link> e{' '}
-                  <Link to="/inasistencias">inasistencias</Link> para mantener la nómina al día.
-                </p>
               </div>
             </div>
           </div>
@@ -308,8 +265,8 @@ function Panel() {
               <p className="dashboard-acciones-sub">Saltos directos a los módulos principales</p>
             </div>
             <div className="dashboard-acciones-grid">
-              {accesosRapidos.map((acceso, indice) => (
-                <Link key={indice} to={acceso.ruta} className={`btn-accion-rapida ${acceso.color}`}>
+              {accesosRapidos.map((acceso) => (
+                <Link key={acceso.ruta} to={acceso.ruta} className={`btn-accion-rapida ${acceso.color}`}>
                   {acceso.texto}
                 </Link>
               ))}

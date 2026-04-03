@@ -5,7 +5,16 @@ function rowsFromResponse(body) {
   if (!body) return [];
   if (Array.isArray(body)) return body.filter((r) => r && typeof r === 'object');
   if (Array.isArray(body.data)) return body.data.filter((r) => r && typeof r === 'object');
+  if (body.data?.data && Array.isArray(body.data.data)) {
+    return body.data.data.filter((r) => r && typeof r === 'object');
+  }
   return [];
+}
+
+/** Evita que un 403 en un catálogo vacíe todo el modal (p. ej. funcionario sin GET /empleados). */
+async function allSettledValores(promesas) {
+  const settled = await Promise.allSettled(promesas);
+  return settled.map((s) => (s.status === 'fulfilled' ? s.value : null));
 }
 
 function normalizeObject(body, idKey) {
@@ -222,7 +231,7 @@ export async function obtenerCatalogosCertificacion({ forzar = false, ligero = t
 
   inflightCatalogosCert = (async () => {
     if (ligero) {
-      const [empresasRaw, empleadosRaw, contratosRaw, afilRaw] = await Promise.all([
+      const [empresasRaw, empleadosRaw, contratosRaw, afilRaw] = await allSettledValores([
         getEmpresasCatalogo(),
         getEmpleadosCatalogo(),
         getContratosCatalogo(),
@@ -245,7 +254,7 @@ export async function obtenerCatalogosCertificacion({ forzar = false, ligero = t
     }
 
     const [empresasRaw, empleadosRaw, contratosRaw, afilRaw, epsRaw, arlsRaw, pensionesRaw, cajasRaw, cesantiasRaw] =
-      await Promise.all([
+      await allSettledValores([
         getEmpresasCatalogo(),
         getEmpleadosCatalogo(),
         getContratosCatalogo(),

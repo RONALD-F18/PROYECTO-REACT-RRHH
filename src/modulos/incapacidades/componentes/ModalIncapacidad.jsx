@@ -144,10 +144,12 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     let cancel = false;
     (async () => {
       try {
-        const [t, c] = await Promise.all([getTiposIncapacidad(), getClasificacionesEnfermedad()]);
+        const [st, sc] = await Promise.allSettled([getTiposIncapacidad(), getClasificacionesEnfermedad()]);
         if (cancel) return;
-        setTiposCatalogo(extraerFilasCatalogo(t));
-        setClasifCatalogo(extraerFilasCatalogo(c));
+        if (st.status === 'fulfilled') setTiposCatalogo(extraerFilasCatalogo(st.value));
+        else setTiposCatalogo([]);
+        if (sc.status === 'fulfilled') setClasifCatalogo(extraerFilasCatalogo(sc.value));
+        else setClasifCatalogo([]);
       } catch {
         if (!cancel) {
           setTiposCatalogo([]);

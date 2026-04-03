@@ -164,9 +164,19 @@ function Incapacidades() {
     setMensajeLista('');
     setCargando(true);
     try {
-      const [json, jr] = await Promise.all([getIncapacidades(), getResumenIncapacidades()]);
-      setLista(extraerFilasIncapacidades(json));
-      setResumenApi(extraerResumenIncapacidades(jr));
+      const [si, sr] = await Promise.allSettled([getIncapacidades(), getResumenIncapacidades()]);
+      const partes = [];
+      if (si.status === 'fulfilled') setLista(extraerFilasIncapacidades(si.value));
+      else {
+        setLista([]);
+        partes.push(mensajeErrorApi(si.reason));
+      }
+      if (sr.status === 'fulfilled') setResumenApi(extraerResumenIncapacidades(sr.value));
+      else {
+        setResumenApi(null);
+        partes.push(mensajeErrorApi(sr.reason));
+      }
+      if (partes.length) setMensajeLista(partes.join(' · '));
     } catch (e) {
       setLista([]);
       setMensajeLista(mensajeErrorApi(e));
@@ -181,17 +191,29 @@ function Incapacidades() {
       setMensajeLista('');
       setCargando(true);
       try {
-        const [ji, je, jt, jr] = await Promise.all([
+        const [si, se, st, sr] = await Promise.allSettled([
           getIncapacidades(),
           getEmpleados(),
           getTiposIncapacidad(),
           getResumenIncapacidades(),
         ]);
         if (!activo) return;
-        setLista(extraerFilasIncapacidades(ji));
-        setEmpleados(extraerFilasEmpleados(je));
-        setTiposCatalogo(extraerFilasCatalogo(jt));
-        setResumenApi(extraerResumenIncapacidades(jr));
+        const partes = [];
+        if (si.status === 'fulfilled') setLista(extraerFilasIncapacidades(si.value));
+        else {
+          setLista([]);
+          partes.push(mensajeErrorApi(si.reason));
+        }
+        if (se.status === 'fulfilled') setEmpleados(extraerFilasEmpleados(se.value));
+        else setEmpleados([]);
+        if (st.status === 'fulfilled') setTiposCatalogo(extraerFilasCatalogo(st.value));
+        else setTiposCatalogo([]);
+        if (sr.status === 'fulfilled') setResumenApi(extraerResumenIncapacidades(sr.value));
+        else setResumenApi(null);
+        if (se.status === 'rejected') partes.push(mensajeErrorApi(se.reason));
+        if (st.status === 'rejected') partes.push(mensajeErrorApi(st.reason));
+        if (sr.status === 'rejected') partes.push(mensajeErrorApi(sr.reason));
+        if (partes.length) setMensajeLista(partes.join(' · '));
       } catch (e) {
         if (!activo) return;
         setLista([]);

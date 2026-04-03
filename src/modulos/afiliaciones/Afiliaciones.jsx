@@ -180,10 +180,20 @@ function Afiliaciones() {
       setMensajeLista('');
       setCargando(true);
       try {
-        const [ja, je] = await Promise.all([getAfiliaciones(), getEmpleados()]);
+        const [sa, se] = await Promise.allSettled([getAfiliaciones(), getEmpleados()]);
         if (!activo) return;
-        setLista(extraerFilasAfiliaciones(ja));
-        setEmpleados(extraerFilasEmpleados(je));
+        const partes = [];
+        if (sa.status === 'fulfilled') setLista(extraerFilasAfiliaciones(sa.value));
+        else {
+          setLista([]);
+          partes.push(mensajeErrorApi(sa.reason));
+        }
+        if (se.status === 'fulfilled') setEmpleados(extraerFilasEmpleados(se.value));
+        else {
+          setEmpleados([]);
+          partes.push(mensajeErrorApi(se.reason));
+        }
+        if (partes.length) setMensajeLista(partes.join(' · '));
       } catch (e) {
         if (!activo) return;
         setLista([]);

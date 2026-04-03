@@ -286,10 +286,24 @@ function ComunicacionesDisciplinarias() {
       setMensajeLista('');
       setCargando(true);
       try {
-        const [jc, je] = await Promise.all([getComunicacionesDisciplinarias(), getEmpleados()]);
+        const [sc, se] = await Promise.allSettled([
+          getComunicacionesDisciplinarias(),
+          getEmpleados(),
+        ]);
         if (!activo) return;
-        setLista(extraerFilasComunicaciones(jc));
-        setEmpleados(extraerFilasEmpleados(je));
+        const partes = [];
+        if (sc.status === 'fulfilled') {
+          setLista(extraerFilasComunicaciones(sc.value));
+        } else {
+          setLista([]);
+          partes.push(mensajeErrorApi(sc.reason));
+        }
+        if (se.status === 'fulfilled') {
+          setEmpleados(extraerFilasEmpleados(se.value));
+        } else {
+          setEmpleados([]);
+          partes.push(mensajeErrorApi(se.reason));
+        }
         if (esAdmin) {
           try {
             const ju = await getUsuarios();
@@ -300,6 +314,7 @@ function ComunicacionesDisciplinarias() {
         } else if (activo) {
           setUsuarios([]);
         }
+        if (activo && partes.length) setMensajeLista(partes.join(' · '));
       } catch (e) {
         if (!activo) return;
         setLista([]);

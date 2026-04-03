@@ -75,10 +75,12 @@ function DetallesContrato() {
     let a = true;
     (async () => {
       try {
-        const [je, jc] = await Promise.all([getEmpleados(), getCargos()]);
+        const [se, sc] = await Promise.allSettled([getEmpleados(), getCargos()]);
         if (!a) return;
-        setEmpleadosLista(extraerFilasEmpleados(je));
-        setCargosLista(extraerFilasCargos(jc));
+        if (se.status === 'fulfilled') setEmpleadosLista(extraerFilasEmpleados(se.value));
+        else setEmpleadosLista([]);
+        if (sc.status === 'fulfilled') setCargosLista(extraerFilasCargos(sc.value));
+        else setCargosLista([]);
       } catch {
         if (a) {
           setEmpleadosLista([]);

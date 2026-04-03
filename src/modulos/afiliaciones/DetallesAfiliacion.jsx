@@ -88,10 +88,12 @@ function DetallesAfiliacion() {
     let a = true;
     (async () => {
       try {
-        const [je, cat] = await Promise.all([getEmpleados(), obtenerCatalogosAfiliacion()]);
+        const [se, sc] = await Promise.allSettled([getEmpleados(), obtenerCatalogosAfiliacion()]);
         if (!a) return;
-        setEmpleados(extraerFilasEmpleados(je));
-        setCatalogos(cat);
+        if (se.status === 'fulfilled') setEmpleados(extraerFilasEmpleados(se.value));
+        else setEmpleados([]);
+        if (sc.status === 'fulfilled') setCatalogos(sc.value);
+        else setCatalogos(null);
       } catch {
         if (a) {
           setEmpleados([]);

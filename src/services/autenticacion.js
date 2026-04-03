@@ -68,7 +68,11 @@ export function usuarioSesionLocal() {
   }
 }
 
-/** Empleados: cualquier sesión válida (administrador, funcionario, etc.). Solo `/usuarios` queda reservado a admin en rutas y menú. */
+/**
+ * Cualquier sesión válida (administrador, funcionario, etc.). Solo `/usuarios` queda reservado a admin.
+ * Los listados del API deben permitir al funcionario lo mismo que al admin salvo usuarios; si GET /empleados
+ * falla para un rol pero el módulo principal responde, la UI usa Promise.allSettled para no vaciar la tabla.
+ */
 export function puedeAccederModuloEmpleadosSesion() {
   return haySesionLocalActiva();
 }

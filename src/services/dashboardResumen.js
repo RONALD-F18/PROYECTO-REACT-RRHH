@@ -18,8 +18,15 @@ function prefijoAnioMes(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+/** Laravel / front pueden usar distintos nombres de campo para la fecha. */
+function ymFechaInasistencia(registro) {
+  if (!registro || typeof registro !== 'object') return '';
+  const raw = registro.fecha_inasistencia ?? registro.fecha ?? registro.fechaInasistencia ?? '';
+  return String(raw).trim().slice(0, 7);
+}
+
 function contarInasistenciasEnMes(filas, prefijoYyyyMm) {
-  return filas.filter((r) => String(r.fecha_inasistencia ?? '').slice(0, 7) === prefijoYyyyMm).length;
+  return filas.filter((r) => ymFechaInasistencia(r) === prefijoYyyyMm).length;
 }
 
 function serieInasistenciasUltimosMeses(filas, cantMeses) {
@@ -30,7 +37,7 @@ function serieInasistenciasUltimosMeses(filas, cantMeses) {
     const key = prefijoAnioMes(d);
     const label = d.toLocaleDateString('es-CO', { month: 'short' });
     const cap = label ? label.charAt(0).toUpperCase() + label.slice(1) : key;
-    const total = filas.filter((r) => String(r.fecha_inasistencia ?? '').slice(0, 7) === key).length;
+    const total = filas.filter((r) => ymFechaInasistencia(r) === key).length;
     out.push({ clave: key, etiqueta: cap, total });
   }
   return out;

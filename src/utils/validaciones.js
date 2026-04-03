@@ -222,26 +222,26 @@ export function prevenirSiNoEsPasaporteDoc(e) {
   }
 }
 
-/** Nombres: letras con tildes, espacio, guion, apóstrofo, punto. */
+/** Nombres/apellidos: letras Unicode y espacio (espejo EmpleadoRequest / \p{L}\s). */
 export function prevenirSiNoEsLetrasNombre(e) {
   if (esTeclaControlNavegacion(e)) return;
-  if (e.key.length === 1 && !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-'.]$/u.test(e.key)) {
+  if (e.key.length === 1 && e.key !== ' ' && !/^\p{L}$/u.test(e.key)) {
     e.preventDefault();
   }
 }
 
-/** Nacionalidad (solo letras y espacios, alineado a sanitizarNacionalidad). */
+/** Nacionalidad: letras Unicode y espacio. */
 export function prevenirSiNoEsNacionalidad(e) {
   if (esTeclaControlNavegacion(e)) return;
-  if (e.key.length === 1 && !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]$/u.test(e.key)) {
+  if (e.key.length === 1 && e.key !== ' ' && !/^\p{L}$/u.test(e.key)) {
     e.preventDefault();
   }
 }
 
-/** Profesión: letras, números, espacios y signos habituales. */
+/** Profesión: letras Unicode y espacio (EmpleadoRequest). */
 export function prevenirSiNoEsProfesion(e) {
   if (esTeclaControlNavegacion(e)) return;
-  if (e.key.length === 1 && !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s\-.,/+#()°]$/u.test(e.key)) {
+  if (e.key.length === 1 && e.key !== ' ' && !/^\p{L}$/u.test(e.key)) {
     e.preventDefault();
   }
 }
@@ -259,19 +259,19 @@ export function sanitizarDocPasaporte(valor, maxLen = 50) {
 
 export function sanitizarLetrasNombre(valor, maxLen = 100) {
   return String(valor ?? '')
-    .replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-'.]/gu, '')
+    .replace(/[^\p{L}\s]/gu, '')
     .slice(0, maxLen);
 }
 
 export function sanitizarNacionalidad(valor, maxLen = 50) {
   return String(valor ?? '')
-    .replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/gu, '')
+    .replace(/[^\p{L}\s]/gu, '')
     .slice(0, maxLen);
 }
 
 export function sanitizarProfesion(valor, maxLen = 100) {
   return String(valor ?? '')
-    .replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s\-.,/+#()°]/gu, '')
+    .replace(/[^\p{L}\s]/gu, '')
     .slice(0, maxLen);
 }
 

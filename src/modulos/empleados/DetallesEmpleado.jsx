@@ -56,8 +56,14 @@ function DetallesEmpleado() {
     setError('');
     setCargando(true);
     try {
-      const [rawEmp, rawBan] = await Promise.all([getEmpleadoById(id), getBancos()]);
-      const emp = normalizarRegistroEmpleado(rawEmp);
+      const [sEmp, sBan] = await Promise.allSettled([getEmpleadoById(id), getBancos()]);
+      if (sEmp.status !== 'fulfilled') {
+        setEmpleado(null);
+        setBancosLista([]);
+        setError(mensajeErrorApi(sEmp.reason));
+        return;
+      }
+      const emp = normalizarRegistroEmpleado(sEmp.value);
       const codEmp = codigoEmpleadoDesde(emp);
       if (!emp || codEmp == null) {
         setEmpleado(null);
@@ -69,7 +75,9 @@ function DetallesEmpleado() {
         emp.cod_empleado != null ? emp : { ...emp, cod_empleado: codEmp },
       );
 
+      const rawBan = sBan.status === 'fulfilled' ? sBan.value : null;
       const bancos = extraerFilasBancos(rawBan);
+      setBancosLista(bancos);
       const codBanco = emp.cod_banco;
       const b = bancos.find((x) => Number(x.cod_banco) === Number(codBanco));
       setNombreBanco(b?.nombre_banco ?? (codBanco != null ? `Código ${codBanco}` : '—'));

@@ -382,8 +382,9 @@
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   color: #334155;
-  padding: 11px 16px;
-  margin-top: 16px;
+  padding: 14px 18px;
+  margin-top: 8px;
+  margin-bottom: 4px;
   display: grid;
   grid-template-columns: auto 1fr;
   column-gap: 10px;
@@ -417,7 +418,14 @@
 
 .cal-form-section {
   border-top: none;
-  padding-top: 20px;
+  padding-top: 0;
+  margin-top: 2px;
+  margin-bottom: 0;
+}
+
+.cal-form-section:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .cal-form-section-title {
@@ -430,7 +438,8 @@
   font-size: 11.5px;
   letter-spacing: 0.6px;
   text-transform: uppercase;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
+  margin-top: 0;
 }
 
 .cal-form-section-title::after {
@@ -455,16 +464,17 @@
 .cal-act-form label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
   font-size: 10.5px;
   font-weight: 600;
   color: #7c8091;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  margin-bottom: 0;
 }
 
 .cal-act-form label span {
-  margin-bottom: 1px;
+  margin-bottom: 0;
 }
 
 .cal-act-form input,
@@ -502,12 +512,13 @@
 .cal-act-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 10px;
+  gap: 12px 14px;
 }
 
 .cal-tipo-busqueda {
   position: relative;
   margin-bottom: 8px;
+  margin-top: 0;
 }
 
 .cal-tipo-busqueda-icono {
@@ -521,8 +532,9 @@
 .cal-tipo-sugerencias {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 2px;
+  gap: 8px;
+  margin-top: 6px;
+  margin-bottom: 2px;
 }
 
 .cal-tipo-sugerencias button {
@@ -556,7 +568,8 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 2px;
+  margin-top: 8px;
+  margin-bottom: 4px;
 }
 
 .cal-color-dot {
@@ -574,8 +587,8 @@
 .cal-act-form-acciones {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 10px;
+  margin-top: 14px;
   border-top: 1px solid #e8eaf0;
   padding-top: 14px;
 }

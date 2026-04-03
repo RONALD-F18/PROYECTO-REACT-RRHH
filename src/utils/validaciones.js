@@ -83,6 +83,79 @@ export const validarCorreo = (valor) => {
   return null;
 };
 
+/** Límite habitual en VARCHAR de usuario (Laravel). */
+export const LONGITUD_NOMBRE_USUARIO_MAX = 255;
+export const LONGITUD_EMAIL_USUARIO_MAX = 255;
+
+/**
+ * Nombre completo del usuario (perfil / tabla usuarios).
+ * Letras con tildes, espacios, guion, apóstrofo y punto (sin números ni símbolos raros).
+ */
+export function validarNombreCompletoUsuario(valor) {
+  const v = typeof valor === 'string' ? valor.trim() : '';
+  if (!v) return 'El nombre es obligatorio.';
+  if (v.length < 2) return 'El nombre debe tener al menos 2 caracteres.';
+  if (v.length > LONGITUD_NOMBRE_USUARIO_MAX) {
+    return `El nombre no puede superar ${LONGITUD_NOMBRE_USUARIO_MAX} caracteres.`;
+  }
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-'.,]+$/u.test(v)) {
+    return 'El nombre solo puede incluir letras, espacios, guiones, apóstrofos o comas.';
+  }
+  return null;
+}
+
+/** Correo para formularios de usuario con tope de longitud alineado al backend. */
+export function validarEmailUsuario(valor) {
+  const base = validarCorreo(valor);
+  if (base) return base;
+  if (valor.trim().length > LONGITUD_EMAIL_USUARIO_MAX) {
+    return `El correo no puede superar ${LONGITUD_EMAIL_USUARIO_MAX} caracteres.`;
+  }
+  return null;
+}
+
+/**
+ * Alineado a `UsuarioRequest` (Laravel) — actualización PUT/PATCH: `nombre_usuario` string|max:255.
+ * Mensajes iguales a `UsuarioRequest::messages()`.
+ */
+export function validarNombreUsuarioRequest(valor) {
+  const v = typeof valor === 'string' ? valor : '';
+  const t = v.trim();
+  if (!t) return 'El nombre de usuario es obligatorio.';
+  if (t.length > LONGITUD_NOMBRE_USUARIO_MAX) {
+    return 'El nombre de usuario no puede superar los 255 caracteres.';
+  }
+  return null;
+}
+
+/**
+ * Alineado a `UsuarioRequest`: `email_usuario` string|email|max:255.
+ * (El front no replica `email:rfc,dns` al 100%; el servidor sigue siendo la referencia.)
+ */
+export function validarEmailUsuarioRequest(valor) {
+  const v = typeof valor === 'string' ? valor : '';
+  const t = v.trim();
+  if (!t) return 'El correo electrónico es obligatorio.';
+  if (t.length > LONGITUD_EMAIL_USUARIO_MAX) {
+    return 'El correo electrónico no puede superar los 255 caracteres.';
+  }
+  if (!expresionesRegulares.correo.test(t)) {
+    return 'El correo electrónico debe tener un formato válido.';
+  }
+  return null;
+}
+
+/**
+ * Actualización: `contrasena_usuario` => sometimes|string|min:8|max:64 (vacío = no cambiar).
+ */
+export function validarContrasenaUsuarioRequestActualizacion(valor) {
+  const v = typeof valor === 'string' ? valor : '';
+  if (!v.trim()) return null;
+  if (v.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+  if (v.length > 64) return 'La contraseña no puede superar los 64 caracteres.';
+  return null;
+}
+
 export const validarContrasena = (valor) => validarContrasenaUsuarioApi(valor, { permitirVacio: false });
 
 export const validarConfirmarContrasena = (valor, contrasena) => {

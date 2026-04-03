@@ -69,6 +69,7 @@
 .tarjeta-dato-icono.naranja { background: #ffedd5; }
 .tarjeta-dato-icono.azul { background: #dbeafe; }
 .tarjeta-dato-icono.verde { background: #d1fae5; }
+.tarjeta-dato-icono.morado { background: #ede9fe; }
 
 .tarjeta-dato-contenido {
   display: flex;

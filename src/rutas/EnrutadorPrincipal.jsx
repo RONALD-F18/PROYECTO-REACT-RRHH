@@ -74,7 +74,6 @@ export const rutasPrivadas = [
   { ruta: "/incapacidades", componente: Incapacidades },
   { ruta: "/inasistencias", componente: Inasistencias },
   { ruta: "/actividades", componente: CalendarioActividades },
-  { ruta: "/calendario", componente: CalendarioActividades },
   { ruta: "/incapacidades/:id", componente: DetallesIncapacidad },
   { ruta: "/afiliaciones", componente: Afiliaciones },
   { ruta: "/afiliaciones/:id", componente: DetallesAfiliacion },
@@ -103,6 +102,14 @@ function EnrutadorPrincipal() {
           />
         ),
       )}
+      <Route
+        path="/calendario"
+        element={
+          <RutaPrivada>
+            <Navigate to="/actividades" replace />
+          </RutaPrivada>
+        }
+      />
     </Routes>
   );
 }

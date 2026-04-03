@@ -11,6 +11,24 @@
   width: 100%;
 }
 
+.modal-contenido--usuario-form.modal-contenido--mi-perfil {
+  max-width: 520px;
+}
+
+.formulario-usuario-api .usuario-modal-rol-lectura {
+  margin: 0 0 8px;
+  font-size: var(--texto-sm);
+  color: var(--gris-500);
+  font-weight: 500;
+}
+
+.formulario-usuario-api .usuario-modal-mi-perfil-ayuda {
+  margin: 0 0 16px;
+  font-size: var(--texto-xs);
+  color: var(--gris-500);
+  line-height: 1.45;
+}
+
 .formulario-usuario-api {
   display: flex;
   flex-direction: column;

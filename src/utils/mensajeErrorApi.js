@@ -1,3 +1,36 @@
+function primerMensajeCampo(val) {
+  if (Array.isArray(val) && val.length > 0) return String(val[0]).trim();
+  if (typeof val === 'string') return val.trim();
+  return '';
+}
+
+/**
+ * Para 422 con `errors` de Laravel: mensajes por campo del perfil de usuario.
+ * @returns {null | { nombre: string, email: string, contrasena: string, confirmacion: string }}
+ */
+export function mapaErroresValidacionPerfilUsuario(error) {
+  if (error?.response?.status !== 422) return null;
+  const raw = error.response.data;
+  if (!raw || typeof raw !== 'object' || !raw.errors || typeof raw.errors !== 'object') return null;
+  const e = raw.errors;
+
+  const pick = (keys) => {
+    for (const k of keys) {
+      if (e[k] == null) continue;
+      const msg = primerMensajeCampo(e[k]);
+      if (msg) return msg;
+    }
+    return '';
+  };
+
+  return {
+    nombre: pick(['nombre_usuario', 'nombre']),
+    email: pick(['email_usuario', 'email']),
+    contrasena: pick(['contrasena_usuario', 'password']),
+    confirmacion: pick(['contrasena_usuario_confirmation']),
+  };
+}
+
 /** Une mensajes de validación Laravel */
 function unirErroresLaravel(errors) {
   if (!errors || typeof errors !== 'object') return '';

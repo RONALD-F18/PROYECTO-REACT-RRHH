@@ -194,6 +194,26 @@
   padding-right: 50px;
 }
 
+.panel-navegacion-perfil-principal {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.panel-navegacion-perfil-principal:hover .panel-navegacion-nombre {
+  color: var(--color-primario);
+}
+
 .panel-navegacion-avatar {
   width: 40px;
   height: 40px;
@@ -212,6 +232,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1;
 }
 
 .panel-navegacion-nombre {
@@ -230,7 +251,7 @@
   white-space: nowrap;
 }
 
-.panel-navegacion-cerrar-sesion {
+.panel-navegacion-boton-perfil {
   position: absolute;
   right: 0;
   top: 50%;
@@ -255,15 +276,15 @@
   min-height: 32px;
 }
 
-.panel-navegacion-cerrar-sesion:hover {
+.panel-navegacion-boton-cerrar-sesion:hover {
   background: var(--gris-200);
   color: var(--color-error);
   border-color: var(--color-error);
-  transform: translateY(-50%) scale(1.1);
+  transform: translateY(-50%) scale(1.06);
   box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
 }
 
-.panel-navegacion-cerrar-sesion-icono {
+.panel-navegacion-boton-perfil-icono {
   font-size: 18px;
   display: flex;
   align-items: center;

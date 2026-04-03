@@ -484,8 +484,8 @@ function CalendarioActividades() {
     <ContenedorPrincipal>
       <div className="cal-act-modulo">
         <EncabezadoModulo
-          titulo="Actividades"
-          subtitulo="Calendario de tareas, reuniones y recordatorios"
+          titulo="Calendario de Actividades"
+          subtitulo="Tareas, reuniones y recordatorios en un solo calendario"
           textoBoton="Nueva actividad"
           alHacerClic={() => abrirNuevo()}
         />
@@ -627,7 +627,11 @@ function CalendarioActividades() {
           </article>
 
           <aside className="cal-act-lista">
-            <h4>{diaSeleccionadoIso ? `Actividades del ${formatearFechaVista(diaSeleccionadoIso)}` : 'Actividades del mes'}</h4>
+            <h4>
+              {diaSeleccionadoIso
+                ? `Eventos del ${formatearFechaVista(diaSeleccionadoIso)}`
+                : 'Eventos del mes'}
+            </h4>
             {diaSeleccionadoIso ? (
               <button type="button" className="cal-list-reset" onClick={() => setDiaSeleccionadoIso('')}>
                 Ver todo el mes

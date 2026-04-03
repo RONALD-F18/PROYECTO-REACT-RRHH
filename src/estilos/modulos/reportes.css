@@ -188,17 +188,18 @@
   gap: 8px;
 }
 
-/* Misma línea visual que certificaciones: PDF con gradiente, eliminar rojo; botones más grandes */
+/* PDF y eliminar en registro: compactos, proporcionados a las pills */
 .reportes-registro-acciones {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
 .reportes-registro-acciones .btn-accion-tabla {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 5px;
 }
 
 .reportes-registro-acciones .btn-accion-tabla-cert-pdf {
@@ -341,9 +342,9 @@
   }
 
   .reportes-registro-acciones .btn-accion-tabla {
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
   }
 
   .reportes-item {

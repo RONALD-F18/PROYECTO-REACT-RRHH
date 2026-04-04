@@ -13,6 +13,7 @@ import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpl
 import { getUsuarios, extraerFilasUsuarios } from '../../services/usuario';
 import { esAdminSesionLocal } from '../../services/autenticacion';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import {
   TIPOS_COMUNICACION,
   ESTADOS_COMUNICACION,
@@ -148,7 +149,6 @@ function ComunicacionesDisciplinarias() {
     tipo: '',
     estado: '',
   });
-
   const mapaEmpleados = useMemo(() => {
     const m = new Map();
     for (const e of empleados) {
@@ -286,20 +286,37 @@ function ComunicacionesDisciplinarias() {
       setMensajeLista('');
       setCargando(true);
       try {
-        const [jc, je] = await Promise.all([getComunicacionesDisciplinarias(), getEmpleados()]);
+        const settled = esAdmin
+          ? await Promise.allSettled([getComunicacionesDisciplinarias(), getEmpleados(), getUsuarios()])
+          : await Promise.allSettled([getComunicacionesDisciplinarias(), getEmpleados()]);
         if (!activo) return;
-        setLista(extraerFilasComunicaciones(jc));
-        setEmpleados(extraerFilasEmpleados(je));
+        const partes = [];
+        const sc = settled[0];
+        const se = settled[1];
+        if (sc.status === 'fulfilled') {
+          setLista(extraerFilasComunicaciones(sc.value));
+        } else {
+          setLista([]);
+          partes.push(mensajeErrorApi(sc.reason));
+        }
+        if (se.status === 'fulfilled') {
+          setEmpleados(extraerFilasEmpleados(se.value));
+        } else {
+          setEmpleados([]);
+          partes.push(mensajeErrorApi(se.reason));
+        }
         if (esAdmin) {
-          try {
-            const ju = await getUsuarios();
-            if (activo) setUsuarios(extraerFilasUsuarios(ju));
-          } catch {
-            if (activo) setUsuarios([]);
+          const su = settled[2];
+          if (su && su.status === 'fulfilled') {
+            setUsuarios(extraerFilasUsuarios(su.value));
+          } else {
+            setUsuarios([]);
+            if (su && su.status === 'rejected') partes.push(mensajeErrorApi(su.reason));
           }
-        } else if (activo) {
+        } else {
           setUsuarios([]);
         }
+        if (activo && partes.length) setMensajeLista(partes.join(' · '));
       } catch (e) {
         if (!activo) return;
         setLista([]);
@@ -341,14 +358,15 @@ function ComunicacionesDisciplinarias() {
       setRegistroEditar(raw ?? fila);
       setMostrarForm(true);
     } catch (err) {
-      window.alert(mensajeErrorApi(err));
+      void alertaErrorApi('No se pudo abrir el documento', err);
     }
   };
 
   const confirmarEliminar = async (fila) => {
     const cod = codigoDisciplinarioDesde(fila);
     if (cod == null) return;
-    if (!window.confirm('¿Eliminar este documento disciplinario? Esta acción no se puede deshacer.')) return;
+    const ok = await confirmarEliminacion({ titulo: '¿Eliminar este documento disciplinario?' });
+    if (!ok) return;
     try {
       await deleteComunicacionDisciplinaria(cod);
       setMostrarDetalle(false);
@@ -357,7 +375,7 @@ function ComunicacionesDisciplinarias() {
       setMensajeExito('Documento eliminado correctamente.');
       window.setTimeout(() => setMensajeExito(''), 3000);
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo eliminar el documento', e);
     }
   };
 

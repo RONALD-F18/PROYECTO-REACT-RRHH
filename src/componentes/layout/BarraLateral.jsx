@@ -1,12 +1,26 @@
+import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { cerrarSesion, esAdminSesionLocal } from '../../services/autenticacion';
+import { cerrarSesion, esAdminSesionLocal, usuarioSesionLocal } from '../../services/autenticacion';
+import ModalMiPerfil from './ModalMiPerfil';
 
 /**
  * Componente de barra lateral de navegación
  */
+function inicialesNombre(nombre) {
+  const s = String(nombre || '').trim();
+  if (!s) return '?';
+  return s.charAt(0).toUpperCase();
+}
+
 function BarraLateral({ menuAbierto = false, cerrarMenu }) {
   const ubicacion = useLocation();
   const navegar = useNavigate();
+  const [perfilAbierto, setPerfilAbierto] = useState(false);
+  const [tickSesion, setTickSesion] = useState(0);
+  const sesion = useMemo(() => usuarioSesionLocal(), [tickSesion]);
+  const nombreMostrar = sesion?.nombre?.trim() || 'Usuario';
+  const correoMostrar = sesion?.email?.trim() || '—';
+  const avatarLetra = inicialesNombre(nombreMostrar);
 
   const enlacesMenu = [
     { ruta: '/dashboard', etiqueta: 'Dashboard', icono: '' },
@@ -16,16 +30,21 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
     { ruta: '/prestaciones', etiqueta: 'Prestaciones Sociales', icono: '' },
     { ruta: '/afiliaciones', etiqueta: 'Afiliaciones', icono: '' },
     { ruta: '/contratos', etiqueta: 'Contratos', icono: '' },
-    { ruta: '/certificacion', etiqueta: 'Certificación', icono: '' },
+    { ruta: '/certificaciones', etiqueta: 'Certificaciones', icono: '' },
     { ruta: '/comunicaciones-disciplinarias', etiqueta: 'Comunicaciones Disciplinarias', icono: '' },
     { ruta: '/inasistencias', etiqueta: 'Inasistencias', icono: '' },
-    { ruta: '/actividades', etiqueta: 'Actividades', icono: '' },
+    { ruta: '/actividades', etiqueta: 'Calendario de Actividades', icono: '' },
     { ruta: '/reportes', etiqueta: 'Reportes', icono: '' },
   ];
   const esAdmin = esAdminSesionLocal();
   const enlacesVisibles = enlacesMenu.filter((item) => item.ruta !== '/usuarios' || esAdmin);
 
-  const estaActivo = (ruta) => ubicacion.pathname === ruta;
+  const estaActivo = (ruta) => {
+    if (ruta === '/actividades') {
+      return ubicacion.pathname === '/actividades' || ubicacion.pathname === '/calendario';
+    }
+    return ubicacion.pathname === ruta;
+  };
 
   const manejarClick = () => {
     if (cerrarMenu) {
@@ -66,24 +85,27 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
       </nav>
 
       <div className="barra-lateral-pie">
-        <Link to="#" className="barra-lateral-opcion">
-          <span className="barra-lateral-opcion-icono"></span>
-          <span>Ayuda</span>
-        </Link>
-
         <div className="barra-lateral-usuario">
-          <div className="barra-lateral-avatar">A</div>
-          <div className="barra-lateral-datos">
-            <span className="barra-lateral-nombre">Admin</span>
-            <span className="barra-lateral-correo">admin@talentsphere.com</span>
-          </div>
           <button
             type="button"
-            className="barra-lateral-cerrar-sesion"
+            className="barra-lateral-perfil-principal"
+            onClick={() => setPerfilAbierto(true)}
+            aria-label="Abrir mi perfil"
+          >
+            <span className="barra-lateral-avatar">{avatarLetra}</span>
+            <span className="barra-lateral-datos">
+              <span className="barra-lateral-nombre">{nombreMostrar}</span>
+              <span className="barra-lateral-correo">{correoMostrar}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            className="barra-lateral-boton-perfil barra-lateral-boton-cerrar-sesion"
             onClick={manejarCerrarSesion}
             title="Cerrar sesión"
+            aria-label="Cerrar sesión"
           >
-            <span className="barra-lateral-cerrar-sesion-icono">→</span>
+            <span className="barra-lateral-boton-perfil-icono">→</span>
           </button>
         </div>
 
@@ -96,6 +118,12 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
           <span>Cerrar sesión</span>
         </button>
       </div>
+
+      <ModalMiPerfil
+        mostrar={perfilAbierto}
+        cerrar={() => setPerfilAbierto(false)}
+        alGuardar={() => setTickSesion((t) => t + 1)}
+      />
     </aside>
   );
 }

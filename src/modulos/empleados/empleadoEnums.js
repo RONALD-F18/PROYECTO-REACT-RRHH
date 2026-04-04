@@ -14,7 +14,7 @@ export const TIPO_CUENTA = [
 
 export const ESTADO_EMP = [
   { valor: 'ACTIVO', etiqueta: 'Activo' },
-  { valor: 'INACTIVO', etiqueta: 'Inactivo' },
+  { valor: 'RETIRADO', etiqueta: 'Retirado' },
 ];
 
 export const DISCAPACIDAD = [
@@ -68,6 +68,7 @@ export function etiquetaTipoCuenta(v) {
 export function etiquetaEstadoEmp(v) {
   if (v == null || v === '') return '—';
   const s = String(v).toUpperCase();
+  if (s === 'INACTIVO') return 'Retirado';
   return mapa(ESTADO_EMP).get(s) ?? String(v);
 }
 

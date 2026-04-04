@@ -95,8 +95,8 @@ function Inicio() {
       descripcion: "Tipos, clasificación e historial de incapacidades por empleado.",
     },
     {
-      titulo: "Calendario de actividades",
-      descripcion: "Actividades y fechas importantes del área de personas.",
+      titulo: "Calendario de Actividades",
+      descripcion: "Eventos y fechas importantes del área de personas.",
     },
     {
       titulo: "Empresa",

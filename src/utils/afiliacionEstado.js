@@ -1,11 +1,15 @@
-/** Equivalencia UI ↔ valores habituales en BD (p. ej. seed `ACTIVA`). */
+/** Etiquetas permitidas en UI (listados, detalle, modal). */
+export const ETIQUETAS_ESTADO_AFILIACION = ['Aprobada', 'Pendiente', 'Retirada'];
+
+/**
+ * Etiqueta visible: solo tres estados. Valores heredados (p. ej. EN_PROCESO) se agrupan.
+ */
 export function etiquetaEstadoAfiliacion(estadoBd) {
   const u = String(estadoBd || '').toUpperCase().replace(/\s+/g, '_');
   if (u === 'ACTIVA' || u === 'APROBADA') return 'Aprobada';
-  if (u === 'PENDIENTE') return 'Pendiente';
-  if (u === 'EN_PROCESO') return 'En Proceso';
-  if (u === 'RECHAZADA') return 'Rechazada';
-  return estadoBd ? String(estadoBd) : '—';
+  if (u === 'RETIRADA' || u === 'RETIRADO' || u === 'RECHAZADA') return 'Retirada';
+  if (u === 'PENDIENTE' || u === 'EN_PROCESO') return 'Pendiente';
+  return 'Pendiente';
 }
 
 export function estadoAfiliacionDesdeEtiquetaUi(etiqueta) {
@@ -13,10 +17,10 @@ export function estadoAfiliacionDesdeEtiquetaUi(etiqueta) {
     Aprobada: 'ACTIVA',
     Activa: 'ACTIVA',
     Pendiente: 'PENDIENTE',
-    'En Proceso': 'EN_PROCESO',
-    Rechazada: 'RECHAZADA',
+    Retirada: 'RETIRADA',
+    Retirado: 'RETIRADA',
   };
-  return map[etiqueta] ?? etiqueta;
+  return map[etiqueta] ?? 'PENDIENTE';
 }
 
 export function tipoRegimenApi(valorForm) {

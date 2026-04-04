@@ -1,4 +1,10 @@
 import api, { API_REQUEST_TIMEOUT_MS } from './api';
+import { crearPeticionCompartida } from '../utils/peticionCompartida';
+
+const ejecutarGetAfiliacionesLista = crearPeticionCompartida(async () => {
+  const { data } = await api.get('/afiliaciones');
+  return data;
+});
 
 export function extraerFilasAfiliaciones(cuerpo) {
   if (!cuerpo) return [];
@@ -73,8 +79,7 @@ export async function obtenerCatalogosAfiliacion({ forzar = false } = {}) {
 }
 
 export async function getAfiliaciones() {
-  const { data } = await api.get('/afiliaciones');
-  return data;
+  return ejecutarGetAfiliacionesLista();
 }
 
 export async function getAfiliacionById(cod) {

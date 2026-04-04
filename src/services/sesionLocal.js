@@ -40,3 +40,34 @@ export function limpiarAlmacenSesionCliente() {
     /* noop */
   }
 }
+
+/**
+ * Actualiza en localStorage los campos del usuario (nombre, correo, etc.) tras guardar el perfil.
+ */
+export function fusionarUsuarioEnSesion(parcial) {
+  if (!parcial || typeof parcial !== 'object') return;
+  const almacenado = leerPayloadSesion();
+  if (!almacenado) return;
+  const merge = (u) =>
+    u && typeof u === 'object' && !Array.isArray(u) ? { ...u, ...parcial } : u;
+
+  const next = {
+    ...almacenado,
+    user: merge(almacenado.user),
+    raw:
+      almacenado.raw && typeof almacenado.raw === 'object'
+        ? { ...almacenado.raw }
+        : almacenado.raw,
+  };
+  if (next.raw && typeof next.raw === 'object') {
+    if (next.raw.user) next.raw.user = merge(next.raw.user);
+    if (next.raw.data && typeof next.raw.data === 'object' && next.raw.data.user) {
+      next.raw.data = { ...next.raw.data, user: merge(next.raw.data.user) };
+    }
+  }
+  try {
+    localStorage.setItem(CLAVE_SESION_LOCAL, JSON.stringify(next));
+  } catch {
+    /* noop */
+  }
+}

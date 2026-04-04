@@ -19,7 +19,9 @@ function FormularioSecciones({
   onChange,
   onBlur,
   obtenerClaseCampo,
-  mostrarMensaje
+  mostrarMensaje,
+  /** Oculta número + título de sección (p. ej. cuando el padre ya usa `FormularioPasos`). */
+  ocultarEncabezadosSeccion = false,
 }) {
   const renderizarCampo = (campo) => {
     const valor = valores[campo.nombre] || '';
@@ -43,7 +45,9 @@ function FormularioSecciones({
             className={claseCampo}
             disabled={campo.deshabilitado}
           >
-            <option value="">{campo.placeholder || 'Seleccione...'}</option>
+            {!campo.selectSinVacio ? (
+              <option value="">{campo.placeholder || 'Seleccione...'}</option>
+            ) : null}
             {campo.opciones?.map((opcion, idx) => (
               <option key={idx} value={typeof opcion === 'string' ? opcion : opcion.valor}>
                 {typeof opcion === 'string' ? opcion : opcion.texto}
@@ -141,18 +145,25 @@ function FormularioSecciones({
   };
 
   return (
-    <div className="formulario-secciones">
+    <div
+      className={`formulario-secciones${ocultarEncabezadosSeccion ? ' formulario-secciones--solo-campos' : ''}`}
+    >
       {secciones.map((seccion, indice) => (
-        <div key={indice} className="seccion-formulario">
-          <div className="seccion-formulario-header">
-            <div className={`seccion-formulario-numero ${seccion.color}`}>
-              {seccion.numero}
+        <div
+          key={indice}
+          className={`seccion-formulario${ocultarEncabezadosSeccion ? ' seccion-formulario--sin-encabezado' : ''}`}
+        >
+          {!ocultarEncabezadosSeccion ? (
+            <div className="seccion-formulario-header">
+              <div className={`seccion-formulario-numero ${seccion.color}`}>
+                {seccion.numero}
+              </div>
+              <h3 className="seccion-formulario-titulo">
+                {seccion.icono && <span className="seccion-formulario-icono">{seccion.icono}</span>}
+                {seccion.titulo}
+              </h3>
             </div>
-            <h3 className="seccion-formulario-titulo">
-              {seccion.icono && <span className="seccion-formulario-icono">{seccion.icono}</span>}
-              {seccion.titulo}
-            </h3>
-          </div>
+          ) : null}
           <div className="seccion-formulario-campos">
             {seccion.campos.map(renderizarCampo)}
           </div>

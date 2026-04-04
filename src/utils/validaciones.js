@@ -83,6 +83,79 @@ export const validarCorreo = (valor) => {
   return null;
 };
 
+/** Límite habitual en VARCHAR de usuario (Laravel). */
+export const LONGITUD_NOMBRE_USUARIO_MAX = 255;
+export const LONGITUD_EMAIL_USUARIO_MAX = 255;
+
+/**
+ * Nombre completo del usuario (perfil / tabla usuarios).
+ * Letras con tildes, espacios, guion, apóstrofo y punto (sin números ni símbolos raros).
+ */
+export function validarNombreCompletoUsuario(valor) {
+  const v = typeof valor === 'string' ? valor.trim() : '';
+  if (!v) return 'El nombre es obligatorio.';
+  if (v.length < 2) return 'El nombre debe tener al menos 2 caracteres.';
+  if (v.length > LONGITUD_NOMBRE_USUARIO_MAX) {
+    return `El nombre no puede superar ${LONGITUD_NOMBRE_USUARIO_MAX} caracteres.`;
+  }
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-'.,]+$/u.test(v)) {
+    return 'El nombre solo puede incluir letras, espacios, guiones, apóstrofos o comas.';
+  }
+  return null;
+}
+
+/** Correo para formularios de usuario con tope de longitud alineado al backend. */
+export function validarEmailUsuario(valor) {
+  const base = validarCorreo(valor);
+  if (base) return base;
+  if (valor.trim().length > LONGITUD_EMAIL_USUARIO_MAX) {
+    return `El correo no puede superar ${LONGITUD_EMAIL_USUARIO_MAX} caracteres.`;
+  }
+  return null;
+}
+
+/**
+ * Alineado a `UsuarioRequest` (Laravel) — actualización PUT/PATCH: `nombre_usuario` string|max:255.
+ * Mensajes iguales a `UsuarioRequest::messages()`.
+ */
+export function validarNombreUsuarioRequest(valor) {
+  const v = typeof valor === 'string' ? valor : '';
+  const t = v.trim();
+  if (!t) return 'El nombre de usuario es obligatorio.';
+  if (t.length > LONGITUD_NOMBRE_USUARIO_MAX) {
+    return 'El nombre de usuario no puede superar los 255 caracteres.';
+  }
+  return null;
+}
+
+/**
+ * Alineado a `UsuarioRequest`: `email_usuario` string|email|max:255.
+ * (El front no replica `email:rfc,dns` al 100%; el servidor sigue siendo la referencia.)
+ */
+export function validarEmailUsuarioRequest(valor) {
+  const v = typeof valor === 'string' ? valor : '';
+  const t = v.trim();
+  if (!t) return 'El correo electrónico es obligatorio.';
+  if (t.length > LONGITUD_EMAIL_USUARIO_MAX) {
+    return 'El correo electrónico no puede superar los 255 caracteres.';
+  }
+  if (!expresionesRegulares.correo.test(t)) {
+    return 'El correo electrónico debe tener un formato válido.';
+  }
+  return null;
+}
+
+/**
+ * Actualización: `contrasena_usuario` => sometimes|string|min:8|max:64 (vacío = no cambiar).
+ */
+export function validarContrasenaUsuarioRequestActualizacion(valor) {
+  const v = typeof valor === 'string' ? valor : '';
+  if (!v.trim()) return null;
+  if (v.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+  if (v.length > 64) return 'La contraseña no puede superar los 64 caracteres.';
+  return null;
+}
+
 export const validarContrasena = (valor) => validarContrasenaUsuarioApi(valor, { permitirVacio: false });
 
 export const validarConfirmarContrasena = (valor, contrasena) => {
@@ -149,26 +222,26 @@ export function prevenirSiNoEsPasaporteDoc(e) {
   }
 }
 
-/** Nombres: letras con tildes, espacio, guion, apóstrofo, punto. */
+/** Nombres/apellidos: letras Unicode y espacio (espejo EmpleadoRequest / \p{L}\s). */
 export function prevenirSiNoEsLetrasNombre(e) {
   if (esTeclaControlNavegacion(e)) return;
-  if (e.key.length === 1 && !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-'.]$/u.test(e.key)) {
+  if (e.key.length === 1 && e.key !== ' ' && !/^\p{L}$/u.test(e.key)) {
     e.preventDefault();
   }
 }
 
-/** Nacionalidad (solo letras y espacios, alineado a sanitizarNacionalidad). */
+/** Nacionalidad: letras Unicode y espacio. */
 export function prevenirSiNoEsNacionalidad(e) {
   if (esTeclaControlNavegacion(e)) return;
-  if (e.key.length === 1 && !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]$/u.test(e.key)) {
+  if (e.key.length === 1 && e.key !== ' ' && !/^\p{L}$/u.test(e.key)) {
     e.preventDefault();
   }
 }
 
-/** Profesión: letras, números, espacios y signos habituales. */
+/** Profesión: letras Unicode y espacio (EmpleadoRequest). */
 export function prevenirSiNoEsProfesion(e) {
   if (esTeclaControlNavegacion(e)) return;
-  if (e.key.length === 1 && !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s\-.,/+#()°]$/u.test(e.key)) {
+  if (e.key.length === 1 && e.key !== ' ' && !/^\p{L}$/u.test(e.key)) {
     e.preventDefault();
   }
 }
@@ -186,19 +259,19 @@ export function sanitizarDocPasaporte(valor, maxLen = 50) {
 
 export function sanitizarLetrasNombre(valor, maxLen = 100) {
   return String(valor ?? '')
-    .replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-'.]/gu, '')
+    .replace(/[^\p{L}\s]/gu, '')
     .slice(0, maxLen);
 }
 
 export function sanitizarNacionalidad(valor, maxLen = 50) {
   return String(valor ?? '')
-    .replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/gu, '')
+    .replace(/[^\p{L}\s]/gu, '')
     .slice(0, maxLen);
 }
 
 export function sanitizarProfesion(valor, maxLen = 100) {
   return String(valor ?? '')
-    .replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s\-.,/+#()°]/gu, '')
+    .replace(/[^\p{L}\s]/gu, '')
     .slice(0, maxLen);
 }
 

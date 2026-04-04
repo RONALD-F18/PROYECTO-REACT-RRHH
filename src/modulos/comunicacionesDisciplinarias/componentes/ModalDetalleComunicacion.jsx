@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
-import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
+import { alertaErrorApi, confirmarEliminacion } from '../../../utils/alertasSwal';
 import {
   getComunicacionDisciplinariaById,
   patchComunicacionDisciplinaria,
@@ -108,20 +108,22 @@ function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizad
       setDetalle((prev) => (prev ? { ...prev, estado_comunicacion: nuevoApi } : prev));
       await onActualizado?.();
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo actualizar el estado', e);
     } finally {
       setActualizandoEstado(false);
     }
   };
 
   const manejarEliminar = async () => {
-    if (!cod || !window.confirm('¿Eliminar este documento disciplinario?')) return;
+    if (!cod) return;
+    const ok = await confirmarEliminacion({ titulo: '¿Eliminar este documento disciplinario?' });
+    if (!ok) return;
     try {
       await deleteComunicacionDisciplinaria(cod);
       await onEliminado?.();
       cerrar();
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo eliminar el documento', e);
     }
   };
 

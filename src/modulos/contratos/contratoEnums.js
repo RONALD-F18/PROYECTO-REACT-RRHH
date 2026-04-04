@@ -31,11 +31,12 @@ export const HORARIO_TRABAJO_OPCIONES = [
 
 export const ESTADO_CONTRATO = [
   { valor: 'ACTIVO', etiqueta: 'Vigente' },
-  { valor: 'INACTIVO', etiqueta: 'Finalizado' },
+  { valor: 'FINALIZADO', etiqueta: 'Finalizado' },
 ];
 
 export function etiquetaEstadoContrato(valor) {
   const u = String(valor || '').toUpperCase();
-  const f = ESTADO_CONTRATO.find((e) => e.valor === u);
+  const normalizado = u === 'INACTIVO' ? 'FINALIZADO' : u;
+  const f = ESTADO_CONTRATO.find((e) => e.valor === normalizado);
   return f ? f.etiqueta : valor ? String(valor) : '—';
 }

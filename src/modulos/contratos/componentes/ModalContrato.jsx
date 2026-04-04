@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
+import FormularioPasos from '../../../componentes/comunes/FormularioPasos';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 import {
   createContrato,
@@ -16,6 +17,8 @@ import {
   HORARIO_TRABAJO_OPCIONES,
   ESTADO_CONTRATO,
 } from '../contratoEnums';
+
+import '../../../estilos/componentes/formulario-secciones.css';
 
 function estadoInicialVacio() {
   return {
@@ -63,7 +66,10 @@ function contratoApiAFormulario(raw, cargosLista) {
     horario_trabajo: c.horario_trabajo ? String(c.horario_trabajo) : '',
     auxilio_transporte: Boolean(c.auxilio_transporte),
     descripcion: c.descripcion != null ? String(c.descripcion) : '',
-    estado_contrato: c.estado_contrato ? String(c.estado_contrato).toUpperCase() : 'ACTIVO',
+    estado_contrato: (() => {
+      const u = c.estado_contrato ? String(c.estado_contrato).toUpperCase() : 'ACTIVO';
+      return u === 'INACTIVO' ? 'FINALIZADO' : u;
+    })(),
     _cargosExtra: opcionCargo,
   };
 }
@@ -117,7 +123,10 @@ function construirPayloadApi(formulario) {
 function validar(formulario, esEdicion) {
   const e = {};
   if (!esEdicion) {
-    if (!formulario.doc_iden.trim()) e.doc_iden = 'Ingrese el documento del empleado.';
+    const doc = String(formulario.doc_iden ?? '').trim();
+    if (!doc) e.doc_iden = 'Ingrese el documento del empleado.';
+    else if (!/^\d+$/.test(doc)) e.doc_iden = 'El documento debe contener solo dígitos.';
+    else if (doc.length < 5 || doc.length > 10) e.doc_iden = 'El documento debe tener entre 5 y 10 dígitos.';
     if (!formulario.cod_empleado) e.cod_empleado = 'No se encontró un empleado con ese documento.';
   }
   if (!formulario.tipo_contrato.trim()) e.tipo_contrato = 'Seleccione o indique el tipo de contrato.';
@@ -136,6 +145,32 @@ function validar(formulario, esEdicion) {
   return e;
 }
 
+const CAMPOS_POR_PASO_CONTRATO = [
+  ['doc_iden', 'cod_empleado', 'tipo_contrato', 'forma_de_pago', 'fecha_ingreso', 'fecha_fin', 'estado_contrato'],
+  ['salario_base', 'cod_cargo', 'modalidad_trabajo', 'horario_trabajo'],
+  ['descripcion'],
+];
+
+function campoTieneErrorApiContrato(campo, erroresApi) {
+  const x = erroresApi?.[campo];
+  if (x == null) return false;
+  if (Array.isArray(x)) return x.some((m) => m != null && String(m).trim() !== '');
+  if (typeof x === 'string') return x.trim().length > 0;
+  return true;
+}
+
+function primerPasoConErroresContrato(erroresCliente, erroresApi) {
+  const tiene = (c) => Boolean(erroresCliente?.[c]) || campoTieneErrorApiContrato(c, erroresApi);
+  for (let i = 0; i < CAMPOS_POR_PASO_CONTRATO.length; i++) {
+    if (CAMPOS_POR_PASO_CONTRATO[i].some(tiene)) return i;
+  }
+  const keys = new Set([...Object.keys(erroresCliente || {}), ...Object.keys(erroresApi || {})]);
+  for (const k of keys) {
+    if (tiene(k)) return 0;
+  }
+  return 0;
+}
+
 function empleadoPorDocumento(empleados, doc) {
   const t = String(doc || '').trim();
   if (!t) return null;
@@ -152,6 +187,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
   const [erroresApi, setErroresApi] = useState({});
   const [errorGeneral, setErrorGeneral] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [pasoActual, setPasoActual] = useState(0);
 
   const cargosOpciones = [
     ...((formulario._cargosExtra && Array.isArray(formulario._cargosExtra) ? formulario._cargosExtra : []) || []),
@@ -182,6 +218,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
     setErrores({});
     setErroresApi({});
     setErrorGeneral('');
+    setPasoActual(0);
   }, [mostrar, esEdicion, datosContrato, cargos]);
 
   useEffect(() => {
@@ -247,13 +284,33 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
 
   const mensajeCampo = (campo) => errores[campo] || (erroresApi[campo] && erroresApi[campo][0]);
 
+  const validarAntesDeSiguiente = (idx) => {
+    const camposPorPaso = [
+      ['doc_iden', 'cod_empleado', 'tipo_contrato', 'forma_de_pago', 'fecha_ingreso', 'fecha_fin', 'estado_contrato'],
+      ['salario_base', 'cod_cargo', 'modalidad_trabajo', 'horario_trabajo'],
+    ];
+
+    const campos = camposPorPaso[idx] ?? [];
+    const v = validar(formulario, esEdicion);
+
+    const subset = {};
+    for (const c of campos) {
+      if (v[c]) subset[c] = v[c];
+    }
+    setErrores(subset);
+    return Object.keys(subset).length === 0;
+  };
+
   const manejarGuardar = async (ev) => {
     ev.preventDefault();
     setErrorGeneral('');
     setErroresApi({});
     const v = validar(formulario, esEdicion);
     setErrores(v);
-    if (Object.keys(v).length > 0) return;
+    if (Object.keys(v).length > 0) {
+      setPasoActual(primerPasoConErroresContrato(v, {}));
+      return;
+    }
 
     const payload = construirPayloadApi(formulario);
     setEnviando(true);
@@ -283,6 +340,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
       if (err.response?.status === 422 && data?.errors && typeof data.errors === 'object') {
         setErroresApi(data.errors);
         setErrorGeneral('Revisa los campos marcados.');
+        setPasoActual(primerPasoConErroresContrato({}, data.errors));
       } else {
         setErrorGeneral(mensajeErrorApi(err));
       }
@@ -306,9 +364,23 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
           </div>
         ) : null}
 
-        <div className="formulario-grid-doble formulario-contrato-grid">
-          <div className="columna-izquierda">
-            <h3 className="formulario-contrato-seccion">Empleado y contrato</h3>
+        <FormularioPasos
+          pasos={[
+            { numero: 1, titulo: 'Empleado y contrato', color: 'morado' },
+            { numero: 2, titulo: 'Condiciones laborales', color: 'azul' },
+            { numero: 3, titulo: 'Descripción', color: 'verde' },
+          ]}
+          pasoActual={pasoActual}
+          setPasoActual={setPasoActual}
+          onCancelar={cerrar}
+          enviando={enviando}
+          textoGuardar={esEdicion ? 'Actualizar' : 'Guardar'}
+          validarAntesDeSiguiente={validarAntesDeSiguiente}
+        >
+          <div className="formulario-grid-doble formulario-contrato-grid">
+          <div
+            className={`columna-izquierda${pasoActual === 0 ? ' columna-izquierda--contrato-activa' : ''}`}
+          >
             <div className="campo-formulario">
               <label htmlFor="ctr-doc_iden">Número de documento *</label>
               <input
@@ -387,36 +459,59 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
               {mensajeCampo('forma_de_pago') ? <span className="mensaje-error">{mensajeCampo('forma_de_pago')}</span> : null}
             </div>
 
-            <div className="campo-formulario">
-              <label htmlFor="ctr-fecha_ingreso">Fecha de ingreso *</label>
-              <input
-                id="ctr-fecha_ingreso"
-                type="date"
-                name="fecha_ingreso"
-                value={formulario.fecha_ingreso}
-                onChange={manejarCambio}
-                className={mensajeCampo('fecha_ingreso') ? 'campo-error' : ''}
-              />
-              {mensajeCampo('fecha_ingreso') ? <span className="mensaje-error">{mensajeCampo('fecha_ingreso')}</span> : null}
+            <div className="formulario-contrato-fechas">
+              <div className="campo-formulario">
+                <label htmlFor="ctr-fecha_ingreso">Fecha de ingreso *</label>
+                <input
+                  id="ctr-fecha_ingreso"
+                  type="date"
+                  name="fecha_ingreso"
+                  value={formulario.fecha_ingreso}
+                  onChange={manejarCambio}
+                  className={mensajeCampo('fecha_ingreso') ? 'campo-error' : ''}
+                />
+                {mensajeCampo('fecha_ingreso') ? <span className="mensaje-error">{mensajeCampo('fecha_ingreso')}</span> : null}
+              </div>
+
+              <div className="campo-formulario">
+                <label htmlFor="ctr-fecha_fin">Fecha de fin</label>
+                <input
+                  id="ctr-fecha_fin"
+                  type="date"
+                  name="fecha_fin"
+                  value={formulario.fecha_fin}
+                  onChange={manejarCambio}
+                  className={mensajeCampo('fecha_fin') ? 'campo-error' : ''}
+                />
+                <span className="campo-ayuda">Opcional si no hay terminación.</span>
+                {mensajeCampo('fecha_fin') ? <span className="mensaje-error">{mensajeCampo('fecha_fin')}</span> : null}
+              </div>
             </div>
 
-            <div className="campo-formulario">
-              <label htmlFor="ctr-fecha_fin">Fecha de fin</label>
-              <input
-                id="ctr-fecha_fin"
-                type="date"
-                name="fecha_fin"
-                value={formulario.fecha_fin}
-                onChange={manejarCambio}
-                className={mensajeCampo('fecha_fin') ? 'campo-error' : ''}
-              />
-              <span className="campo-ayuda">Opcional. Vacío en contratos sin fecha de terminación.</span>
-              {mensajeCampo('fecha_fin') ? <span className="mensaje-error">{mensajeCampo('fecha_fin')}</span> : null}
-            </div>
+            {esEdicion ? (
+              <div className="campo-formulario campo-formulario-contrato-estado">
+                <label htmlFor="ctr-estado_contrato">Estado del contrato</label>
+                <select
+                  id="ctr-estado_contrato"
+                  name="estado_contrato"
+                  value={formulario.estado_contrato}
+                  onChange={manejarCambio}
+                >
+                  {ESTADO_CONTRATO.map((o) => (
+                    <option key={o.valor} value={o.valor}>
+                      {o.etiqueta}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
           </div>
 
-          <div className="columna-derecha">
-            <h3 className="formulario-contrato-seccion">Condiciones laborales</h3>
+          <div
+            className={`columna-derecha${pasoActual !== 0 ? ' columna-derecha--contrato-activa' : ''}`}
+          >
+            <div style={{ display: pasoActual === 1 ? 'contents' : 'none' }}>
+            <div className="formulario-contrato-bloque-doble">
             <div className="campo-formulario">
               <label htmlFor="ctr-salario_base">Salario base (COP) *</label>
               <input
@@ -449,6 +544,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
                 ))}
               </select>
               {mensajeCampo('cod_cargo') ? <span className="mensaje-error">{mensajeCampo('cod_cargo')}</span> : null}
+            </div>
             </div>
 
             <div className="campo-formulario">
@@ -530,44 +626,26 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
                 Auxilio de transporte
               </label>
             </div>
+          </div>
 
-            {esEdicion ? (
-              <div className="campo-formulario">
-                <label htmlFor="ctr-estado_contrato">Estado del contrato</label>
-                <select id="ctr-estado_contrato" name="estado_contrato" value={formulario.estado_contrato} onChange={manejarCambio}>
-                  {ESTADO_CONTRATO.map((o) => (
-                    <option key={o.valor} value={o.valor}>
-                      {o.etiqueta}
-                    </option>
-                  ))}
-                </select>
+            <div style={{ display: pasoActual === 2 ? 'contents' : 'none' }}>
+              <div className="campo-formulario campo-formulario--ancho">
+                <label htmlFor="ctr-descripcion">Observaciones</label>
+                <textarea
+                  id="ctr-descripcion"
+                  name="descripcion"
+                  rows={4}
+                  value={formulario.descripcion}
+                  onChange={manejarCambio}
+                  maxLength={2000}
+                  placeholder="Detalles adicionales del contrato (opcional)"
+                />
               </div>
-            ) : null}
-
-            <h3 className="formulario-contrato-seccion">Descripción</h3>
-            <div className="campo-formulario campo-formulario--ancho">
-              <label htmlFor="ctr-descripcion">Observaciones</label>
-              <textarea
-                id="ctr-descripcion"
-                name="descripcion"
-                rows={4}
-                value={formulario.descripcion}
-                onChange={manejarCambio}
-                maxLength={2000}
-                placeholder="Detalles adicionales del contrato (opcional)"
-              />
             </div>
           </div>
         </div>
 
-        <div className="modal-acciones">
-          <button type="button" className="btn-cancelar" onClick={cerrar} disabled={enviando}>
-            Cancelar
-          </button>
-          <button type="submit" className="btn-guardar" disabled={enviando}>
-            {enviando ? 'Guardando…' : esEdicion ? 'Actualizar' : 'Guardar'}
-          </button>
-        </div>
+      </FormularioPasos>
       </form>
     </Modal>
   );

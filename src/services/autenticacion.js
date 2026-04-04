@@ -23,7 +23,56 @@ export function haySesionLocalActiva() {
   return leerPayloadSesion() != null;
 }
 
-/** Empleados: cualquier sesión válida (administrador, funcionario, etc.). Solo `/usuarios` queda reservado a admin en rutas y menú. */
+/**
+ * Usuario autenticado en cliente (localStorage). Sirve para mostrar nombre/correo y formularios de perfil.
+ */
+export function usuarioSesionLocal() {
+  try {
+    const almacenado = leerPayloadSesion();
+    if (!almacenado) return null;
+    const respuestaLogin = almacenado.raw ?? {};
+    const user =
+      (almacenado.user && typeof almacenado.user === 'object' ? almacenado.user : null) ??
+      (respuestaLogin.user && typeof respuestaLogin.user === 'object' ? respuestaLogin.user : null) ??
+      (respuestaLogin.data?.user && typeof respuestaLogin.data.user === 'object'
+        ? respuestaLogin.data.user
+        : null);
+    if (!user || typeof user !== 'object') return null;
+    const nombre =
+      (typeof user.nombre_usuario === 'string' && user.nombre_usuario.trim()) ||
+      (typeof user.nombre === 'string' && user.nombre.trim()) ||
+      (typeof user.name === 'string' && user.name.trim()) ||
+      'Usuario';
+    const email =
+      (typeof user.email_usuario === 'string' && user.email_usuario.trim()) ||
+      (typeof user.email === 'string' && user.email.trim()) ||
+      '';
+    const cod = user.cod_usuario ?? user.id ?? user.user_id ?? null;
+    let codRol = user.cod_rol ?? user.role_id;
+    if (codRol == null && user.rol && typeof user.rol === 'object') {
+      codRol = user.rol.cod_rol;
+    }
+    const estadoRaw = user.estado_usuario;
+    const estado_usuario = !(estadoRaw === false || estadoRaw === 0 || estadoRaw === '0');
+    const n = codRol != null && codRol !== '' ? Number(codRol) : NaN;
+    return {
+      user,
+      nombre,
+      email,
+      cod,
+      codRol: Number.isFinite(n) ? n : null,
+      estado_usuario,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cualquier sesión válida (administrador, funcionario, etc.). Solo `/usuarios` queda reservado a admin.
+ * Los listados del API deben permitir al funcionario lo mismo que al admin salvo usuarios; si GET /empleados
+ * falla para un rol pero el módulo principal responde, la UI usa Promise.allSettled para no vaciar la tabla.
+ */
 export function puedeAccederModuloEmpleadosSesion() {
   return haySesionLocalActiva();
 }

@@ -8,13 +8,13 @@ import '../../estilos/componentes/filtros.css';
  * @param {function} onFiltrar - Función callback cuando se hace clic en filtrar
  * @param {string} titulo - Título opcional del bloque de filtros
  */
-function FiltrosBusqueda({ 
-  placeholderBusqueda = "Buscar...",
+function FiltrosBusqueda({
+  placeholderBusqueda = 'Buscar...',
   etiquetaBusqueda = '',
   filtrosSelect = [],
   onFiltrar,
   titulo = null,
-  className = ""
+  className = '',
 }) {
   const [busqueda, setBusqueda] = useState('');
   const [filtros, setFiltros] = useState({});
@@ -24,9 +24,9 @@ function FiltrosBusqueda({
   };
 
   const manejarCambioFiltro = (nombre, valor) => {
-    setFiltros(prev => ({
+    setFiltros((prev) => ({
       ...prev,
-      [nombre]: valor
+      [nombre]: valor,
     }));
   };
 
@@ -34,7 +34,7 @@ function FiltrosBusqueda({
     if (onFiltrar) {
       onFiltrar({
         busqueda,
-        ...filtros
+        ...filtros,
       });
     }
   };
@@ -103,4 +103,3 @@ function FiltrosBusqueda({
 }
 
 export default FiltrosBusqueda;
-

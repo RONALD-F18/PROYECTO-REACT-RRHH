@@ -14,6 +14,29 @@ import {
   textoPeriodoPrestacion,
 } from '../../services/prestacionesSociales';
 
+/** Contrato API: boolean/0-1 y opcionalmente monto mensual (nombres habituales en Laravel). */
+function datosAuxilioTransporteContrato(c) {
+  if (!c || typeof c !== 'object') {
+    return { activo: false, monto: null, sinMonto: false };
+  }
+  const at = c.auxilio_transporte;
+  const activo =
+    at === true ||
+    at === 1 ||
+    at === '1' ||
+    (typeof at === 'string' && ['TRUE', 'SI', 'SÍ', 'YES'].includes(at.trim().toUpperCase()));
+  if (!activo) return { activo: false, monto: null, sinMonto: false };
+  const raw =
+    c.valor_auxilio_transporte ??
+    c.auxilio_transporte_valor ??
+    c.monto_auxilio_transporte ??
+    c.auxilio_mensual ??
+    c.valor_auxilio;
+  const n = raw != null && raw !== '' ? Number(raw) : NaN;
+  if (Number.isFinite(n) && n > 0) return { activo: true, monto: n, sinMonto: false };
+  return { activo: true, monto: null, sinMonto: true };
+}
+
 /**
  * Detalle por cod_contrato (ruta /prestaciones/:id).
  *
@@ -73,6 +96,7 @@ function DetallesPrestaciones() {
   const nombreEmp = nombreCompletoEmpleado(emp);
   const nombreCargo = nombreCargoDesde(cargo);
   const salarioMostrar = formatearMonedaCop(contrato?.salario_base);
+  const auxilio = datosAuxilioTransporteContrato(contrato);
 
   const manejarCalcular = async () => {
     if (!codContrato) return;
@@ -147,24 +171,43 @@ function DetallesPrestaciones() {
         <div className="detalles-prestaciones">
           <h2 className="detalles-titulo">Gestión de prestaciones sociales</h2>
 
-          <div className="tarjeta-empleado">
-            <div className="tarjeta-empleado-info">
-              <div className="info-fila">
+          <div className="tarjeta-empleado prestaciones-detalle-resumen">
+            <div className="prestaciones-detalle-resumen-grid">
+              <div className="info-fila prestaciones-detalle-fila--empleado">
                 <span className="info-etiqueta">Empleado(a)</span>
-                <span className="info-valor">{nombreEmp}</span>
+                <span className="info-valor prestaciones-detalle-nombre">{nombreEmp}</span>
               </div>
-              <div className="info-fila">
+              <div className="info-fila prestaciones-detalle-fila--cargo">
                 <span className="info-etiqueta">Cargo</span>
-                <span className="info-valor">{nombreCargo}</span>
+                <span className="info-valor prestaciones-detalle-sub">{nombreCargo}</span>
               </div>
-              <div className="info-fila">
-                <span className="info-etiqueta">Salario base (contrato)</span>
-                <span className="info-valor">{salarioMostrar}</span>
+              <div className="prestaciones-detalle-montos">
+                <div className="prestaciones-detalle-monto-item">
+                  <span className="info-etiqueta">Salario base</span>
+                  <span className="prestaciones-detalle-monto-valor">{salarioMostrar}</span>
+                </div>
+                <div className="prestaciones-detalle-monto-item">
+                  <span className="info-etiqueta">Aux. transporte</span>
+                  {!auxilio.activo ? (
+                    <span className="prestaciones-detalle-aux-no">No</span>
+                  ) : (
+                    <div className="prestaciones-detalle-aux-inline">
+                      <span className="prestaciones-detalle-aux-badge">Sí</span>
+                      {auxilio.monto != null ? (
+                        <span className="prestaciones-detalle-aux-monto">
+                          {formatearMonedaCop(auxilio.monto)}
+                        </span>
+                      ) : (
+                        <span className="prestaciones-detalle-aux-placeholder">Sin monto</span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <button
               type="button"
-              className="btn btn-exito"
+              className="btn btn-exito prestaciones-detalle-btn-calcular"
               onClick={manejarCalcular}
               disabled={calculando}
             >
@@ -179,6 +222,7 @@ function DetallesPrestaciones() {
 
           <h2 className="detalles-titulo">Cálculos</h2>
 
+          <div className="prestaciones-tabla-scroll">
           <TablaDatos
             columnas={[
               { campo: '_periodoTexto', encabezado: 'Período' },
@@ -240,6 +284,7 @@ function DetallesPrestaciones() {
               );
             }}
           />
+          </div>
         </div>
       )}
 

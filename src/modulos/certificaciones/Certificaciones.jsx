@@ -10,6 +10,7 @@ import {
   normalizarRegistroCertificacion,
 } from '../../services/certificaciones';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import { CertificationActions, CertificacionesFiltros, ModalCertificacion } from './componentes';
 import { extraerMensajeErroresBackend } from './utils/certificacionesPayload';
 import { useCreateCertificacion } from './hooks/useCreateCertificacion';
@@ -54,23 +55,24 @@ function Certificaciones() {
     setError('');
     setErrorCatalogos('');
     setLoading(true);
+    setCargandoCatalogos(true);
     try {
-      const certRaw = await getCertificaciones();
-      setData(extraerFilasCertificaciones(certRaw));
+      const [rCert, rCat] = await Promise.allSettled([
+        getCertificaciones(),
+        obtenerCatalogosCertificacion({ ligero: true }),
+      ]);
+      if (rCert.status === 'fulfilled') setData(extraerFilasCertificaciones(rCert.value));
+      else {
+        setData([]);
+        setError(mensajeErrorApi(rCert.reason));
+      }
+      if (rCat.status === 'fulfilled') setCatalogos(rCat.value);
+      else setErrorCatalogos(mensajeErrorApi(rCat.reason));
     } catch (e) {
       setData([]);
       setError(mensajeErrorApi(e));
     } finally {
       setLoading(false);
-    }
-
-    setCargandoCatalogos(true);
-    try {
-      const cat = await obtenerCatalogosCertificacion({ ligero: true });
-      setCatalogos(cat);
-    } catch (e) {
-      setErrorCatalogos(mensajeErrorApi(e));
-    } finally {
       setCargandoCatalogos(false);
     }
   }, []);
@@ -158,7 +160,7 @@ function Certificaciones() {
       setRegistroEditar(normalizarRegistroCertificacion(json));
       setMostrarModal(true);
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo abrir la certificación', e);
     }
   };
 
@@ -176,25 +178,22 @@ function Certificaciones() {
       setTimeout(() => setMensajeExito(''), 3000);
     } catch (e) {
       const msgBackend = extraerMensajeErroresBackend(e);
-      if (msgBackend) {
-        window.alert(msgBackend || mensajeErrorApi(e));
-        return;
-      }
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo guardar la certificación', msgBackend || e);
     }
   };
 
   const eliminar = async (fila) => {
     const id = codigoCertificacionDesde(fila);
     if (id == null) return;
-    if (!window.confirm('¿Eliminar certificacion?')) return;
+    const ok = await confirmarEliminacion({ titulo: '¿Eliminar esta certificación?' });
+    if (!ok) return;
     try {
       await deleteMut.mutate(id);
       await refetchLista();
       setMensajeExito('Certificacion eliminada.');
       setTimeout(() => setMensajeExito(''), 3000);
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo eliminar la certificación', e);
     }
   };
 
@@ -202,8 +201,7 @@ function Certificaciones() {
     try {
       await pdfMut.download(fila);
     } catch (e) {
-      const msg = e?.message && !e.response ? String(e.message) : mensajeErrorApi(e);
-      window.alert(msg);
+      void alertaErrorApi('No se pudo generar el PDF', e);
     }
   };
 
@@ -224,14 +222,14 @@ function Certificaciones() {
         <TarjetasResumen tarjetas={tarjetas} />
 
         <CertificacionesFiltros
-          onAplicar={(f) =>
+          onAplicar={(f) => {
             setFiltros({
               busqueda: f.busqueda || '',
               tipo: f.tipo || '',
               desde: f.desde || '',
               hasta: f.hasta || '',
-            })
-          }
+            });
+          }}
         />
         {cargandoCatalogos ? (
           <p className="contrato-pagina-cargando" style={{ marginTop: -4 }}>

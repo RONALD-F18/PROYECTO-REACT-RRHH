@@ -1,4 +1,10 @@
 import api from './api';
+import { crearPeticionCompartida } from '../utils/peticionCompartida';
+
+const ejecutarGetCargosLista = crearPeticionCompartida(async () => {
+  const { data } = await api.get('/cargos');
+  return data;
+});
 
 export function extraerFilasCargos(cuerpo) {
   if (!cuerpo) return [];
@@ -8,8 +14,7 @@ export function extraerFilasCargos(cuerpo) {
 }
 
 export async function getCargos() {
-  const { data } = await api.get('/cargos');
-  return data;
+  return ejecutarGetCargosLista();
 }
 
 /** Nombre visible del cargo (API suele usar nomb_cargo). */

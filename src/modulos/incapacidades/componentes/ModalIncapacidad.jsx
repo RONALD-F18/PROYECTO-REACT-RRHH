@@ -18,6 +18,11 @@ import {
   nombreCompletoEmpleado,
   buscarEmpleadoPorDocumento,
 } from '../../../services/empleados';
+import {
+  ETIQUETAS_ESTADO_EDICION_INCAPACIDAD,
+  estadoIncapacidadEdicionDesdeApi,
+  estadoIncapacidadApiDesdeEtiquetaEdicion,
+} from '../../../utils/incapacidadEstado';
 import '../../../estilos/componentes/formulario-secciones.css';
 
 const DESCRIPCION_MAX = 200;
@@ -33,6 +38,7 @@ function estadoFormularioVacio() {
     diagnostico: '',
     cod_clasificacion_enfermedad: '',
     descripcion: '',
+    estadoIncapacidadUi: '',
   };
 }
 
@@ -82,10 +88,11 @@ function incapacidadApiAFormulario(raw, empleados) {
     diagnostico: r.descripcion != null ? String(r.descripcion) : '',
     cod_clasificacion_enfermedad: codClas,
     descripcion: '',
+    estadoIncapacidadUi: estadoIncapacidadEdicionDesdeApi(r.estado_incapacidad),
   };
 }
 
-function construirPayloadIncapacidad(formulario, codEmpleado) {
+function construirPayloadIncapacidad(formulario, codEmpleado, incluirEstadoEdicion) {
   const cod = Number(codEmpleado);
   const tipoN = Number(formulario.tipoIncapacidad);
   const comb = combinarDescripcionParaApi(formulario.diagnostico, formulario.descripcion);
@@ -106,6 +113,10 @@ function construirPayloadIncapacidad(formulario, codEmpleado) {
   if (cce) {
     const n = Number(cce);
     if (Number.isFinite(n)) payload.cod_clasificacion_enfermedad = n;
+  }
+
+  if (incluirEstadoEdicion) {
+    payload.estado_incapacidad = estadoIncapacidadApiDesdeEtiquetaEdicion(formulario.estadoIncapacidadUi);
   }
 
   return payload;
@@ -218,6 +229,10 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
         if (!String(valor ?? '').trim()) return 'El diagnóstico es requerido';
         return null;
       }
+      case 'estadoIncapacidadUi':
+        if (!esEdicion) return null;
+        if (!valor) return 'Seleccione el estado';
+        return null;
       default:
         return null;
     }
@@ -226,7 +241,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
   const validarAntesDeSiguiente = useCallback(
     (idx) => {
       const grupos = [
-        ['documento', 'nombre'],
+        esEdicion ? ['documento', 'nombre', 'estadoIncapacidadUi'] : ['documento', 'nombre'],
         ['tipoIncapacidad', 'fechaInicio', 'fechaFin'],
         ['diagnostico'],
       ];
@@ -248,7 +263,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
       setErrores(nuevosErrores);
       return Object.keys(nuevosErrores).length === 0;
     },
-    [formulario],
+    [formulario, esEdicion],
   );
 
   const manejarCambio = (e) => {
@@ -281,6 +296,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     const campos = [
       'documento',
       'nombre',
+      ...(esEdicion ? ['estadoIncapacidadUi'] : []),
       'tipoIncapacidad',
       'fechaInicio',
       'fechaFin',
@@ -297,7 +313,11 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
   };
 
   const pasoPorErroresIncap = (errs) => {
-    const grupos = [['documento', 'nombre'], ['tipoIncapacidad', 'fechaInicio', 'fechaFin'], ['diagnostico']];
+    const grupos = [
+      esEdicion ? ['documento', 'nombre', 'estadoIncapacidadUi'] : ['documento', 'nombre'],
+      ['tipoIncapacidad', 'fechaInicio', 'fechaFin'],
+      ['diagnostico'],
+    ];
     for (let i = 0; i < grupos.length; i++) {
       if (grupos[i].some((c) => errs[c])) return i;
     }
@@ -394,6 +414,19 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
           placeholder: 'Nombre completo del empleado',
           deshabilitado: true,
         },
+        ...(esEdicion
+          ? [
+              {
+                nombre: 'estadoIncapacidadUi',
+                etiqueta: 'Estado de la incapacidad',
+                tipo: 'select',
+                requerido: true,
+                selectSinVacio: true,
+                opciones: ETIQUETAS_ESTADO_EDICION_INCAPACIDAD,
+                hint: 'Solo Activa o Finalizada. Se guarda al actualizar.',
+              },
+            ]
+          : []),
       ],
     },
     {

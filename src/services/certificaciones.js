@@ -1,5 +1,11 @@
 import api from './api';
 import { getAfiliaciones, extraerFilasAfiliaciones } from './afiliaciones';
+import { crearPeticionCompartida } from '../utils/peticionCompartida';
+
+const ejecutarGetCertificacionesLista = crearPeticionCompartida(async () => {
+  const { data } = await api.get('/certificaciones');
+  return data;
+});
 
 function rowsFromResponse(body) {
   if (!body) return [];
@@ -112,7 +118,7 @@ async function simpleGet(path) {
 }
 
 export async function getCertificaciones() {
-  return simpleGet('/certificaciones');
+  return ejecutarGetCertificacionesLista();
 }
 
 export async function getCertificacionById(id) {

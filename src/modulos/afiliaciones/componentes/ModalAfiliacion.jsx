@@ -6,7 +6,13 @@ import { validarNumeroDocumento, validarNombres } from '../../../utils/validacio
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 import { createAfiliacion, updateAfiliacion, normalizarRegistroAfiliacion, codigoAfiliacionDesde } from '../../../services/afiliaciones';
 import { codigoEmpleadoDesde, nombreCompletoEmpleado, empleadoPorDocumento } from '../../../services/empleados';
-import { tipoRegimenApi, tipoRegimenFormDesdeApi } from '../../../utils/afiliacionEstado';
+import {
+  tipoRegimenApi,
+  tipoRegimenFormDesdeApi,
+  etiquetaEstadoAfiliacion,
+  estadoAfiliacionDesdeEtiquetaUi,
+  ETIQUETAS_ESTADO_AFILIACION,
+} from '../../../utils/afiliacionEstado';
 import '../../../estilos/componentes/formulario-secciones.css';
 
 function estadoVacio(codigoAuto) {
@@ -28,6 +34,7 @@ function estadoVacio(codigoAuto) {
     cajaCompensacion: '',
     fechaAfiliacionCaja: '',
     descripcion: '',
+    estadoAfiliacionUi: '',
   };
 }
 
@@ -61,6 +68,7 @@ function afiliacionApiAFormulario(raw, empleados) {
     cajaCompensacion: r.cod_caja_compensacion != null ? String(r.cod_caja_compensacion) : '',
     fechaAfiliacionCaja: r.fecha_afiliacion_caja ? String(r.fecha_afiliacion_caja).slice(0, 10) : '',
     descripcion: r.descripcion != null ? String(r.descripcion) : '',
+    estadoAfiliacionUi: etiquetaEstadoAfiliacion(r.estado_afiliacion),
   };
 }
 
@@ -158,7 +166,8 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
     if (datosAfiliacion && codigoAfiliacionDesde(datosAfiliacion) != null) {
       const r = normalizarRegistroAfiliacion(datosAfiliacion) ?? datosAfiliacion;
       setFormulario(afiliacionApiAFormulario(r, empleados));
-      setEstadoBdEdicion(String(r.estado_afiliacion || 'ACTIVA').toUpperCase());
+      const ui = etiquetaEstadoAfiliacion(r.estado_afiliacion);
+      setEstadoBdEdicion(estadoAfiliacionDesdeEtiquetaUi(ui));
     } else {
       const codigoAuto = `AF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`;
       setFormulario(estadoVacio(codigoAuto));
@@ -192,6 +201,10 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
       case 'fechaAfiliacionCaja':
         if (!valor) return 'La fecha de afiliación es requerida';
         return null;
+      case 'estadoAfiliacionUi':
+        if (!esEdicion) return null;
+        if (!valor) return 'Seleccione el estado';
+        return null;
       default:
         return null;
     }
@@ -200,7 +213,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
   const validarAntesDeSiguiente = useCallback(
     (idx) => {
       const grupos = [
-        ['documento', 'nombre'],
+        esEdicion ? ['documento', 'nombre', 'estadoAfiliacionUi'] : ['documento', 'nombre'],
         ['eps', 'tipoAfiliacion', 'fechaAfiliacionEPS'],
         ['fondoPensiones', 'fechaAfiliacionPensiones'],
         ['fondoCesantias', 'fechaAfiliacionCesantias'],
@@ -224,11 +237,14 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
       setErrores(nuevosErrores);
       return Object.keys(nuevosErrores).length === 0;
     },
-    [formulario],
+    [formulario, esEdicion],
   );
 
   const manejarCambio = (e) => {
     const { name, value } = e.target;
+    if (name === 'estadoAfiliacionUi') {
+      setEstadoBdEdicion(estadoAfiliacionDesdeEtiquetaUi(value));
+    }
     setFormulario((prev) => {
       const next = { ...prev, [name]: value };
       if (name === 'documento' && !esEdicion) {
@@ -257,6 +273,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
     const campos = [
       'documento',
       'nombre',
+      ...(esEdicion ? ['estadoAfiliacionUi'] : []),
       'eps',
       'tipoAfiliacion',
       'fechaAfiliacionEPS',
@@ -283,7 +300,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
 
   const pasoPorErroresAfili = (errs) => {
     const grupos = [
-      ['documento', 'nombre'],
+      esEdicion ? ['documento', 'nombre', 'estadoAfiliacionUi'] : ['documento', 'nombre'],
       ['eps', 'tipoAfiliacion', 'fechaAfiliacionEPS'],
       ['fondoPensiones', 'fechaAfiliacionPensiones'],
       ['fondoCesantias', 'fechaAfiliacionCesantias'],
@@ -380,6 +397,19 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
           deshabilitado: true,
           hint: 'Generado en pantalla; el identificador en API es numérico.',
         },
+        ...(esEdicion
+          ? [
+              {
+                nombre: 'estadoAfiliacionUi',
+                etiqueta: 'Estado de la afiliación',
+                tipo: 'select',
+                requerido: true,
+                selectSinVacio: true,
+                opciones: ETIQUETAS_ESTADO_AFILIACION,
+                hint: 'Aprobada, pendiente o retirada. Se guarda al actualizar la afiliación.',
+              },
+            ]
+          : []),
       ],
     },
     {

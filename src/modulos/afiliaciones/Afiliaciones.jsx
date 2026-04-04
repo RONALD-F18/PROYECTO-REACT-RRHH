@@ -11,6 +11,7 @@ import {
   obtenerCatalogosAfiliacion,
 } from '../../services/afiliaciones';
 import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
+import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { etiquetaEstadoAfiliacion } from '../../utils/afiliacionEstado';
 import '../../estilos/modulos/afiliaciones.css';
@@ -57,7 +58,6 @@ function Afiliaciones() {
     estado: '',
     eps: '',
   });
-
   const mapas = useMemo(() => {
     const empleadosMap = (() => {
       const m = new Map();
@@ -137,17 +137,23 @@ function Afiliaciones() {
         const e = u(r.estado_afiliacion);
         return e === 'ACTIVA' || e === 'APROBADA';
       }).length,
-      pendientes: base.filter((r) => u(r.estado_afiliacion) === 'PENDIENTE').length,
-      enProceso: base.filter((r) => u(r.estado_afiliacion) === 'EN_PROCESO').length,
+      pendientes: base.filter((r) => {
+        const e = u(r.estado_afiliacion);
+        return e === 'PENDIENTE' || e === 'EN_PROCESO';
+      }).length,
+      retiradas: base.filter((r) => {
+        const e = u(r.estado_afiliacion);
+        return e === 'RETIRADA' || e === 'RETIRADO' || e === 'RECHAZADA';
+      }).length,
     };
   }, [filasFiltradas]);
 
   const tarjetasResumen = useMemo(
     () => [
       { etiqueta: 'Total', valor: String(kpis.total), color: 'azul', icono: '' },
-      { etiqueta: 'Aprovadas', valor: String(kpis.aprobadas), color: 'verde', icono: '' },
+      { etiqueta: 'Aprobadas', valor: String(kpis.aprobadas), color: 'verde', icono: '' },
       { etiqueta: 'Pendientes', valor: String(kpis.pendientes), color: 'azul', icono: '' },
-      { etiqueta: 'En Proceso', valor: String(kpis.enProceso), color: 'amarillo', icono: '' },
+      { etiqueta: 'Retiradas', valor: String(kpis.retiradas), color: 'amarillo', icono: '' },
     ],
     [kpis],
   );
@@ -176,11 +182,23 @@ function Afiliaciones() {
 
   useEffect(() => {
     let activo = true;
+    const catalogoVacio = {
+      eps: [],
+      riesgos: [],
+      arls: [],
+      pensiones: [],
+      cesantias: [],
+      compensaciones: [],
+    };
     (async () => {
       setMensajeLista('');
       setCargando(true);
       try {
-        const [sa, se] = await Promise.allSettled([getAfiliaciones(), getEmpleados()]);
+        const [sa, se, sc] = await Promise.allSettled([
+          getAfiliaciones(),
+          getEmpleados(),
+          obtenerCatalogosAfiliacion(),
+        ]);
         if (!activo) return;
         const partes = [];
         if (sa.status === 'fulfilled') setLista(extraerFilasAfiliaciones(sa.value));
@@ -193,6 +211,8 @@ function Afiliaciones() {
           setEmpleados([]);
           partes.push(mensajeErrorApi(se.reason));
         }
+        if (sc.status === 'fulfilled') setCatalogos(sc.value);
+        else setCatalogos(catalogoVacio);
         if (partes.length) setMensajeLista(partes.join(' · '));
       } catch (e) {
         if (!activo) return;
@@ -200,23 +220,6 @@ function Afiliaciones() {
         setMensajeLista(mensajeErrorApi(e));
       } finally {
         if (activo) setCargando(false);
-      }
-
-      if (!activo) return;
-      try {
-        const cat = await obtenerCatalogosAfiliacion();
-        if (!activo) return;
-        setCatalogos(cat);
-      } catch {
-        if (!activo) return;
-        setCatalogos({
-          eps: [],
-          riesgos: [],
-          arls: [],
-          pensiones: [],
-          cesantias: [],
-          compensaciones: [],
-        });
       }
     })();
     return () => {
@@ -237,21 +240,22 @@ function Afiliaciones() {
       setAfiliacionEditar(json?.data ?? json);
       setMostrarModal(true);
     } catch (err) {
-      window.alert(mensajeErrorApi(err));
+      void alertaErrorApi('No se pudo abrir la afiliación', err);
     }
   };
 
   const confirmarEliminar = async (fila) => {
     const cod = codigoAfiliacionDesde(fila);
     if (cod == null) return;
-    if (!window.confirm('¿Eliminar esta afiliación? Esta acción no se puede deshacer.')) return;
+    const ok = await confirmarEliminacion({ titulo: '¿Eliminar esta afiliación?' });
+    if (!ok) return;
     try {
       await deleteAfiliacion(cod);
       await recargarLista();
       setMensajeExito('Afiliación eliminada correctamente.');
       window.setTimeout(() => setMensajeExito(''), 3000);
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo eliminar la afiliación', e);
     }
   };
 
@@ -297,7 +301,7 @@ function Afiliaciones() {
             {
               nombre: 'estado',
               placeholder: 'Todos los Estados',
-              opciones: ['Aprobada', 'Pendiente', 'En Proceso', 'Rechazada'],
+              opciones: ['Aprobada', 'Pendiente', 'Retirada'],
             },
             {
               nombre: 'eps',
@@ -305,13 +309,13 @@ function Afiliaciones() {
               opciones: opcionesFiltroEps,
             },
           ]}
-          onFiltrar={(filtros) =>
+          onFiltrar={(filtros) => {
             setCriteriosFiltro({
               busqueda: filtros.busqueda || '',
               estado: filtros.estado || '',
               eps: filtros.eps || '',
-            })
-          }
+            });
+          }}
         />
 
         <div className="afiliaciones-contenedor-principal">

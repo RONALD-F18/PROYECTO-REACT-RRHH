@@ -13,6 +13,12 @@ import {
 } from '../../services/incapacidades';
 import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
+import {
+  ETIQUETAS_ESTADO_EDICION_INCAPACIDAD,
+  estadoIncapacidadEdicionDesdeApi,
+  estadoIncapacidadApiDesdeEtiquetaEdicion,
+} from '../../utils/incapacidadEstado';
 
 function formatearSoloFecha(valor) {
   if (!valor) return '—';
@@ -53,12 +59,6 @@ function formatearCOP(n) {
   if (Number.isNaN(num)) return String(n);
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(num);
 }
-
-const ESTADOS_SELECT = [
-  { valor: 'Activa', etiqueta: 'Activa' },
-  { valor: 'Finalizada', etiqueta: 'Finalizada' },
-  { valor: 'Cancelada', etiqueta: 'Cancelada' },
-];
 
 // Componente para mostrar los detalles de una incapacidad
 function DetallesIncapacidad() {
@@ -135,8 +135,7 @@ function DetallesIncapacidad() {
     const dias = registro.dias_incapacidad ?? registro.dias ?? diasEntre(fi, ff);
     const dp = distribucionPagos;
     const pagador = dp?.entidad_responsable ?? registro.entidad_responsable ?? registro.entidad_pagadora ?? entidadPagadoraPorTipo(tipo);
-    const estadoRaw = String(registro.estado_incapacidad || '').trim();
-    const estadoVal = ESTADOS_SELECT.some((o) => o.valor === estadoRaw) ? estadoRaw : 'Activa';
+    const estadoVal = estadoIncapacidadEdicionDesdeApi(registro.estado_incapacidad);
 
     const desc = registro.descripcion != null && String(registro.descripcion).trim() !== '' ? String(registro.descripcion) : '—';
     const cieObj = registro.clasificacionEnfermedad;
@@ -175,12 +174,13 @@ function DetallesIncapacidad() {
   const manejarCambioEstado = async (nuevoEstado) => {
     const cod = registro ? codigoIncapacidadDesde(registro) : null;
     if (cod == null || !nuevoEstado) return;
+    const apiEstado = estadoIncapacidadApiDesdeEtiquetaEdicion(nuevoEstado);
     setActualizandoEstado(true);
     try {
-      await patchIncapacidad(cod, { estado_incapacidad: nuevoEstado });
-      setRegistro((prev) => (prev ? { ...prev, estado_incapacidad: nuevoEstado } : prev));
+      await patchIncapacidad(cod, { estado_incapacidad: apiEstado });
+      setRegistro((prev) => (prev ? { ...prev, estado_incapacidad: apiEstado } : prev));
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo actualizar el estado', e);
     } finally {
       setActualizandoEstado(false);
     }
@@ -189,12 +189,13 @@ function DetallesIncapacidad() {
   const manejarEliminar = async () => {
     const cod = registro ? codigoIncapacidadDesde(registro) : null;
     if (cod == null) return;
-    if (!window.confirm('¿Eliminar esta incapacidad?')) return;
+    const ok = await confirmarEliminacion({ titulo: '¿Eliminar esta incapacidad?' });
+    if (!ok) return;
     try {
       await deleteIncapacidad(cod);
       navegar('/incapacidades');
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo eliminar la incapacidad', e);
     }
   };
 
@@ -291,9 +292,9 @@ function DetallesIncapacidad() {
               disabled={actualizandoEstado}
               aria-busy={actualizandoEstado}
             >
-              {ESTADOS_SELECT.map((est) => (
-                <option key={est.valor} value={est.valor}>
-                  {est.etiqueta}
+              {ETIQUETAS_ESTADO_EDICION_INCAPACIDAD.map((est) => (
+                <option key={est} value={est}>
+                  {est}
                 </option>
               ))}
             </select>

@@ -33,9 +33,11 @@ export async function crearInasistenciaApi(payload) {
     const { data } = await api.post('/inasistencias', payload);
     return data;
   } catch (error) {
-    const validacion = extraerErrores422(error);
-    if (validacion) {
-      error.validation = validacion;
+    const err422 = extraerErrores422(error);
+    if (err422) {
+      const e = new Error(err422.message);
+      e.errors = err422.errors;
+      throw e;
     }
     throw error;
   }
@@ -46,9 +48,11 @@ export async function actualizarInasistenciaApi(id, payload) {
     const { data } = await api.put(`/inasistencias/${id}`, payload);
     return data;
   } catch (error) {
-    const validacion = extraerErrores422(error);
-    if (validacion) {
-      error.validation = validacion;
+    const err422 = extraerErrores422(error);
+    if (err422) {
+      const e = new Error(err422.message);
+      e.errors = err422.errors;
+      throw e;
     }
     throw error;
   }

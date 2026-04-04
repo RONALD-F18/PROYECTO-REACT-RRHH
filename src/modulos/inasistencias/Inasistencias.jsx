@@ -13,8 +13,8 @@ import {
   obtenerCodigoEmpleado,
   estadoUiDesdeMotivo,
 } from './utils/inasistencias.mapper';
-import { alertaError, alertaExito, confirmarAccion } from '../../utils/alertas';
-
+import { alertaError, alertaExito, confirmarAccion } from '../../utils/alertasSwal';
+import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 function colorEstado(estado) {
   if (estado === ESTADO_UI.AUSENTE) return 'rojo';
   if (estado === ESTADO_UI.TARDE) return 'amarillo';
@@ -172,7 +172,7 @@ function Inasistencias() {
       await borrarInasistencia(item.cod_inasistencias);
       await alertaExito('Inasistencia eliminada');
     } catch (e) {
-      await alertaError('No se pudo eliminar', error || String(e?.message || ''));
+      await alertaError('No se pudo eliminar', mensajeErrorApi(e));
     }
   };
 

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ContenedorPrincipal, EncabezadoModulo, Modal, SinDatos } from '../../componentes';
 import { generateGeneralReport } from '../../services/api/reportesApi';
-import { confirmarAccion } from '../../utils/alertas';
+import { confirmarAccion } from '../../utils/alertasSwal';
 import '../../estilos/modulos/reportes.css';
 
 const MODULOS = [

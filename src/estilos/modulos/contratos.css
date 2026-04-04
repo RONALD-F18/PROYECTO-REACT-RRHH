@@ -11,7 +11,7 @@
 
 .contratos-kpis {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -43,56 +43,11 @@
 .contrato-kpi--total strong { color: #6366f1; }
 .contrato-kpi--activos strong { color: #16a34a; }
 .contrato-kpi--finalizados strong { color: #f97316; }
-.contrato-kpi--indefinido strong { color: #7c3aed; }
-.contrato-kpi--fijo strong { color: #0ea5e9; }
-
-@media (max-width: 1200px) {
-  .contratos-kpis {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
 
 @media (max-width: 720px) {
   .contratos-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
-}
-
-.tabla-acciones-contrato {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 14px;
-}
-
-.tabla-enlace-accion {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: var(--texto-sm);
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.tabla-enlace-accion:hover {
-  text-decoration: underline;
-}
-
-.tabla-enlace-accion--ver {
-  color: var(--color-primario-oscuro);
-}
-
-.tabla-enlace-accion--editar {
-  color: #d97706;
-}
-
-.tabla-enlace-accion--finalizar {
-  color: #b45309;
-}
-
-.tabla-enlace-accion--eliminar {
-  color: #dc2626;
 }
 
 .contrato-pagina-alerta {
@@ -347,18 +302,14 @@
   letter-spacing: 0.06em;
 }
 
-.contrato-cabecera-estado .select-estado-empleado {
-  min-width: 160px;
+.contrato-cabecera-estado .etiqueta {
+  min-width: 100px;
+  text-align: center;
 }
 
 @media (max-width: 640px) {
   .contrato-cabecera-resumen {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .tabla-acciones-contrato {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }

@@ -45,7 +45,9 @@ function FormularioSecciones({
             className={claseCampo}
             disabled={campo.deshabilitado}
           >
-            <option value="">{campo.placeholder || 'Seleccione...'}</option>
+            {!campo.selectSinVacio ? (
+              <option value="">{campo.placeholder || 'Seleccione...'}</option>
+            ) : null}
             {campo.opciones?.map((opcion, idx) => (
               <option key={idx} value={typeof opcion === 'string' ? opcion : opcion.valor}>
                 {typeof opcion === 'string' ? opcion : opcion.texto}

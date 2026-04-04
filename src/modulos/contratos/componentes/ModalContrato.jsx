@@ -66,7 +66,10 @@ function contratoApiAFormulario(raw, cargosLista) {
     horario_trabajo: c.horario_trabajo ? String(c.horario_trabajo) : '',
     auxilio_transporte: Boolean(c.auxilio_transporte),
     descripcion: c.descripcion != null ? String(c.descripcion) : '',
-    estado_contrato: c.estado_contrato ? String(c.estado_contrato).toUpperCase() : 'ACTIVO',
+    estado_contrato: (() => {
+      const u = c.estado_contrato ? String(c.estado_contrato).toUpperCase() : 'ACTIVO';
+      return u === 'INACTIVO' ? 'FINALIZADO' : u;
+    })(),
     _cargosExtra: opcionCargo,
   };
 }
@@ -143,7 +146,7 @@ function validar(formulario, esEdicion) {
 }
 
 const CAMPOS_POR_PASO_CONTRATO = [
-  ['doc_iden', 'cod_empleado', 'tipo_contrato', 'forma_de_pago', 'fecha_ingreso', 'fecha_fin'],
+  ['doc_iden', 'cod_empleado', 'tipo_contrato', 'forma_de_pago', 'fecha_ingreso', 'fecha_fin', 'estado_contrato'],
   ['salario_base', 'cod_cargo', 'modalidad_trabajo', 'horario_trabajo'],
   ['descripcion'],
 ];
@@ -283,7 +286,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
 
   const validarAntesDeSiguiente = (idx) => {
     const camposPorPaso = [
-      ['doc_iden', 'cod_empleado', 'tipo_contrato', 'forma_de_pago', 'fecha_ingreso', 'fecha_fin'],
+      ['doc_iden', 'cod_empleado', 'tipo_contrato', 'forma_de_pago', 'fecha_ingreso', 'fecha_fin', 'estado_contrato'],
       ['salario_base', 'cod_cargo', 'modalidad_trabajo', 'horario_trabajo'],
     ];
 
@@ -484,6 +487,24 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
                 {mensajeCampo('fecha_fin') ? <span className="mensaje-error">{mensajeCampo('fecha_fin')}</span> : null}
               </div>
             </div>
+
+            {esEdicion ? (
+              <div className="campo-formulario campo-formulario-contrato-estado">
+                <label htmlFor="ctr-estado_contrato">Estado del contrato</label>
+                <select
+                  id="ctr-estado_contrato"
+                  name="estado_contrato"
+                  value={formulario.estado_contrato}
+                  onChange={manejarCambio}
+                >
+                  {ESTADO_CONTRATO.map((o) => (
+                    <option key={o.valor} value={o.valor}>
+                      {o.etiqueta}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
           </div>
 
           <div
@@ -605,19 +626,6 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
                 Auxilio de transporte
               </label>
             </div>
-
-            {esEdicion ? (
-              <div className="campo-formulario campo-formulario-contrato-estado">
-                <label htmlFor="ctr-estado_contrato">Estado del contrato</label>
-                <select id="ctr-estado_contrato" name="estado_contrato" value={formulario.estado_contrato} onChange={manejarCambio}>
-                  {ESTADO_CONTRATO.map((o) => (
-                    <option key={o.valor} value={o.valor}>
-                      {o.etiqueta}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
           </div>
 
             <div style={{ display: pasoActual === 2 ? 'contents' : 'none' }}>

@@ -1,4 +1,4 @@
-import api from '../api';
+import { getEmpleados } from '../empleados';
 
 export function extraerEmpleadosApi(json) {
   if (!json) return [];
@@ -7,7 +7,7 @@ export function extraerEmpleadosApi(json) {
   return [];
 }
 
+/** Misma lista que `getEmpleados` (comparte deduplicación en vuelo). */
 export async function listarEmpleadosApi() {
-  const { data } = await api.get('/empleados');
-  return data;
+  return getEmpleados();
 }

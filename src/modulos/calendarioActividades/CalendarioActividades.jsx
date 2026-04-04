@@ -12,7 +12,7 @@ import {
 } from '../../services/api/calendarioActividadesApi';
 import { codUsuarioSesionLocal } from '../../services/autenticacion';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
-import { alertaError, alertaExito, confirmarAccion } from '../../utils/alertas';
+import { alertaError, alertaExito, confirmarAccion } from '../../utils/alertasSwal';
 import '../../estilos/modulos/calendario-actividades.css';
 
 const TIPOS = ['TAREA', 'REUNION', 'RECORDATORIO'];

@@ -47,7 +47,7 @@ export function useInasistencias() {
   }, []);
 
   useEffect(() => {
-    cargarTodo();
+    void cargarTodo();
   }, [cargarTodo]);
 
   const inasistenciasFiltradas = useMemo(

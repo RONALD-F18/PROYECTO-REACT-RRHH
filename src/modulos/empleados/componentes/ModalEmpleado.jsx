@@ -20,12 +20,14 @@ import {
   CAMPOS_EMPLEADO_VALIDACION_DEBOUNCED,
 } from '../../../utils/validacionEmpleadoFormulario';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
+import { alertaMensaje } from '../../../utils/alertasSwal';
 import {
   createEmpleado,
   patchEmpleado,
   normalizarRegistroEmpleado,
   codigoEmpleadoDesde,
 } from '../../../services/empleados';
+import { getContratos, extraerFilasContratos, esContratoVigenteParaEmpleado } from '../../../services/contratos';
 import {
   TIPO_DOCUMENTO,
   TIPO_CUENTA,
@@ -76,7 +78,10 @@ function empleadoApiAFormulario(emp) {
     numero_cuenta: e.numero_cuenta != null ? String(e.numero_cuenta) : '',
     tipo_cuenta: e.tipo_cuenta ? String(e.tipo_cuenta).toUpperCase() : '',
     cod_banco: e.cod_banco != null && e.cod_banco !== '' ? String(e.cod_banco) : '',
-    estado_emp: e.estado_emp ? String(e.estado_emp).toUpperCase() : 'ACTIVO',
+    estado_emp: (() => {
+      const s = e.estado_emp ? String(e.estado_emp).toUpperCase() : 'ACTIVO';
+      return s === 'INACTIVO' ? 'RETIRADO' : s;
+    })(),
     discapacidad: e.discapacidad ? String(e.discapacidad).toUpperCase() : 'NINGUNA',
     nacionalidad: e.nacionalidad ?? '',
     estado_civil: e.estado_civil ? String(e.estado_civil).toUpperCase() : '',
@@ -150,6 +155,7 @@ const CAMPOS_POR_PASO_EMPLEADO = [
     'direccion',
     'nacionalidad',
     'estado_civil',
+    'estado_emp',
   ],
   ['cod_banco', 'numero_cuenta', 'tipo_cuenta', 'profesion'],
   ['grupo_sanguineo', 'discapacidad', 'descripcion'],
@@ -375,6 +381,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
         'direccion',
         'nacionalidad',
         'estado_civil',
+        'estado_emp',
       ],
       ['cod_banco', 'numero_cuenta', 'tipo_cuenta', 'profesion'],
       ['grupo_sanguineo', 'discapacidad', 'descripcion'],
@@ -410,6 +417,26 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
         if (Object.keys(parcial).length === 0) {
           setErrorGeneral('No hay cambios que guardar.');
           return;
+        }
+        if (parcial.estado_emp === 'RETIRADO') {
+          const jsonCtr = await getContratos();
+          const filas = extraerFilasContratos(jsonCtr);
+          const codEmp = Number(codEdicion);
+          const tieneVigente = filas.some(
+            (c) =>
+              c &&
+              Number(c.cod_empleado) === codEmp &&
+              esContratoVigenteParaEmpleado(c.estado_contrato),
+          );
+          if (tieneVigente) {
+            await alertaMensaje({
+              titulo: 'No se puede marcar como retirado',
+              texto:
+                'Este empleado tiene al menos un contrato vigente (ACTIVO). Finaliza ese contrato en el módulo de Contratos antes de marcar al empleado como Retirado.',
+              icon: 'warning',
+            });
+            return;
+          }
         }
         await patchEmpleado(codEdicion, parcial);
         await alExito?.('actualizado');
@@ -659,6 +686,23 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 <span className="mensaje-error">{mensajeCampo('estado_civil')}</span>
               ) : null}
             </div>
+            <div className="campo-formulario">
+              <label htmlFor="emp-estado_emp">Estado en la empresa *</label>
+              <select
+                id="emp-estado_emp"
+                name="estado_emp"
+                value={formulario.estado_emp}
+                onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
+                onKeyUp={manejarKeyUpValidar}
+              >
+                {ESTADO_EMP.map((o) => (
+                  <option key={o.valor} value={o.valor}>
+                    {o.etiqueta}
+                  </option>
+                ))}
+              </select>
+            </div>
               </>
             ) : null}
           </div>
@@ -728,23 +772,6 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
               {mensajeCampo('tipo_cuenta') ? (
                 <span className="mensaje-error">{mensajeCampo('tipo_cuenta')}</span>
               ) : null}
-            </div>
-            <div className="campo-formulario">
-              <label htmlFor="emp-estado_emp">Estado en la empresa *</label>
-              <select
-                id="emp-estado_emp"
-                name="estado_emp"
-                value={formulario.estado_emp}
-                onChange={manejarCambio}
-                onBlur={manejarBlurCampo}
-                onKeyUp={manejarKeyUpValidar}
-              >
-                {ESTADO_EMP.map((o) => (
-                  <option key={o.valor} value={o.valor}>
-                    {o.etiqueta}
-                  </option>
-                ))}
-              </select>
             </div>
             <div className="campo-formulario">
               <label htmlFor="emp-profesion">Profesión *</label>

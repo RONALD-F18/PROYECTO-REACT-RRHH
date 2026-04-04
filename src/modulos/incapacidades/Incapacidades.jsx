@@ -18,7 +18,7 @@ import {
 } from '../../services/incapacidades';
 import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
-
+import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 function diasEntre(fechaInicio, fechaFin) {
   if (!fechaInicio || !fechaFin) return 0;
   const a = new Date(`${String(fechaInicio).slice(0, 10)}T12:00:00`);
@@ -69,7 +69,6 @@ function Incapacidades() {
     estado: '',
     tipo: '',
   });
-
   const mapaEmpleados = useMemo(() => {
     const m = new Map();
     for (const e of empleados) {
@@ -116,8 +115,7 @@ function Incapacidades() {
       if (!row || typeof row !== 'object') return false;
       if (tipoF && String(row._tipo) !== tipoF) return false;
       if (est === 'Activa' && row._estado !== 'Activa') return false;
-      if (est === 'Finalizada' && row._estado !== 'Finalizada') return false;
-      if (est === 'Cancelada' && row._estado !== 'Cancelada') return false;
+      if (est === 'Finalizada' && row._estado !== 'Finalizada' && row._estado !== 'Cancelada') return false;
       if (q) {
         const nom = String(row._empleado || '').toLowerCase();
         const doc = String(row._documento || '').toLowerCase();
@@ -164,7 +162,10 @@ function Incapacidades() {
     setMensajeLista('');
     setCargando(true);
     try {
-      const [si, sr] = await Promise.allSettled([getIncapacidades(), getResumenIncapacidades()]);
+      const [si, sr] = await Promise.allSettled([
+        getIncapacidades(),
+        getResumenIncapacidades(),
+      ]);
       const partes = [];
       if (si.status === 'fulfilled') setLista(extraerFilasIncapacidades(si.value));
       else {
@@ -191,11 +192,11 @@ function Incapacidades() {
       setMensajeLista('');
       setCargando(true);
       try {
-        const [si, se, st, sr] = await Promise.allSettled([
+        const [si, se, sr, st] = await Promise.allSettled([
           getIncapacidades(),
           getEmpleados(),
-          getTiposIncapacidad(),
           getResumenIncapacidades(),
+          getTiposIncapacidad(),
         ]);
         if (!activo) return;
         const partes = [];
@@ -206,12 +207,11 @@ function Incapacidades() {
         }
         if (se.status === 'fulfilled') setEmpleados(extraerFilasEmpleados(se.value));
         else setEmpleados([]);
-        if (st.status === 'fulfilled') setTiposCatalogo(extraerFilasCatalogo(st.value));
-        else setTiposCatalogo([]);
         if (sr.status === 'fulfilled') setResumenApi(extraerResumenIncapacidades(sr.value));
         else setResumenApi(null);
+        if (st.status === 'fulfilled') setTiposCatalogo(extraerFilasCatalogo(st.value));
+        else setTiposCatalogo([]);
         if (se.status === 'rejected') partes.push(mensajeErrorApi(se.reason));
-        if (st.status === 'rejected') partes.push(mensajeErrorApi(st.reason));
         if (sr.status === 'rejected') partes.push(mensajeErrorApi(sr.reason));
         if (partes.length) setMensajeLista(partes.join(' · '));
       } catch (e) {
@@ -242,21 +242,22 @@ function Incapacidades() {
       setIncapacidadEditar(raw);
       setMostrarModal(true);
     } catch (err) {
-      window.alert(mensajeErrorApi(err));
+      void alertaErrorApi('No se pudo abrir la incapacidad', err);
     }
   };
 
   const confirmarEliminar = async (fila) => {
     const cod = codigoIncapacidadDesde(fila);
     if (cod == null) return;
-    if (!window.confirm('¿Eliminar esta incapacidad? Esta acción no se puede deshacer.')) return;
+    const ok = await confirmarEliminacion({ titulo: '¿Eliminar esta incapacidad?' });
+    if (!ok) return;
     try {
       await deleteIncapacidad(cod);
       await recargarLista();
       setMensajeExito('Incapacidad eliminada correctamente.');
       window.setTimeout(() => setMensajeExito(''), 3000);
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo eliminar la incapacidad', e);
     }
   };
 
@@ -336,7 +337,7 @@ function Incapacidades() {
             {
               nombre: 'estado',
               placeholder: 'Todos los Estados',
-              opciones: ['Activa', 'Finalizada', 'Cancelada'],
+              opciones: ['Activa', 'Finalizada'],
             },
             {
               nombre: 'tipo',
@@ -344,13 +345,13 @@ function Incapacidades() {
               opciones: opcionesFiltroTipo,
             },
           ]}
-          onFiltrar={(filtros) =>
+          onFiltrar={(filtros) => {
             setCriteriosFiltro({
               busqueda: filtros.busqueda || '',
               estado: filtros.estado || '',
               tipo: filtros.tipo || '',
-            })
-          }
+            });
+          }}
         />
 
         <div className="lista-incapacidades">

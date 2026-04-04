@@ -1,4 +1,20 @@
 import api from './api';
+import { crearPeticionCompartida } from '../utils/peticionCompartida';
+
+const ejecutarGetIncapacidadesLista = crearPeticionCompartida(async () => {
+  const { data } = await api.get('/incapacidades');
+  return data;
+});
+
+const ejecutarGetTiposIncapacidad = crearPeticionCompartida(async () => {
+  const { data } = await api.get('/tipos-incapacidad');
+  return data;
+});
+
+const ejecutarGetClasificacionesEnfermedad = crearPeticionCompartida(async () => {
+  const { data } = await api.get('/clasificaciones-enfermedad');
+  return data;
+});
 
 /** Respuestas tipo `{ message, data: [] }` o lista plana. */
 export function extraerFilasIncapacidades(cuerpo) {
@@ -87,13 +103,11 @@ export async function getResumenIncapacidades() {
 }
 
 export async function getTiposIncapacidad() {
-  const { data } = await api.get('/tipos-incapacidad');
-  return data;
+  return ejecutarGetTiposIncapacidad();
 }
 
 export async function getClasificacionesEnfermedad() {
-  const { data } = await api.get('/clasificaciones-enfermedad');
-  return data;
+  return ejecutarGetClasificacionesEnfermedad();
 }
 
 export async function getIncapacidadById(cod) {

@@ -8,9 +8,12 @@ import { ESTADO_CONTRATO } from '../contratos/contratoEnums';
 import {
   getResumenPrestacionesSociales,
   listarPrestacionesSocialesGlobales,
-  formatearMonedaCop,
   textoPeriodoPrestacion,
   filaResumenContratoPrestaciones,
+  agregarMontosPrestacionesPorEstado,
+  construirTarjetaKpiPrestacion,
+  esEstadoPrestacionPagado,
+  formatearMonedaCop,
 } from '../../services/prestacionesSociales';
 
 function PrestacionesSociales() {
@@ -28,9 +31,9 @@ function PrestacionesSociales() {
     estadoContrato: '',
   });
 
-  const [listaGlobal, setListaGlobal] = useState([]);
-  const [cargandoGlobal, setCargandoGlobal] = useState(false);
-  const [errorGlobal, setErrorGlobal] = useState('');
+  /** Todos los períodos de prestaciones (para KPI reales y pestaña períodos). */
+  const [periodosTodos, setPeriodosTodos] = useState([]);
+  const [errorListadoPeriodos, setErrorListadoPeriodos] = useState('');
   const [pillEstado, setPillEstado] = useState('Todos');
   const [criteriosGlobal, setCriteriosGlobal] = useState({ busqueda: '' });
 
@@ -38,9 +41,10 @@ function PrestacionesSociales() {
     setErrorResumen('');
     setCargandoResumen(true);
     try {
-      const { totales_pendientes, contratos_vigentes } = await getResumenPrestacionesSociales();
+      const rResumen = await getResumenPrestacionesSociales();
+      const { totales_pendientes, contratos_vigentes } = rResumen;
       setTotalesPendientes(totales_pendientes ?? {});
-      setContratosRaw(contratos_vigentes);
+      setContratosRaw(contratos_vigentes ?? []);
     } catch (e) {
       setTotalesPendientes({});
       setContratosRaw([]);
@@ -50,32 +54,24 @@ function PrestacionesSociales() {
     }
   }, []);
 
+  const cargarPeriodos = useCallback(async () => {
+    setErrorListadoPeriodos('');
+    try {
+      const rows = await listarPrestacionesSocialesGlobales();
+      setPeriodosTodos(Array.isArray(rows) ? rows : []);
+    } catch (e) {
+      setPeriodosTodos([]);
+      setErrorListadoPeriodos(mensajeErrorApi(e));
+    }
+  }, []);
+
   useEffect(() => {
-    cargarResumen();
+    void cargarResumen();
   }, [cargarResumen]);
 
   useEffect(() => {
-    if (vista !== 'periodos') return;
-    let activo = true;
-    (async () => {
-      setErrorGlobal('');
-      setCargandoGlobal(true);
-      try {
-        const rows = await listarPrestacionesSocialesGlobales();
-        if (activo) setListaGlobal(rows);
-      } catch (e) {
-        if (activo) {
-          setListaGlobal([]);
-          setErrorGlobal(mensajeErrorApi(e));
-        }
-      } finally {
-        if (activo) setCargandoGlobal(false);
-      }
-    })();
-    return () => {
-      activo = false;
-    };
-  }, [vista]);
+    void cargarPeriodos();
+  }, [cargarPeriodos]);
 
   const opcionesCargos = useMemo(() => {
     const nombres = new Set();
@@ -112,15 +108,98 @@ function PrestacionesSociales() {
     }
     if (criteriosContratos.estadoContrato) {
       const esp = String(criteriosContratos.estadoContrato).toUpperCase();
-      r = r.filter((f) => String(f._estadoContrato || '').toUpperCase() === esp);
+      r = r.filter((f) => {
+        const u = String(f._estadoContrato || '').toUpperCase();
+        const norm = u === 'INACTIVO' ? 'FINALIZADO' : u;
+        return norm === esp;
+      });
     }
     return r;
   }, [filasContratoBase, criteriosContratos]);
 
+  const montosPorEstado = useMemo(
+    () => agregarMontosPrestacionesPorEstado(periodosTodos),
+    [periodosTodos],
+  );
+
+  const tarjetasTotalesApi = useMemo(() => {
+    const api = totalesPendientes;
+    /** Si el GET de períodos respondió bien, los KPI salen solo de esos registros (lista vacía => ceros). */
+    const listadoPeriodosOk = !errorListadoPeriodos;
+    const montos = (clave, claveApi) => {
+      if (listadoPeriodosOk) {
+        const x = montosPorEstado[clave];
+        return { pendiente: x.pendiente, pagado: x.pagado };
+      }
+      const pend = Number(api[claveApi]) || 0;
+      return { pendiente: pend, pagado: 0 };
+    };
+
+    const mPrima = montos('prima', 'total_prima');
+    const mCes = montos('cesantias', 'total_cesantias');
+    const mInt = montos('intereses', 'total_intereses');
+    const mVac = montos('vacaciones', 'total_vacaciones');
+    const totalLiquidar =
+      (Number(mPrima.pendiente) || 0) +
+      (Number(mCes.pendiente) || 0) +
+      (Number(mInt.pendiente) || 0) +
+      (Number(mVac.pendiente) || 0);
+
+    return [
+      construirTarjetaKpiPrestacion({
+        tituloBase: 'Prima de servicios',
+        ...mPrima,
+        color: 'verde',
+      }),
+      construirTarjetaKpiPrestacion({
+        tituloBase: 'Cesantías',
+        ...mCes,
+        color: 'azul',
+      }),
+      construirTarjetaKpiPrestacion({
+        tituloBase: 'Interés cesantías',
+        ...mInt,
+        color: 'morado',
+      }),
+      construirTarjetaKpiPrestacion({
+        tituloBase: 'Vacaciones',
+        ...mVac,
+        color: 'naranja',
+      }),
+      {
+        titulo: 'Total a liquidar (pendiente)',
+        valor: formatearMonedaCop(totalLiquidar),
+        color: 'total',
+      },
+    ];
+  }, [montosPorEstado, errorListadoPeriodos, totalesPendientes]);
+
+  /** Contratos que el API incluye en el resumen para la pestaña «Contratos a liquidar». */
+  const codigosContratoLiquidacion = useMemo(() => {
+    const s = new Set();
+    for (const c of contratosRaw) {
+      const n = Number(c?.cod_contrato);
+      if (Number.isFinite(n)) s.add(n);
+    }
+    return s;
+  }, [contratosRaw]);
+
+  /** Hay períodos en el historial cuyo contrato no está en `contratos_vigentes` del resumen. */
+  const periodosFueraDeLiquidacion = useMemo(() => {
+    if (!periodosTodos.length) return false;
+    return periodosTodos.some((p) => {
+      const cod = p?.contrato?.cod_contrato;
+      if (cod == null) return true;
+      return !codigosContratoLiquidacion.has(Number(cod));
+    });
+  }, [periodosTodos, codigosContratoLiquidacion]);
+
   const filasGlobalFiltradas = useMemo(() => {
-    let r = listaGlobal;
-    if (pillEstado !== 'Todos') {
-      r = r.filter((p) => String(p.estado_pago ?? '').trim() === pillEstado);
+    let r = periodosTodos;
+    if (pillEstado === 'Pendiente') {
+      r = r.filter((p) => !esEstadoPrestacionPagado(p.estado_pago));
+    } else if (pillEstado === 'Pagado') {
+      r = r.filter((p) => esEstadoPrestacionPagado(p.estado_pago));
     }
     const q = criteriosGlobal.busqueda.trim().toLowerCase();
     if (q) {
@@ -138,32 +217,9 @@ function PrestacionesSociales() {
       });
     }
     return r;
-  }, [listaGlobal, pillEstado, criteriosGlobal]);
+  }, [periodosTodos, pillEstado, criteriosGlobal]);
 
-  const tarjetasTotalesApi = [
-    {
-      titulo: 'Prima de servicios (pendiente)',
-      valor: formatearMonedaCop(totalesPendientes.total_prima),
-      color: 'verde',
-    },
-    {
-      titulo: 'Cesantías (pendiente)',
-      valor: formatearMonedaCop(totalesPendientes.total_cesantias),
-      color: 'azul',
-    },
-    {
-      titulo: 'Interés cesantías (pendiente)',
-      valor: formatearMonedaCop(totalesPendientes.total_intereses),
-      color: 'morado',
-    },
-    {
-      titulo: 'Vacaciones (pendiente)',
-      valor: formatearMonedaCop(totalesPendientes.total_vacaciones),
-      color: 'naranja',
-    },
-  ];
-
-  const PILL_ESTADOS = ['Todos', 'Pendiente', 'Pagado', 'Trasladado'];
+  const PILL_ESTADOS = ['Todos', 'Pendiente', 'Pagado'];
 
   return (
     <ContenedorPrincipal>
@@ -202,26 +258,42 @@ function PrestacionesSociales() {
             {errorResumen}
           </p>
         ) : null}
+        {errorListadoPeriodos && !errorResumen ? (
+          <p className="prestaciones-nota-api" style={{ marginBottom: 16, color: 'var(--gris-600)' }}>
+            No se pudo cargar el listado de períodos: {errorListadoPeriodos} Los totales superiores usan solo el
+            resumen del servidor si está disponible.
+          </p>
+        ) : null}
 
-        <div className="tarjetas-prestaciones" style={{ marginBottom: '24px' }}>
-          {cargandoResumen
-            ? tarjetasTotalesApi.map((_, i) => (
-                <div key={i} className="tarjeta-prestacion azul" style={{ opacity: 0.6 }}>
-                  <div className="tarjeta-prestacion-info">
-                    <h3>Cargando…</h3>
-                    <p className="tarjeta-prestacion-valor">—</p>
+        <div className="prestaciones-scroll-row" aria-label="Resumen de montos">
+          <div className="tarjetas-prestaciones">
+            {cargandoResumen
+              ? Array.from({ length: 5 }, (_, i) => (
+                  <div key={i} className="tarjeta-prestacion azul" style={{ opacity: 0.6 }}>
+                    <div className="tarjeta-prestacion-info">
+                      <h3>Cargando…</h3>
+                      <p className="tarjeta-prestacion-valor">—</p>
+                    </div>
                   </div>
-                </div>
-              ))
-            : tarjetasTotalesApi.map((tarjeta, indice) => (
-                <div key={indice} className={`tarjeta-prestacion ${tarjeta.color}`}>
-                  <div className="tarjeta-prestacion-info">
-                    <h3>{tarjeta.titulo}</h3>
-                    <p className="tarjeta-prestacion-valor">{tarjeta.valor}</p>
+                ))
+              : tarjetasTotalesApi.map((tarjeta, indice) => (
+                  <div key={indice} className={`tarjeta-prestacion ${tarjeta.color}`}>
+                    <div className="tarjeta-prestacion-info">
+                      <h3>{tarjeta.titulo}</h3>
+                      <p className="tarjeta-prestacion-valor">{tarjeta.valor}</p>
+                    </div>
+                    <div
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 12,
+                        background:
+                          tarjeta.color === 'total' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)',
+                      }}
+                    />
                   </div>
-                  <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.6)' }} />
-                </div>
-              ))}
+                ))}
+          </div>
         </div>
 
         {vista === 'contratos' ? (
@@ -254,7 +326,16 @@ function PrestacionesSociales() {
               <p className="prestaciones-nota-api" style={{ marginTop: -12, marginBottom: 16 }}>
                 Los filtros se aplican en el navegador; el API no expone parámetros de búsqueda en esta ruta.
               </p>
+              {!cargandoResumen && contratosFiltrados.length === 0 && periodosFueraDeLiquidacion ? (
+                <p className="prestaciones-nota-api prestaciones-nota-historial" role="note">
+                  <strong>Sin contratos en esta lista:</strong> el servidor no devolvió contratos en el resumen de
+                  liquidación, pero en <strong>Todos los períodos</strong> puede haber registros históricos (p. ej.
+                  pendientes ligados a un contrato que ya no se considera vigente para liquidar). Revisa el módulo{' '}
+                  <strong>Contratos</strong> o los datos en backend.
+                </p>
+              ) : null}
 
+              <div className="prestaciones-tabla-scroll">
               <TablaDatos
                 columnas={[
                   {
@@ -291,6 +372,7 @@ function PrestacionesSociales() {
                   </button>
                 )}
               />
+              </div>
             </div>
           </>
         ) : (
@@ -313,23 +395,30 @@ function PrestacionesSociales() {
             <FiltrosBusqueda
               placeholderBusqueda="Buscar por empleado, documento o contrato..."
               filtrosSelect={[]}
-              onFiltrar={(f) => setCriteriosGlobal({ busqueda: f.busqueda ?? '' })}
+              onFiltrar={(f) => {
+                setCriteriosGlobal({ busqueda: f.busqueda ?? '' });
+              }}
             />
-
-            {errorGlobal ? (
-              <p className="mensaje-error" style={{ marginBottom: 16 }}>
-                {errorGlobal}
-              </p>
-            ) : null}
 
             <div className="prestaciones-contenedor-principal">
               <h2 className="prestaciones-titulo-seccion">Períodos registrados</h2>
               <p className="prestaciones-meta-tabla">
-                {cargandoGlobal
+                {cargandoResumen
                   ? 'Cargando…'
-                  : `Mostrando ${filasGlobalFiltradas.length} de ${listaGlobal.length} períodos`}
+                  : `Mostrando ${filasGlobalFiltradas.length} de ${periodosTodos.length} períodos`}
               </p>
+              {periodosFueraDeLiquidacion ? (
+                <p className="prestaciones-nota-api prestaciones-nota-historial" role="note">
+                  <strong>¿Por qué un período «pendiente» no aparece en Contratos a liquidar?</strong> Esa pestaña solo
+                  muestra los contratos que el API envía como vigentes para liquidar (campo{' '}
+                  <span className="prestaciones-nota-campo">contratos_vigentes</span>).
+                  Aquí ves el <strong>historial completo</strong> de períodos: si el contrato ya no entra en ese resumen
+                  (finalizado, retirado del listado, etc.), el período puede seguir figurando aquí hasta que el backend lo
+                  archive, pague o elimine.
+                </p>
+              ) : null}
 
+              <div className="prestaciones-tabla-scroll">
               <TablaDatos
                 columnas={[
                   {
@@ -418,6 +507,7 @@ function PrestacionesSociales() {
                   );
                 }}
               />
+              </div>
             </div>
           </>
         )}

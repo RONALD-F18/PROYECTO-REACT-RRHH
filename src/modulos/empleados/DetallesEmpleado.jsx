@@ -4,8 +4,6 @@ import { ContenedorPrincipal, EncabezadoModulo } from '../../componentes';
 import { ModalEmpleado } from './componentes';
 import {
   getEmpleadoById,
-  deleteEmpleado,
-  patchEmpleado,
   normalizarRegistroEmpleado,
   nombreCompletoEmpleado,
   codigoEmpleadoDesde,
@@ -19,7 +17,6 @@ import {
   etiquetaDiscapacidad,
   etiquetaEstadoCivil,
   etiquetaGrupoSanguineo,
-  ESTADO_EMP,
 } from './empleadoEnums';
 
 function formatearSoloFecha(valor) {
@@ -40,6 +37,13 @@ function inicialesDesdeEmpleado(e) {
   return s || '?';
 }
 
+function claseEtiquetaEstadoEmp(valor) {
+  const u = String(valor || '').toUpperCase();
+  if (u === 'ACTIVO') return 'activo';
+  if (u === 'RETIRADO' || u === 'INACTIVO') return 'retirado';
+  return 'inactivo';
+}
+
 function DetallesEmpleado() {
   const { id } = useParams();
   const navegar = useNavigate();
@@ -48,7 +52,6 @@ function DetallesEmpleado() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [mostrarModal, setMostrarModal] = useState(false);
-  const [actualizandoEstado, setActualizandoEstado] = useState(false);
   const [bancosLista, setBancosLista] = useState([]);
 
   const cargar = useCallback(async () => {
@@ -94,32 +97,6 @@ function DetallesEmpleado() {
     cargar();
   }, [cargar]);
 
-  const manejarCambioEstado = async (nuevoEstado) => {
-    const cod = empleado ? codigoEmpleadoDesde(empleado) : null;
-    if (cod == null || !nuevoEstado) return;
-    setActualizandoEstado(true);
-    try {
-      await patchEmpleado(cod, { estado_emp: nuevoEstado });
-      setEmpleado((prev) => (prev ? { ...prev, estado_emp: nuevoEstado } : prev));
-    } catch (e) {
-      window.alert(mensajeErrorApi(e));
-    } finally {
-      setActualizandoEstado(false);
-    }
-  };
-
-  const manejarEliminar = async () => {
-    const cod = empleado ? codigoEmpleadoDesde(empleado) : null;
-    if (cod == null) return;
-    if (!window.confirm('¿Eliminar este empleado?')) return;
-    try {
-      await deleteEmpleado(cod);
-      navegar('/empleados');
-    } catch (e) {
-      window.alert(mensajeErrorApi(e));
-    }
-  };
-
   if (cargando) {
     return (
       <ContenedorPrincipal>
@@ -161,14 +138,6 @@ function DetallesEmpleado() {
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
             </button>
-            <button type="button" className="btn-accion btn-accion-eliminar" onClick={manejarEliminar} title="Eliminar">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                <line x1="10" y1="11" x2="10" y2="17" />
-                <line x1="14" y1="11" x2="14" y2="17" />
-              </svg>
-            </button>
           </div>
         </div>
 
@@ -180,19 +149,9 @@ function DetallesEmpleado() {
             <h2 className="perfil-nombre">{nombreCompleto}</h2>
           </div>
           <div className="perfil-estado">
-            <select
-              value={String(empleado.estado_emp || '').toUpperCase() || 'ACTIVO'}
-              onChange={(e) => manejarCambioEstado(e.target.value)}
-              className="select-estado-empleado"
-              disabled={actualizandoEstado}
-              aria-busy={actualizandoEstado}
-            >
-              {ESTADO_EMP.map((o) => (
-                <option key={o.valor} value={o.valor}>
-                  {o.etiqueta}
-                </option>
-              ))}
-            </select>
+            <span className={`etiqueta etiqueta-${claseEtiquetaEstadoEmp(empleado.estado_emp)}`}>
+              {etiquetaEstadoEmp(empleado.estado_emp)}
+            </span>
           </div>
         </div>
 

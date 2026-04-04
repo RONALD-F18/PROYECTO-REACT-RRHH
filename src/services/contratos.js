@@ -1,4 +1,10 @@
 import api from './api';
+import { crearPeticionCompartida } from '../utils/peticionCompartida';
+
+const ejecutarGetContratosLista = crearPeticionCompartida(async () => {
+  const { data } = await api.get('/contratos');
+  return data;
+});
 
 export function extraerFilasContratos(cuerpo) {
   if (!cuerpo) return [];
@@ -29,9 +35,13 @@ export function codigoContratoDesde(registro) {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Contrato que sigue contando como vigente para reglas de negocio (solo ACTIVO). */
+export function esContratoVigenteParaEmpleado(estadoContrato) {
+  return String(estadoContrato || '').toUpperCase() === 'ACTIVO';
+}
+
 export async function getContratos() {
-  const { data } = await api.get('/contratos');
-  return data;
+  return ejecutarGetContratosLista();
 }
 
 export async function getContratoById(codContrato) {

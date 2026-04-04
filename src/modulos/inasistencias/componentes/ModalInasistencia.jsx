@@ -7,7 +7,7 @@ import {
   limpiarMotivoPersistido,
   ESTADO_UI,
 } from '../utils/inasistencias.mapper';
-import { alertaError } from '../../../utils/alertas';
+import { alertaError } from '../../../utils/alertasSwal';
 
 function estadoInicial(registro, fechaPreseleccionada, codEmpleadoPreseleccionado) {
   if (!registro) {

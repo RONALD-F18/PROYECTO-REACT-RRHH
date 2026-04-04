@@ -1,2 +1,2 @@
 export * from './validaciones';
-export * from './alertas';
+export * from './alertasSwal';

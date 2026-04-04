@@ -51,6 +51,53 @@ export async function getResumenPrestacionesSociales() {
   return { totales_pendientes: totales, contratos_vigentes: contratos };
 }
 
+/** Liquidado en API: Pagado o Trasladado (cuenta como no pendiente). */
+export function esEstadoPrestacionPagado(estado) {
+  const s = String(estado ?? '').trim().toUpperCase();
+  return s === 'PAGADO' || s === 'TRASLADADO';
+}
+
+/**
+ * Suma montos por tipo de prestación según estado_pago de cada período (todos los empleados/contratos).
+ * @param {Array<object>} periodos filas de listarPrestacionesSocialesGlobales
+ * @returns {{ prima: {pendiente: number, pagado: number}, cesantias: {...}, intereses: {...}, vacaciones: {...} }}
+ */
+export function agregarMontosPrestacionesPorEstado(periodos) {
+  const vacio = () => ({ pendiente: 0, pagado: 0 });
+  const acc = {
+    prima: vacio(),
+    cesantias: vacio(),
+    intereses: vacio(),
+    vacaciones: vacio(),
+  };
+  if (!Array.isArray(periodos)) return acc;
+  for (const p of periodos) {
+    if (!p || typeof p !== 'object') continue;
+    const bucket = esEstadoPrestacionPagado(p.estado_pago) ? 'pagado' : 'pendiente';
+    acc.prima[bucket] += Number(p.prima_valor) || 0;
+    acc.cesantias[bucket] += Number(p.cesantias_valor) || 0;
+    acc.intereses[bucket] += Number(p.intereses_cesantias_valor) || 0;
+    acc.vacaciones[bucket] += Number(p.vacaciones_valor) || 0;
+  }
+  return acc;
+}
+
+/**
+ * Una tarjeta KPI: prioriza monto pendiente; si no hay, muestra total pagado y etiqueta (pagado).
+ */
+export function construirTarjetaKpiPrestacion({ tituloBase, pendiente, pagado, color }) {
+  const p = Number(pendiente) || 0;
+  const g = Number(pagado) || 0;
+  const esPendiente = p > 0;
+  const monto = esPendiente ? p : g;
+  const estadoEtiqueta = esPendiente ? 'pendiente' : g > 0 ? 'pagado' : 'pendiente';
+  return {
+    titulo: `${tituloBase} (${estadoEtiqueta})`,
+    valor: formatearMonedaCop(monto),
+    color,
+  };
+}
+
 export async function getTotalesPendientesPrestaciones() {
   const { data: cuerpo } = await api.get('/prestaciones-sociales/totales');
   const data = extraerData(cuerpo);

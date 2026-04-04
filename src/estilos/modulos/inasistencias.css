@@ -1202,6 +1202,27 @@
   box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
 }
 
+.inasistencias-filtro-archivo-row {
+  margin-top: 10px;
+  padding: 0 6px;
+}
+
+.inasistencias-filtro-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+}
+
+.inasistencias-filtro-checkbox input {
+  width: 15px;
+  height: 15px;
+  accent-color: #2563eb;
+}
+
 .inasistencias-filtro-busqueda {
   border-radius: 999px;
   border: none;

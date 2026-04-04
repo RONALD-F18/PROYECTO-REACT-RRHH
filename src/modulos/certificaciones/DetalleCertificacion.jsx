@@ -6,6 +6,7 @@ import {
   obtenerCatalogosCertificacion,
 } from '../../services/certificaciones';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { alertaErrorApi, alertaMensaje, confirmarEliminacion } from '../../utils/alertasSwal';
 import { ModalCertificacion } from './componentes';
 import { extraerMensajeErroresBackend } from './utils/certificacionesPayload';
 import { useCertificacionDetail } from './hooks/useCertificacionDetail';
@@ -96,7 +97,12 @@ function DetalleCertificacion() {
   const abrirEditar = () => {
     if (!data || cargandoCatalogos) return;
     if (errorCatalogos) {
-      window.alert('No se pudieron cargar los catálogos del formulario. Recargue la página o vuelva al listado.');
+      void alertaMensaje({
+        titulo: 'Catálogos no disponibles',
+        texto:
+          'No se pudieron cargar los catálogos del formulario. Recargue la página o vuelva al listado.',
+        icon: 'warning',
+      });
       return;
     }
     setMostrarModal(true);
@@ -111,23 +117,20 @@ function DetalleCertificacion() {
       await refetch();
     } catch (e) {
       const msgBackend = extraerMensajeErroresBackend(e);
-      if (msgBackend) {
-        window.alert(msgBackend || mensajeErrorApi(e));
-        return;
-      }
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo guardar la certificación', msgBackend || e);
     }
   };
 
   const eliminar = async () => {
     const cod = codigoCertificacionDesde(data);
     if (cod == null) return;
-    if (!window.confirm('¿Eliminar esta certificación? Esta acción no se puede deshacer.')) return;
+    const ok = await confirmarEliminacion({ titulo: '¿Eliminar esta certificación?' });
+    if (!ok) return;
     try {
       await deleteMut.mutate(cod);
       navegar('/certificaciones');
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo eliminar la certificación', e);
     }
   };
 

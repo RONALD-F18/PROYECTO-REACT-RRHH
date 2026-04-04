@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
+import FormularioPasos from '../../../componentes/comunes/FormularioPasos';
 import {
-  validarNumeroDocumento,
   prevenirSiNoEsDigito,
   prevenirSiNoEsPasaporteDoc,
   prevenirSiNoEsLetrasNombre,
@@ -13,13 +13,21 @@ import {
   sanitizarNacionalidad,
   sanitizarProfesion,
 } from '../../../utils/validaciones';
+import {
+  validarCampoEmpleado,
+  validarFormularioEmpleadoCompleto,
+  CAMPOS_EMPLEADO_DEBOUNCE_MS,
+  CAMPOS_EMPLEADO_VALIDACION_DEBOUNCED,
+} from '../../../utils/validacionEmpleadoFormulario';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
+import { alertaMensaje } from '../../../utils/alertasSwal';
 import {
   createEmpleado,
   patchEmpleado,
   normalizarRegistroEmpleado,
   codigoEmpleadoDesde,
 } from '../../../services/empleados';
+import { getContratos, extraerFilasContratos, esContratoVigenteParaEmpleado } from '../../../services/contratos';
 import {
   TIPO_DOCUMENTO,
   TIPO_CUENTA,
@@ -29,9 +37,7 @@ import {
   GRUPO_SANGUINEO,
 } from '../empleadoEnums';
 
-const TELEFONO_CO = /^3[0-9]{9}$/;
-const CUENTA_DIGITOS = /^\d{8,20}$/;
-const NACIONALIDAD_OK = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/u;
+import '../../../estilos/componentes/formulario-secciones.css';
 
 function estadoInicialVacio() {
   return {
@@ -42,6 +48,7 @@ function estadoInicialVacio() {
     fecha_nac: '',
     direccion: '',
     numero_telefono: '',
+    correo_empleado: '',
     numero_cuenta: '',
     tipo_cuenta: '',
     cod_banco: '',
@@ -67,10 +74,14 @@ function empleadoApiAFormulario(emp) {
     fecha_nac: e.fecha_nac ? String(e.fecha_nac).slice(0, 10) : '',
     direccion: e.direccion ?? '',
     numero_telefono: e.numero_telefono != null ? String(e.numero_telefono) : '',
+    correo_empleado: String(e.correo_empleado ?? e.email ?? '').trim().slice(0, 120),
     numero_cuenta: e.numero_cuenta != null ? String(e.numero_cuenta) : '',
     tipo_cuenta: e.tipo_cuenta ? String(e.tipo_cuenta).toUpperCase() : '',
     cod_banco: e.cod_banco != null && e.cod_banco !== '' ? String(e.cod_banco) : '',
-    estado_emp: e.estado_emp ? String(e.estado_emp).toUpperCase() : 'ACTIVO',
+    estado_emp: (() => {
+      const s = e.estado_emp ? String(e.estado_emp).toUpperCase() : 'ACTIVO';
+      return s === 'INACTIVO' ? 'RETIRADO' : s;
+    })(),
     discapacidad: e.discapacidad ? String(e.discapacidad).toUpperCase() : 'NINGUNA',
     nacionalidad: e.nacionalidad ?? '',
     estado_civil: e.estado_civil ? String(e.estado_civil).toUpperCase() : '',
@@ -116,6 +127,7 @@ function construirPayload(formulario) {
     fecha_nac: formulario.fecha_nac,
     direccion: formulario.direccion.trim(),
     numero_telefono: formulario.numero_telefono.trim(),
+    correo_empleado: formulario.correo_empleado.trim(),
     numero_cuenta: formulario.numero_cuenta.trim(),
     tipo_cuenta: formulario.tipo_cuenta,
     cod_banco: codBanco,
@@ -130,109 +142,43 @@ function construirPayload(formulario) {
   };
 }
 
-/** Validación de un solo campo (también se usa en onKeyUp). */
-function validarCampoEmpleado(campo, f) {
-  switch (campo) {
-    case 'nombre_empleado':
-      if (!f.nombre_empleado.trim()) return 'El nombre es obligatorio.';
-      return null;
-    case 'apellidos_empleado':
-      if (!f.apellidos_empleado.trim()) return 'Los apellidos son obligatorios.';
-      return null;
-    case 'doc_iden':
-      if (!f.doc_iden.trim()) return 'El documento es obligatorio.';
-      if (f.tipo_documento === 'PASAPORTE') {
-        if (f.doc_iden.trim().length < 3) return 'Ingrese el número de pasaporte.';
-        return null;
-      }
-      if (f.tipo_documento) {
-        return validarNumeroDocumento(f.doc_iden.trim());
-      }
-      return null;
-    case 'tipo_documento':
-      return f.tipo_documento ? null : 'Seleccione el tipo de documento.';
-    case 'fecha_nac':
-      return f.fecha_nac ? null : 'La fecha de nacimiento es obligatoria.';
-    case 'direccion':
-      return f.direccion.trim() ? null : 'La dirección es obligatoria.';
-    case 'numero_telefono':
-      if (!f.numero_telefono.trim()) return 'El celular es obligatorio.';
-      if (!TELEFONO_CO.test(f.numero_telefono.trim())) {
-        return 'Use 10 dígitos: inicia en 3 (ej. 3001234567).';
-      }
-      return null;
-    case 'numero_cuenta':
-      if (!f.numero_cuenta.trim()) return 'El número de cuenta es obligatorio.';
-      if (!CUENTA_DIGITOS.test(f.numero_cuenta.trim())) {
-        return 'Solo dígitos, entre 8 y 20.';
-      }
-      return null;
-    case 'tipo_cuenta':
-      return f.tipo_cuenta ? null : 'Seleccione el tipo de cuenta.';
-    case 'cod_banco':
-      if (!f.cod_banco) return 'Seleccione un banco.';
-      if (Number.isNaN(parseInt(f.cod_banco, 10))) return 'Banco no válido.';
-      return null;
-    case 'discapacidad':
-      return f.discapacidad ? null : 'Seleccione una opción.';
-    case 'nacionalidad':
-      if (!f.nacionalidad.trim()) return 'La nacionalidad es obligatoria.';
-      if (!NACIONALIDAD_OK.test(f.nacionalidad.trim())) return 'Solo letras y espacios.';
-      return null;
-    case 'estado_civil':
-      return f.estado_civil ? null : 'Seleccione el estado civil.';
-    case 'grupo_sanguineo':
-      return f.grupo_sanguineo ? null : 'Seleccione el grupo sanguíneo.';
-    case 'profesion':
-      if (!f.profesion.trim()) return 'La profesión es obligatoria.';
-      if (f.profesion.trim().length > 100) return 'Máximo 100 caracteres.';
-      return null;
-    case 'fec_exp_doc': {
-      if (!f.fec_exp_doc) return 'La fecha de expedición del documento es obligatoria.';
-      const n = f.fecha_nac ? new Date(`${f.fecha_nac}T12:00:00`) : null;
-      const x = new Date(`${f.fec_exp_doc}T12:00:00`);
-      const hoy = new Date();
-      hoy.setHours(23, 59, 59, 999);
-      if (n && x <= n) return 'Debe ser posterior a la fecha de nacimiento.';
-      if (x > hoy) return 'No puede ser posterior a hoy.';
-      return null;
-    }
-    case 'descripcion':
-      if (!f.descripcion.trim()) return 'La descripción es obligatoria.';
-      if (f.descripcion.trim().length > 500) return 'Máximo 500 caracteres.';
-      return null;
-    default:
-      return null;
-  }
-}
-
-const CAMPOS_VALIDAR_ENVIO = [
-  'nombre_empleado',
-  'apellidos_empleado',
-  'doc_iden',
-  'tipo_documento',
-  'fecha_nac',
-  'direccion',
-  'numero_telefono',
-  'numero_cuenta',
-  'tipo_cuenta',
-  'cod_banco',
-  'discapacidad',
-  'nacionalidad',
-  'estado_civil',
-  'grupo_sanguineo',
-  'profesion',
-  'fec_exp_doc',
-  'descripcion',
+const CAMPOS_POR_PASO_EMPLEADO = [
+  [
+    'tipo_documento',
+    'doc_iden',
+    'nombre_empleado',
+    'apellidos_empleado',
+    'fecha_nac',
+    'fec_exp_doc',
+    'numero_telefono',
+    'correo_empleado',
+    'direccion',
+    'nacionalidad',
+    'estado_civil',
+    'estado_emp',
+  ],
+  ['cod_banco', 'numero_cuenta', 'tipo_cuenta', 'profesion'],
+  ['grupo_sanguineo', 'discapacidad', 'descripcion'],
 ];
 
-function validar(formulario) {
-  const err = {};
-  for (const c of CAMPOS_VALIDAR_ENVIO) {
-    const m = validarCampoEmpleado(c, formulario);
-    if (m) err[c] = m;
+function campoTieneErrorApi(campo, erroresApi) {
+  const x = erroresApi?.[campo];
+  if (x == null) return false;
+  if (Array.isArray(x)) return x.some((m) => m != null && String(m).trim() !== '');
+  if (typeof x === 'string') return x.trim().length > 0;
+  return true;
+}
+
+function primerPasoConErroresEmpleado(erroresCliente, erroresApi) {
+  const tiene = (c) => Boolean(erroresCliente?.[c]) || campoTieneErrorApi(c, erroresApi);
+  for (let i = 0; i < CAMPOS_POR_PASO_EMPLEADO.length; i++) {
+    if (CAMPOS_POR_PASO_EMPLEADO[i].some(tiene)) return i;
   }
-  return err;
+  const keys = new Set([...Object.keys(erroresCliente || {}), ...Object.keys(erroresApi || {})]);
+  for (const k of keys) {
+    if (tiene(k)) return 0;
+  }
+  return 0;
 }
 
 function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alExito }) {
@@ -244,30 +190,85 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
   const [erroresApi, setErroresApi] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [errorGeneral, setErrorGeneral] = useState('');
+  const [pasoActual, setPasoActual] = useState(0);
   const formRef = useRef(formulario);
   formRef.current = formulario;
   /** Payload al abrir el modal en edición (para PATCH solo con cambios). */
   const payloadInicialEdicionRef = useRef(null);
 
-  const aplicarErroresTrasCambio = (nombreCampo, estadoFusionado) => {
+  const codigosBancoPermitidos = useMemo(
+    () => new Set(bancos.map((b) => String(b.cod_banco))),
+    [bancos],
+  );
+  const ctxValidacionRef = useRef({ codigosBancoPermitidos });
+  ctxValidacionRef.current = { codigosBancoPermitidos };
+
+  const debounceTimersRef = useRef({});
+
+  const cancelarDebounceCampo = useCallback((name) => {
+    const t = debounceTimersRef.current[name];
+    if (t) {
+      clearTimeout(t);
+      delete debounceTimersRef.current[name];
+    }
+  }, []);
+
+  const aplicarErroresTrasCambio = useCallback((nombreCampo, estadoFusionado) => {
     setErrores((er) => {
+      const ctx = ctxValidacionRef.current;
       const nuevos = { ...er };
-      const m = validarCampoEmpleado(nombreCampo, estadoFusionado);
-      if (m) nuevos[nombreCampo] = m;
-      else delete nuevos[nombreCampo];
-      if (nombreCampo === 'tipo_documento') {
-        const md = validarCampoEmpleado('doc_iden', estadoFusionado);
-        if (md) nuevos.doc_iden = md;
-        else delete nuevos.doc_iden;
+      const campos = new Set([nombreCampo]);
+      if (nombreCampo === 'tipo_documento' || nombreCampo === 'fecha_nac') {
+        ['doc_iden', 'fecha_nac', 'fec_exp_doc'].forEach((c) => campos.add(c));
       }
-      if (nombreCampo === 'fecha_nac' || nombreCampo === 'fec_exp_doc') {
-        const mf = validarCampoEmpleado('fec_exp_doc', estadoFusionado);
-        if (mf) nuevos.fec_exp_doc = mf;
-        else delete nuevos.fec_exp_doc;
+      if (nombreCampo === 'doc_iden') {
+        campos.add('fec_exp_doc');
+      }
+      if (nombreCampo === 'fec_exp_doc') {
+        campos.add('fec_exp_doc');
+      }
+      for (const c of campos) {
+        const m = validarCampoEmpleado(c, estadoFusionado, ctx);
+        if (m) nuevos[c] = m;
+        else delete nuevos[c];
       }
       return nuevos;
     });
-  };
+  }, []);
+
+  const programarValidacionDebounced = useCallback(
+    (name) => {
+      cancelarDebounceCampo(name);
+      debounceTimersRef.current[name] = setTimeout(() => {
+        delete debounceTimersRef.current[name];
+        aplicarErroresTrasCambio(name, formRef.current);
+      }, CAMPOS_EMPLEADO_DEBOUNCE_MS);
+    },
+    [aplicarErroresTrasCambio, cancelarDebounceCampo],
+  );
+
+  const manejarBlurCampo = useCallback(
+    (e) => {
+      const name = e.target?.name;
+      if (!name) return;
+      setErroresApi((p) => {
+        if (!p[name]) return p;
+        const n = { ...p };
+        delete n[name];
+        return n;
+      });
+      cancelarDebounceCampo(name);
+      aplicarErroresTrasCambio(name, formRef.current);
+    },
+    [aplicarErroresTrasCambio, cancelarDebounceCampo],
+  );
+
+  useEffect(() => {
+    return () => {
+      Object.values(debounceTimersRef.current).forEach((id) => clearTimeout(id));
+      debounceTimersRef.current = {};
+    };
+  }, []);
 
   const reiniciar = useCallback(() => {
     const reg = datosEmpleado ? normalizarRegistroEmpleado(datosEmpleado) : null;
@@ -282,6 +283,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
     setErrores({});
     setErroresApi({});
     setErrorGeneral('');
+    setPasoActual(0);
   }, [datosEmpleado]);
 
   useEffect(() => {
@@ -333,11 +335,18 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
           case 'descripcion':
             next.descripcion = String(value).slice(0, 500);
             break;
+          case 'correo_empleado':
+            next.correo_empleado = String(value).slice(0, 120);
+            break;
           default:
             next[name] = value;
         }
       }
-      queueMicrotask(() => aplicarErroresTrasCambio(name, next));
+      const usarDebounce = CAMPOS_EMPLEADO_VALIDACION_DEBOUNCED.includes(name);
+      queueMicrotask(() => {
+        if (usarDebounce) programarValidacionDebounced(name);
+        else aplicarErroresTrasCambio(name, next);
+      });
       return next;
     });
   };
@@ -358,13 +367,47 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
 
   const mensajeCampo = (campo) => errores[campo] || (erroresApi[campo] && erroresApi[campo][0]);
 
+  const validarAntesDeSiguiente = (idx) => {
+    const camposPorPaso = [
+      [
+        'tipo_documento',
+        'doc_iden',
+        'nombre_empleado',
+        'apellidos_empleado',
+        'fecha_nac',
+        'fec_exp_doc',
+        'numero_telefono',
+        'correo_empleado',
+        'direccion',
+        'nacionalidad',
+        'estado_civil',
+        'estado_emp',
+      ],
+      ['cod_banco', 'numero_cuenta', 'tipo_cuenta', 'profesion'],
+      ['grupo_sanguineo', 'discapacidad', 'descripcion'],
+    ];
+
+    const campos = camposPorPaso[idx] ?? [];
+    const nuevosErrores = {};
+    const ctx = { codigosBancoPermitidos };
+    for (const c of campos) {
+      const m = validarCampoEmpleado(c, formulario, ctx);
+      if (m) nuevosErrores[c] = m;
+    }
+    setErrores(nuevosErrores);
+    return Object.keys(nuevosErrores).length === 0;
+  };
+
   const manejarGuardar = async (e) => {
     e.preventDefault();
     setErrorGeneral('');
     setErroresApi({});
-    const v = validar(formulario);
+    const v = validarFormularioEmpleadoCompleto(formulario, { codigosBancoPermitidos });
     setErrores(v);
-    if (Object.keys(v).length > 0) return;
+    if (Object.keys(v).length > 0) {
+      setPasoActual(primerPasoConErroresEmpleado(v, {}));
+      return;
+    }
 
     setEnviando(true);
     try {
@@ -374,6 +417,26 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
         if (Object.keys(parcial).length === 0) {
           setErrorGeneral('No hay cambios que guardar.');
           return;
+        }
+        if (parcial.estado_emp === 'RETIRADO') {
+          const jsonCtr = await getContratos();
+          const filas = extraerFilasContratos(jsonCtr);
+          const codEmp = Number(codEdicion);
+          const tieneVigente = filas.some(
+            (c) =>
+              c &&
+              Number(c.cod_empleado) === codEmp &&
+              esContratoVigenteParaEmpleado(c.estado_contrato),
+          );
+          if (tieneVigente) {
+            await alertaMensaje({
+              titulo: 'No se puede marcar como retirado',
+              texto:
+                'Este empleado tiene al menos un contrato vigente (ACTIVO). Finaliza ese contrato en el módulo de Contratos antes de marcar al empleado como Retirado.',
+              icon: 'warning',
+            });
+            return;
+          }
         }
         await patchEmpleado(codEdicion, parcial);
         await alExito?.('actualizado');
@@ -387,6 +450,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
       if (err.response?.status === 422 && data?.errors && typeof data.errors === 'object') {
         setErroresApi(data.errors);
         setErrorGeneral('Revisa los campos marcados.');
+        setPasoActual(primerPasoConErroresEmpleado({}, data.errors));
       } else {
         setErrorGeneral(mensajeErrorApi(err));
       }
@@ -410,27 +474,23 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
           </div>
         ) : null}
 
-        <div className="formulario-grid-doble formulario-empleado-grid">
-          <div className="columna-izquierda">
-            <h3 className="formulario-empleado-seccion">Identificación</h3>
-            <div className="campo-formulario">
-              <label htmlFor="emp-doc_iden">Número de documento *</label>
-              <input
-                id="emp-doc_iden"
-                name="doc_iden"
-                value={formulario.doc_iden}
-                onChange={manejarCambio}
-                onKeyDown={manejarKeyDownDocIden}
-                onKeyUp={manejarKeyUpValidar}
-                maxLength={50}
-                autoComplete="off"
-                inputMode={formulario.tipo_documento === 'PASAPORTE' ? 'text' : 'numeric'}
-                className={mensajeCampo('doc_iden') ? 'campo-error' : ''}
-              />
-              {mensajeCampo('doc_iden') ? (
-                <span className="mensaje-error">{mensajeCampo('doc_iden')}</span>
-              ) : null}
-            </div>
+        <FormularioPasos
+          pasos={[
+            { numero: 1, titulo: 'Identificación del Empleado', color: 'morado' },
+            { numero: 2, titulo: 'Bancario y laboral', color: 'azul' },
+            { numero: 3, titulo: 'Salud y descripción', color: 'verde' },
+          ]}
+          pasoActual={pasoActual}
+          setPasoActual={setPasoActual}
+          onCancelar={cerrar}
+          enviando={enviando}
+          textoGuardar={esEdicion ? 'Actualizar' : 'Guardar'}
+          validarAntesDeSiguiente={validarAntesDeSiguiente}
+        >
+          <div className="formulario-grid-doble formulario-empleado-grid">
+          <div className="columna-izquierda" style={{ display: pasoActual === 0 ? 'flex' : 'none' }}>
+            {pasoActual === 0 ? (
+              <>
             <div className="campo-formulario">
               <label htmlFor="emp-tipo_documento">Tipo de documento *</label>
               <select
@@ -438,6 +498,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 name="tipo_documento"
                 value={formulario.tipo_documento}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
                 className={mensajeCampo('tipo_documento') ? 'campo-error' : ''}
               >
@@ -453,14 +514,33 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
               ) : null}
             </div>
             <div className="campo-formulario">
+              <label htmlFor="emp-doc_iden">Número de documento *</label>
+              <input
+                id="emp-doc_iden"
+                name="doc_iden"
+                value={formulario.doc_iden}
+                onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
+                onKeyDown={manejarKeyDownDocIden}
+                onKeyUp={manejarKeyUpValidar}
+                maxLength={50}
+                autoComplete="off"
+                inputMode={formulario.tipo_documento === 'PASAPORTE' ? 'text' : 'numeric'}
+                className={mensajeCampo('doc_iden') ? 'campo-error' : ''}
+              />
+              {mensajeCampo('doc_iden') ? (
+                <span className="mensaje-error">{mensajeCampo('doc_iden')}</span>
+              ) : null}
+            </div>
+            <div className="campo-formulario">
               <label htmlFor="emp-nombre_empleado">Nombre *</label>
               <input
                 id="emp-nombre_empleado"
                 name="nombre_empleado"
                 value={formulario.nombre_empleado}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyDown={prevenirSiNoEsLetrasNombre}
-                onKeyUp={manejarKeyUpValidar}
                 maxLength={100}
                 className={mensajeCampo('nombre_empleado') ? 'campo-error' : ''}
               />
@@ -475,8 +555,8 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 name="apellidos_empleado"
                 value={formulario.apellidos_empleado}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyDown={prevenirSiNoEsLetrasNombre}
-                onKeyUp={manejarKeyUpValidar}
                 maxLength={100}
                 className={mensajeCampo('apellidos_empleado') ? 'campo-error' : ''}
               />
@@ -492,6 +572,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 name="fecha_nac"
                 value={formulario.fecha_nac}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
                 className={mensajeCampo('fecha_nac') ? 'campo-error' : ''}
               />
@@ -507,6 +588,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 name="fec_exp_doc"
                 value={formulario.fec_exp_doc}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
                 className={mensajeCampo('fec_exp_doc') ? 'campo-error' : ''}
               />
@@ -521,6 +603,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 name="numero_telefono"
                 value={formulario.numero_telefono}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyDown={prevenirSiNoEsDigito}
                 onKeyUp={manejarKeyUpValidar}
                 maxLength={10}
@@ -534,13 +617,30 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
               ) : null}
             </div>
             <div className="campo-formulario">
+              <label htmlFor="emp-correo_empleado">Correo electrónico *</label>
+              <input
+                id="emp-correo_empleado"
+                name="correo_empleado"
+                type="email"
+                value={formulario.correo_empleado}
+                onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
+                maxLength={120}
+                autoComplete="email"
+                className={mensajeCampo('correo_empleado') ? 'campo-error' : ''}
+              />
+              {mensajeCampo('correo_empleado') ? (
+                <span className="mensaje-error">{mensajeCampo('correo_empleado')}</span>
+              ) : null}
+            </div>
+            <div className="campo-formulario">
               <label htmlFor="emp-direccion">Dirección *</label>
               <input
                 id="emp-direccion"
                 name="direccion"
                 value={formulario.direccion}
                 onChange={manejarCambio}
-                onKeyUp={manejarKeyUpValidar}
+                onBlur={manejarBlurCampo}
                 maxLength={200}
                 className={mensajeCampo('direccion') ? 'campo-error' : ''}
               />
@@ -555,8 +655,8 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 name="nacionalidad"
                 value={formulario.nacionalidad}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyDown={prevenirSiNoEsNacionalidad}
-                onKeyUp={manejarKeyUpValidar}
                 maxLength={50}
                 className={mensajeCampo('nacionalidad') ? 'campo-error' : ''}
               />
@@ -571,6 +671,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 name="estado_civil"
                 value={formulario.estado_civil}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
                 className={mensajeCampo('estado_civil') ? 'campo-error' : ''}
               >
@@ -585,21 +686,42 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 <span className="mensaje-error">{mensajeCampo('estado_civil')}</span>
               ) : null}
             </div>
+            <div className="campo-formulario">
+              <label htmlFor="emp-estado_emp">Estado en la empresa *</label>
+              <select
+                id="emp-estado_emp"
+                name="estado_emp"
+                value={formulario.estado_emp}
+                onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
+                onKeyUp={manejarKeyUpValidar}
+              >
+                {ESTADO_EMP.map((o) => (
+                  <option key={o.valor} value={o.valor}>
+                    {o.etiqueta}
+                  </option>
+                ))}
+              </select>
+            </div>
+              </>
+            ) : null}
           </div>
 
-          <div className="columna-derecha">
-            <h3 className="formulario-empleado-seccion">Bancario y laboral</h3>
+          <div className="columna-derecha" style={{ display: pasoActual !== 0 ? 'flex' : 'none' }}>
+            {pasoActual === 1 ? (
+              <>
             <div className="campo-formulario">
-              <label htmlFor="emp-cod_banco">Banco *</label>
+              <label htmlFor="emp-cod_banco">Banco (opcional)</label>
               <select
                 id="emp-cod_banco"
                 name="cod_banco"
                 value={formulario.cod_banco}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
                 className={mensajeCampo('cod_banco') ? 'campo-error' : ''}
               >
-                <option value="">Seleccione</option>
+                <option value="">Sin especificar</option>
                 {bancos.map((b) => (
                   <option key={b.cod_banco} value={String(b.cod_banco)}>
                     {b.nombre_banco ?? `Banco ${b.cod_banco}`}
@@ -617,6 +739,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 name="numero_cuenta"
                 value={formulario.numero_cuenta}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyDown={prevenirSiNoEsDigito}
                 onKeyUp={manejarKeyUpValidar}
                 maxLength={20}
@@ -635,6 +758,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 name="tipo_cuenta"
                 value={formulario.tipo_cuenta}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
                 className={mensajeCampo('tipo_cuenta') ? 'campo-error' : ''}
               >
@@ -650,30 +774,14 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
               ) : null}
             </div>
             <div className="campo-formulario">
-              <label htmlFor="emp-estado_emp">Estado en la empresa *</label>
-              <select
-                id="emp-estado_emp"
-                name="estado_emp"
-                value={formulario.estado_emp}
-                onChange={manejarCambio}
-                onKeyUp={manejarKeyUpValidar}
-              >
-                {ESTADO_EMP.map((o) => (
-                  <option key={o.valor} value={o.valor}>
-                    {o.etiqueta}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="campo-formulario">
               <label htmlFor="emp-profesion">Profesión *</label>
               <input
                 id="emp-profesion"
                 name="profesion"
                 value={formulario.profesion}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyDown={prevenirSiNoEsProfesion}
-                onKeyUp={manejarKeyUpValidar}
                 maxLength={100}
                 className={mensajeCampo('profesion') ? 'campo-error' : ''}
               />
@@ -682,7 +790,11 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
               ) : null}
             </div>
 
-            <h3 className="formulario-empleado-seccion">Salud</h3>
+              </>
+            ) : null}
+
+            {pasoActual === 2 ? (
+              <>
             <div className="campo-formulario">
               <label htmlFor="emp-grupo_sanguineo">Grupo sanguíneo (incluye RH) *</label>
               <select
@@ -690,6 +802,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 name="grupo_sanguineo"
                 value={formulario.grupo_sanguineo}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
                 className={mensajeCampo('grupo_sanguineo') ? 'campo-error' : ''}
               >
@@ -711,6 +824,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 name="discapacidad"
                 value={formulario.discapacidad}
                 onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
                 className={mensajeCampo('discapacidad') ? 'campo-error' : ''}
               >
@@ -725,16 +839,15 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
               ) : null}
             </div>
 
-            <h3 className="formulario-empleado-seccion">Descripción</h3>
             <div className="campo-formulario campo-formulario--ancho">
-              <label htmlFor="emp-descripcion">Descripción / perfil *</label>
+              <label htmlFor="emp-descripcion">Descripción / perfil (opcional)</label>
               <textarea
                 id="emp-descripcion"
                 name="descripcion"
                 rows={4}
                 value={formulario.descripcion}
                 onChange={manejarCambio}
-                onKeyUp={manejarKeyUpValidar}
+                onBlur={manejarBlurCampo}
                 maxLength={500}
                 className={mensajeCampo('descripcion') ? 'campo-error' : ''}
               />
@@ -742,17 +855,12 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 <span className="mensaje-error">{mensajeCampo('descripcion')}</span>
               ) : null}
             </div>
+              </>
+            ) : null}
           </div>
         </div>
 
-        <div className="modal-acciones">
-          <button type="button" className="btn-cancelar" onClick={cerrar} disabled={enviando}>
-            Cancelar
-          </button>
-          <button type="submit" className="btn-guardar" disabled={enviando}>
-            {enviando ? 'Guardando…' : esEdicion ? 'Actualizar' : 'Guardar'}
-          </button>
-        </div>
+      </FormularioPasos>
       </form>
     </Modal>
   );

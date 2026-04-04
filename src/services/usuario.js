@@ -1,4 +1,10 @@
 import api from './api';
+import { crearPeticionCompartida } from '../utils/peticionCompartida';
+
+const ejecutarGetUsuariosLista = crearPeticionCompartida(async () => {
+  const { data } = await api.get('/usuarios');
+  return data;
+});
 
 /** Soporta array directo, `{ data: [] }` o paginación Laravel `{ data: { data: [] } }` */
 export function extraerFilasUsuarios(cuerpo) {
@@ -11,8 +17,7 @@ export function extraerFilasUsuarios(cuerpo) {
 }
 
 export async function getUsuarios() {
-  const { data } = await api.get('/usuarios');
-  return data;
+  return ejecutarGetUsuariosLista();
 }
 
 export async function getUsuarioById(codUsuario) {

@@ -1,4 +1,10 @@
 import api from './api';
+import { crearPeticionCompartida } from '../utils/peticionCompartida';
+
+const ejecutarGetEmpleadosLista = crearPeticionCompartida(async () => {
+  const { data } = await api.get('/empleados');
+  return data;
+});
 
 export function extraerFilasEmpleados(cuerpo) {
   if (!cuerpo) return [];
@@ -75,8 +81,7 @@ export function buscarEmpleadoPorDocumento(empleados, docIngresado) {
 }
 
 export async function getEmpleados() {
-  const { data } = await api.get('/empleados');
-  return data;
+  return ejecutarGetEmpleadosLista();
 }
 
 export async function getEmpleadoById(codEmpleado) {

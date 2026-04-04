@@ -49,9 +49,9 @@ export const MODULOS_NAVEGACION = [
     descripcion: "Tipos, clasificación e incapacidades",
   },
   {
-    ruta: "/calendario",
-    etiqueta: "Calendario",
-    descripcion: "Actividades y eventos",
+    ruta: "/actividades",
+    etiqueta: "Calendario de Actividades",
+    descripcion: "Tareas, reuniones y recordatorios",
   },
   {
     ruta: "/empresa",
@@ -128,8 +128,8 @@ export const SERVICIOS_LANDING = [
     destacado: false,
   },
   {
-    titulo: "Calendario de actividades",
-    descripcion: "Actividades y eventos de RRHH en una sola línea de tiempo.",
+    titulo: "Calendario de Actividades",
+    descripcion: "Eventos de RRHH en una sola línea de tiempo.",
     metrica: "Eventos programados",
     destacado: false,
   },

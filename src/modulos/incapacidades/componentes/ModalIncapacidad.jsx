@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
 import FormularioSecciones from '../../../componentes/comunes/FormularioSecciones';
+import FormularioPasos from '../../../componentes/comunes/FormularioPasos';
 import { validarNumeroDocumento, validarNombres } from '../../../utils/validaciones';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 import {
@@ -8,90 +9,130 @@ import {
   updateIncapacidad,
   normalizarRegistroIncapacidad,
   codigoIncapacidadDesde,
+  getTiposIncapacidad,
+  getClasificacionesEnfermedad,
+  extraerFilasCatalogo,
 } from '../../../services/incapacidades';
-import { codigoEmpleadoDesde, nombreCompletoEmpleado, empleadoPorDocumento } from '../../../services/empleados';
+import {
+  codigoEmpleadoDesde,
+  nombreCompletoEmpleado,
+  buscarEmpleadoPorDocumento,
+} from '../../../services/empleados';
+import {
+  ETIQUETAS_ESTADO_EDICION_INCAPACIDAD,
+  estadoIncapacidadEdicionDesdeApi,
+  estadoIncapacidadApiDesdeEtiquetaEdicion,
+} from '../../../utils/incapacidadEstado';
 import '../../../estilos/componentes/formulario-secciones.css';
 
-function estadoFormularioVacio(codigoAuto) {
+const DESCRIPCION_MAX = 200;
+
+function estadoFormularioVacio() {
   return {
     documento: '',
     nombre: '',
-    codigoContrato: '',
-    codigoAfiliacion: codigoAuto,
     tipoIncapacidad: '',
     fechaInicio: '',
     fechaFin: '',
+    fechaRadicacion: '',
     diagnostico: '',
-    codigoClasificacion: '',
+    cod_clasificacion_enfermedad: '',
     descripcion: '',
+    estadoIncapacidadUi: '',
   };
+}
+
+function combinarDescripcionParaApi(diagnostico, notas) {
+  const d = String(diagnostico ?? '').trim();
+  const n = String(notas ?? '').trim();
+  let s = '';
+  if (d && n) s = `${d} | ${n}`;
+  else s = d || n;
+  if (s.length > DESCRIPCION_MAX) {
+    return {
+      ok: false,
+      error: `Diagnóstico y notas no pueden superar ${DESCRIPCION_MAX} caracteres en total (límite de la API).`,
+    };
+  }
+  return { ok: true, value: s || undefined };
 }
 
 function incapacidadApiAFormulario(raw, empleados) {
   const r = normalizarRegistroIncapacidad(raw) ?? raw;
-  if (!r || typeof r !== 'object') return estadoFormularioVacio('');
+  if (!r || typeof r !== 'object') return estadoFormularioVacio();
   let emp =
     r.empleado && typeof r.empleado === 'object' && !Array.isArray(r.empleado) ? r.empleado : null;
   if (!emp && r.cod_empleado != null && Array.isArray(empleados)) {
     emp = empleados.find((e) => String(codigoEmpleadoDesde(e)) === String(r.cod_empleado)) ?? null;
   }
+  const codTipo =
+    r.cod_tipo_incapacidad != null
+      ? String(r.cod_tipo_incapacidad)
+      : r.tipoIncapacidad?.cod_tipo_incapacidad != null
+        ? String(r.tipoIncapacidad.cod_tipo_incapacidad)
+        : '';
+  const codClas =
+    r.cod_clasificacion_enfermedad != null
+      ? String(r.cod_clasificacion_enfermedad)
+      : r.clasificacionEnfermedad?.cod_clasificacion_enfermedad != null
+        ? String(r.clasificacionEnfermedad.cod_clasificacion_enfermedad)
+        : '';
+
   return {
     documento: emp ? String(emp.doc_iden ?? '').trim() : '',
     nombre: emp ? nombreCompletoEmpleado(emp) : '',
-    codigoContrato: r.cod_contrato != null ? String(r.cod_contrato) : '',
-    codigoAfiliacion:
-      r.cod_afiliacion != null
-        ? String(r.cod_afiliacion)
-        : r.cod_incapacidad != null
-          ? String(r.cod_incapacidad)
-          : '',
-    tipoIncapacidad: r.tipo_incapacidad ? String(r.tipo_incapacidad) : '',
+    tipoIncapacidad: codTipo,
     fechaInicio: r.fecha_inicio ? String(r.fecha_inicio).slice(0, 10) : '',
     fechaFin: r.fecha_fin ? String(r.fecha_fin).slice(0, 10) : '',
-    diagnostico: r.diagnostico != null ? String(r.diagnostico) : '',
-    codigoClasificacion:
-      r.codigo_enfermedad != null
-        ? String(r.codigo_enfermedad)
-        : r.codigo_cie != null
-          ? String(r.codigo_cie)
-          : '',
-    descripcion:
-      r.observaciones != null
-        ? String(r.observaciones)
-        : r.descripcion != null
-          ? String(r.descripcion)
-          : '',
+    fechaRadicacion: r.fecha_radicacion ? String(r.fecha_radicacion).slice(0, 10) : '',
+    diagnostico: r.descripcion != null ? String(r.descripcion) : '',
+    cod_clasificacion_enfermedad: codClas,
+    descripcion: '',
+    estadoIncapacidadUi: estadoIncapacidadEdicionDesdeApi(r.estado_incapacidad),
   };
 }
 
-function construirPayloadIncapacidad(formulario, codEmpleado) {
+function construirPayloadIncapacidad(formulario, codEmpleado, incluirEstadoEdicion) {
   const cod = Number(codEmpleado);
+  const tipoN = Number(formulario.tipoIncapacidad);
+  const comb = combinarDescripcionParaApi(formulario.diagnostico, formulario.descripcion);
+  if (!comb.ok) throw new Error(comb.error);
+
   const payload = {
     cod_empleado: cod,
-    tipo_incapacidad: formulario.tipoIncapacidad.trim(),
+    cod_tipo_incapacidad: tipoN,
     fecha_inicio: formulario.fechaInicio,
     fecha_fin: formulario.fechaFin,
-    diagnostico: formulario.diagnostico.trim(),
-    codigo_enfermedad: formulario.codigoClasificacion?.trim() || null,
-    observaciones: formulario.descripcion?.trim() || '',
-    estado_incapacidad: 'ACTIVA',
   };
-  const cc = formulario.codigoContrato?.trim();
-  if (cc) {
-    const n = Number(cc);
-    payload.cod_contrato = Number.isFinite(n) ? n : cc;
+  if (comb.value !== undefined) payload.descripcion = comb.value;
+
+  const fr = String(formulario.fechaRadicacion ?? '').trim();
+  if (fr) payload.fecha_radicacion = fr;
+
+  const cce = String(formulario.cod_clasificacion_enfermedad ?? '').trim();
+  if (cce) {
+    const n = Number(cce);
+    if (Number.isFinite(n)) payload.cod_clasificacion_enfermedad = n;
   }
+
+  if (incluirEstadoEdicion) {
+    payload.estado_incapacidad = estadoIncapacidadApiDesdeEtiquetaEdicion(formulario.estadoIncapacidadUi);
+  }
+
   return payload;
 }
 
 function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados = [], alExito }) {
   const esEdicion = !!datosIncapacidad && codigoIncapacidadDesde(datosIncapacidad) != null;
 
-  const [formulario, setFormulario] = useState(() => estadoFormularioVacio(''));
+  const [formulario, setFormulario] = useState(() => estadoFormularioVacio());
+  const [tiposCatalogo, setTiposCatalogo] = useState([]);
+  const [clasifCatalogo, setClasifCatalogo] = useState([]);
   const [errores, setErrores] = useState({});
   const [camposTocados, setCamposTocados] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [errorGeneral, setErrorGeneral] = useState('');
+  const [pasoActual, setPasoActual] = useState(0);
 
   const codEdicion = useMemo(() => (esEdicion ? codigoIncapacidadDesde(datosIncapacidad) : null), [esEdicion, datosIncapacidad]);
 
@@ -111,16 +152,59 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
 
   useEffect(() => {
     if (!mostrar) return;
+    let cancel = false;
+    (async () => {
+      try {
+        const [st, sc] = await Promise.allSettled([getTiposIncapacidad(), getClasificacionesEnfermedad()]);
+        if (cancel) return;
+        if (st.status === 'fulfilled') setTiposCatalogo(extraerFilasCatalogo(st.value));
+        else setTiposCatalogo([]);
+        if (sc.status === 'fulfilled') setClasifCatalogo(extraerFilasCatalogo(sc.value));
+        else setClasifCatalogo([]);
+      } catch {
+        if (!cancel) {
+          setTiposCatalogo([]);
+          setClasifCatalogo([]);
+        }
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [mostrar]);
+
+  useEffect(() => {
+    if (!mostrar) return;
     setErrorGeneral('');
+    setPasoActual(0);
     if (datosIncapacidad && codigoIncapacidadDesde(datosIncapacidad) != null) {
       setFormulario(incapacidadApiAFormulario(datosIncapacidad, empleados));
     } else {
-      const codigoAuto = Math.floor(1000000 + Math.random() * 9000000).toString();
-      setFormulario(estadoFormularioVacio(codigoAuto));
+      setFormulario(estadoFormularioVacio());
     }
     setErrores({});
     setCamposTocados({});
   }, [datosIncapacidad, mostrar, empleados]);
+
+  const opcionesTipo = useMemo(
+    () =>
+      tiposCatalogo.map((t) => ({
+        valor: String(t.cod_tipo_incapacidad),
+        texto: t.nombre_tipo != null ? String(t.nombre_tipo) : String(t.cod_tipo_incapacidad),
+      })),
+    [tiposCatalogo],
+  );
+
+  const opcionesClasif = useMemo(
+    () =>
+      clasifCatalogo.map((c) => {
+        const cod = c.codigo_cie10 != null ? String(c.codigo_cie10).trim() : '';
+        const nom = c.nombre_clasificacion != null ? String(c.nombre_clasificacion).trim() : '';
+        const texto = [cod, nom].filter(Boolean).join(' — ') || String(c.cod_clasificacion_enfermedad);
+        return { valor: String(c.cod_clasificacion_enfermedad), texto };
+      }),
+    [clasifCatalogo],
+  );
 
   const validarCampo = (nombre, valor) => {
     switch (nombre) {
@@ -128,8 +212,6 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
         return validarNumeroDocumento(valor);
       case 'nombre':
         return validarNombres(valor);
-      case 'codigoContrato':
-        return null;
       case 'tipoIncapacidad':
         return !valor ? 'Debe seleccionar un tipo de incapacidad' : null;
       case 'fechaInicio':
@@ -138,23 +220,58 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
       case 'fechaFin':
         if (!valor) return 'La fecha de fin es requerida';
         if (formulario.fechaInicio && valor < formulario.fechaInicio) {
-          return 'La fecha de fin debe ser posterior a la fecha de inicio';
+          return 'La fecha de fin debe ser igual o posterior a la fecha de inicio';
         }
         return null;
-      case 'diagnostico':
-        if (!valor.trim()) return 'El diagnóstico es requerido';
+      case 'diagnostico': {
+        const comb = combinarDescripcionParaApi(valor, formulario.descripcion);
+        if (!comb.ok) return comb.error;
+        if (!String(valor ?? '').trim()) return 'El diagnóstico es requerido';
+        return null;
+      }
+      case 'estadoIncapacidadUi':
+        if (!esEdicion) return null;
+        if (!valor) return 'Seleccione el estado';
         return null;
       default:
         return null;
     }
   };
 
+  const validarAntesDeSiguiente = useCallback(
+    (idx) => {
+      const grupos = [
+        esEdicion ? ['documento', 'nombre', 'estadoIncapacidadUi'] : ['documento', 'nombre'],
+        ['tipoIncapacidad', 'fechaInicio', 'fechaFin'],
+        ['diagnostico'],
+      ];
+      if (idx < 0 || idx >= grupos.length) return true;
+
+      const campos = grupos[idx];
+      const todosTocados = {};
+      const nuevosErrores = {};
+      for (const c of campos) {
+        todosTocados[c] = true;
+        const err = validarCampo(c, formulario[c]);
+        if (err) nuevosErrores[c] = err;
+      }
+      if (idx === 2) {
+        const comb = combinarDescripcionParaApi(formulario.diagnostico, formulario.descripcion);
+        if (!comb.ok) nuevosErrores.diagnostico = comb.error;
+      }
+      setCamposTocados((p) => ({ ...p, ...todosTocados }));
+      setErrores(nuevosErrores);
+      return Object.keys(nuevosErrores).length === 0;
+    },
+    [formulario, esEdicion],
+  );
+
   const manejarCambio = (e) => {
     const { name, value } = e.target;
     setFormulario((prev) => {
       const next = { ...prev, [name]: value };
       if (name === 'documento' && !esEdicion) {
-        const emp = empleadoPorDocumento(empleados, value);
+        const emp = buscarEmpleadoPorDocumento(empleados, value);
         if (emp) next.nombre = nombreCompletoEmpleado(emp);
       }
       return next;
@@ -173,36 +290,71 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     setErrores((prev) => ({ ...prev, [name]: error }));
   };
 
-  const validarFormulario = () => {
+  const calcularErroresIncapacidad = () => {
     const nuevosErrores = {};
     const todosTocados = {};
+    const campos = [
+      'documento',
+      'nombre',
+      ...(esEdicion ? ['estadoIncapacidadUi'] : []),
+      'tipoIncapacidad',
+      'fechaInicio',
+      'fechaFin',
+      'diagnostico',
+    ];
+    for (const campo of campos) {
+      todosTocados[campo] = true;
+      const error = validarCampo(campo, formulario[campo]);
+      if (error) nuevosErrores[campo] = error;
+    }
+    const comb = combinarDescripcionParaApi(formulario.diagnostico, formulario.descripcion);
+    if (!comb.ok) nuevosErrores.diagnostico = comb.error;
+    return { nuevosErrores, todosTocados };
+  };
 
-    Object.keys(formulario).forEach((campo) => {
-      if (campo !== 'descripcion' && campo !== 'codigoClasificacion' && campo !== 'codigoAfiliacion') {
-        todosTocados[campo] = true;
-        const error = validarCampo(campo, formulario[campo]);
-        if (error) nuevosErrores[campo] = error;
-      }
-    });
+  const pasoPorErroresIncap = (errs) => {
+    const grupos = [
+      esEdicion ? ['documento', 'nombre', 'estadoIncapacidadUi'] : ['documento', 'nombre'],
+      ['tipoIncapacidad', 'fechaInicio', 'fechaFin'],
+      ['diagnostico'],
+    ];
+    for (let i = 0; i < grupos.length; i++) {
+      if (grupos[i].some((c) => errs[c])) return i;
+    }
+    return 3;
+  };
 
-    setCamposTocados(todosTocados);
+  const aplicarValidacionIncap = () => {
+    const { nuevosErrores, todosTocados } = calcularErroresIncapacidad();
+    setCamposTocados((prev) => ({ ...prev, ...todosTocados }));
     setErrores(nuevosErrores);
-    return Object.keys(nuevosErrores).length === 0;
+    return nuevosErrores;
   };
 
   const manejarGuardar = async (e) => {
     e.preventDefault();
     setErrorGeneral('');
-    if (!validarFormulario()) return;
+    const nuevosErrores = aplicarValidacionIncap();
+    if (Object.keys(nuevosErrores).length > 0) {
+      setPasoActual(pasoPorErroresIncap(nuevosErrores));
+      return;
+    }
 
-    const emp = empleadoPorDocumento(empleados, formulario.documento);
+    const emp = buscarEmpleadoPorDocumento(empleados, formulario.documento);
     const codEmp = emp ? codigoEmpleadoDesde(emp) : null;
     if (codEmp == null) {
       setErrorGeneral('No se encontró un empleado con ese documento. Verifique el número o sincronice empleados.');
       return;
     }
 
-    const payload = construirPayloadIncapacidad(formulario, codEmp);
+    let payload;
+    try {
+      payload = construirPayloadIncapacidad(formulario, codEmp);
+    } catch (err) {
+      setErrorGeneral(err instanceof Error ? err.message : String(err));
+      return;
+    }
+
     setEnviando(true);
     try {
       if (esEdicion && codEdicion != null) {
@@ -239,13 +391,6 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     return null;
   };
 
-  const opcionesTipoIncapacidad = [
-    'Enfermedad General',
-    'Accidente Laboral',
-    'Licencia Maternidad',
-    'Licencia Paternidad',
-  ];
-
   const secciones = [
     {
       numero: 1,
@@ -258,7 +403,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
           tipo: 'text',
           requerido: true,
           placeholder: 'Ej: 1128455781',
-          hint: 'Ingrese el documento de identidad del empleado.',
+          hint: 'Ingrese el documento de identidad del empleado. Se usará para enviar cod_empleado al API.',
           deshabilitado: esEdicion,
         },
         {
@@ -269,21 +414,19 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
           placeholder: 'Nombre completo del empleado',
           deshabilitado: true,
         },
-        {
-          nombre: 'codigoContrato',
-          etiqueta: 'Código Contrato',
-          tipo: 'text',
-          requerido: false,
-          placeholder: 'Opcional — referencia interna',
-        },
-        {
-          nombre: 'codigoAfiliacion',
-          etiqueta: 'Referencia / código interno',
-          tipo: 'text',
-          requerido: false,
-          deshabilitado: esEdicion,
-          hint: esEdicion ? 'Identificador del registro.' : 'Opcional: código de afiliación si aplica.',
-        },
+        ...(esEdicion
+          ? [
+              {
+                nombre: 'estadoIncapacidadUi',
+                etiqueta: 'Estado de la incapacidad',
+                tipo: 'select',
+                requerido: true,
+                selectSinVacio: true,
+                opciones: ETIQUETAS_ESTADO_EDICION_INCAPACIDAD,
+                hint: 'Solo Activa o Finalizada. Se guarda al actualizar.',
+              },
+            ]
+          : []),
       ],
     },
     {
@@ -297,7 +440,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
           tipo: 'select',
           requerido: true,
           placeholder: 'Seleccione el Tipo...',
-          opciones: opcionesTipoIncapacidad,
+          opciones: opcionesTipo,
         },
         {
           nombre: 'fechaInicio',
@@ -314,13 +457,21 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
           placeholder: 'dd/mm/aaaa',
         },
         {
+          nombre: 'fechaRadicacion',
+          etiqueta: 'Fecha de radicación',
+          tipo: 'date',
+          requerido: false,
+          placeholder: 'Opcional',
+          hint: 'Si no se envía, el servidor puede asignar la fecha actual.',
+        },
+        {
           nombre: 'diasCalculados',
           etiqueta: 'Días Calculados',
           tipo: 'readonly',
           calculado: true,
           valorPorDefecto: diasCalculados.toString(),
           sufijo: 'días',
-          hint: 'Se calculan Automáticamente',
+          hint: 'Se calculan automáticamente (inicio a fin, inclusive).',
         },
       ],
     },
@@ -336,13 +487,15 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
           requerido: true,
           placeholder: 'Describa el diagnóstico completo...',
           filas: 4,
+          hint: `Se envía como descripcion en la API (máx. ${DESCRIPCION_MAX} caracteres junto con notas).`,
         },
         {
-          nombre: 'codigoClasificacion',
-          etiqueta: 'Código clasificación Enfermedad',
-          tipo: 'text',
+          nombre: 'cod_clasificacion_enfermedad',
+          etiqueta: 'Clasificación enfermedad (CIE)',
+          tipo: 'select',
           requerido: false,
-          placeholder: 'Ej: J00, S82',
+          placeholder: 'Opcional — catálogo',
+          opciones: opcionesClasif,
         },
       ],
     },
@@ -361,87 +514,128 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
           </div>
         ) : null}
 
-        <FormularioSecciones
-          secciones={secciones}
-          valores={formulario}
-          errores={errores}
-          camposTocados={camposTocados}
-          onChange={manejarCambio}
-          onBlur={manejarBlur}
-          obtenerClaseCampo={obtenerClaseCampo}
-          mostrarMensaje={mostrarMensaje}
-        />
+        <FormularioPasos
+          pasos={[
+            { numero: 1, titulo: 'Identificación del Empleado', color: 'morado' },
+            { numero: 2, titulo: 'Información de la Incapacidad', color: 'naranja' },
+            { numero: 3, titulo: 'Diagnóstico médico', color: 'morado' },
+            { numero: 4, titulo: 'Notas y referencia de pagos', color: 'azul' },
+          ]}
+          pasoActual={pasoActual}
+          setPasoActual={setPasoActual}
+          onCancelar={cerrar}
+          enviando={enviando}
+          validarAntesDeSiguiente={validarAntesDeSiguiente}
+          textoGuardar={esEdicion ? 'Actualizar Incapacidad' : 'Registrar Incapacidad'}
+        >
+          {pasoActual === 0 ? (
+            <FormularioSecciones
+              ocultarEncabezadosSeccion
+              secciones={[secciones[0]]}
+              valores={formulario}
+              errores={errores}
+              camposTocados={camposTocados}
+              onChange={manejarCambio}
+              onBlur={manejarBlur}
+              obtenerClaseCampo={obtenerClaseCampo}
+              mostrarMensaje={mostrarMensaje}
+            />
+          ) : null}
+          {pasoActual === 1 ? (
+            <FormularioSecciones
+              ocultarEncabezadosSeccion
+              secciones={[secciones[1]]}
+              valores={formulario}
+              errores={errores}
+              camposTocados={camposTocados}
+              onChange={manejarCambio}
+              onBlur={manejarBlur}
+              obtenerClaseCampo={obtenerClaseCampo}
+              mostrarMensaje={mostrarMensaje}
+            />
+          ) : null}
+          {pasoActual === 2 ? (
+            <FormularioSecciones
+              ocultarEncabezadosSeccion
+              secciones={[secciones[2]]}
+              valores={formulario}
+              errores={errores}
+              camposTocados={camposTocados}
+              onChange={manejarCambio}
+              onBlur={manejarBlur}
+              obtenerClaseCampo={obtenerClaseCampo}
+              mostrarMensaje={mostrarMensaje}
+            />
+          ) : null}
+          {pasoActual === 3 ? (
+            <>
+              <div className="seccion-descripcion">
+                <div className="seccion-descripcion-header">
+                  <h3 className="seccion-descripcion-titulo">Descripción y Notas</h3>
+                </div>
+                <p className="seccion-descripcion-instruccion">
+                  Información adicional; se concatena con el diagnóstico en un solo campo descripcion (máx.{' '}
+                  {DESCRIPCION_MAX} caracteres en total).
+                </p>
+                <textarea
+                  name="descripcion"
+                  value={formulario.descripcion}
+                  onChange={manejarCambio}
+                  placeholder="Agregue alguna información adicional...."
+                  rows="4"
+                />
+              </div>
 
-        <div className="seccion-descripcion">
-          <div className="seccion-descripcion-header">
-            <h3 className="seccion-descripcion-titulo">Descripción y Notas</h3>
-          </div>
-          <p className="seccion-descripcion-instruccion">Información adicional que considere relevante.</p>
-          <textarea
-            name="descripcion"
-            value={formulario.descripcion}
-            onChange={manejarCambio}
-            placeholder="Agregue alguna información adicional...."
-            rows="4"
-          />
-        </div>
-
-        <div className="seccion-informacion">
-          <h4 className="seccion-informacion-titulo">Información sobre Pagos de Incapacidades</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginTop: '16px' }}>
-            <div>
-              <h5 style={{ color: '#10b981', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
-                Enfermedad General (Origen Común):
-              </h5>
-              <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
-                <li>Días 1-2: Empresa paga 100%</li>
-                <li>Días 3-90: EPS paga 66.67%</li>
-                <li>Días 91-180: EPS paga 50%</li>
-                <li>Más de 180 días: Evaluación de invalidez</li>
-              </ul>
-            </div>
-            <div>
-              <h5 style={{ color: '#ff6a3a', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
-                Accidente/Enfermedad Laboral:
-              </h5>
-              <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
-                <li>Todos los días: ARL paga 100%</li>
-                <li>Desde el día 1 hasta recuperación</li>
-                <li>Sin límite de días</li>
-              </ul>
-            </div>
-            <div>
-              <h5 style={{ color: '#ef4444', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
-                Licencia de Maternidad:
-              </h5>
-              <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
-                <li>18 semanas (126 días)</li>
-                <li>EPS paga 100%</li>
-              </ul>
-            </div>
-            <div>
-              <h5 style={{ color: '#3b82f6', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
-                Licencia de Paternidad:
-              </h5>
-              <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
-                <li>2 semanas (14 días)</li>
-                <li>EPS paga 100%</li>
-              </ul>
-            </div>
-          </div>
-          <p style={{ marginTop: '16px', fontSize: '13px', color: '#374151', fontWeight: 500 }}>
-            Los cálculos se realizan automáticamente según la normativa colombiana vigente
-          </p>
-        </div>
-
-        <div className="modal-acciones">
-          <button type="button" className="btn-cancelar" onClick={cerrar} disabled={enviando}>
-            Cancelar
-          </button>
-          <button type="submit" className="btn-guardar" disabled={enviando}>
-            {enviando ? 'Guardando…' : esEdicion ? 'Actualizar Incapacidad' : 'Registrar Incapacidad'}
-          </button>
-        </div>
+              <div className="seccion-informacion">
+                <h4 className="seccion-informacion-titulo">Información sobre Pagos de Incapacidades</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginTop: '16px' }}>
+                  <div>
+                    <h5 style={{ color: '#10b981', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
+                      Enfermedad General (Origen Común):
+                    </h5>
+                    <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
+                      <li>Días 1-2: Empresa paga 100%</li>
+                      <li>Días 3-90: EPS paga 66.67%</li>
+                      <li>Días 91-180: EPS paga 50%</li>
+                      <li>Más de 180 días: Evaluación de invalidez</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 style={{ color: '#ff6a3a', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
+                      Accidente/Enfermedad Laboral:
+                    </h5>
+                    <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
+                      <li>Todos los días: ARL paga 100%</li>
+                      <li>Desde el día 1 hasta recuperación</li>
+                      <li>Sin límite de días</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 style={{ color: '#ef4444', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
+                      Licencia de Maternidad:
+                    </h5>
+                    <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
+                      <li>18 semanas (126 días)</li>
+                      <li>EPS paga 100%</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 style={{ color: '#3b82f6', fontWeight: 700, marginBottom: '8px', fontSize: '14px' }}>
+                      Licencia de Paternidad:
+                    </h5>
+                    <ul className="seccion-informacion-lista" style={{ fontSize: '13px' }}>
+                      <li>2 semanas (14 días)</li>
+                      <li>EPS paga 100%</li>
+                    </ul>
+                  </div>
+                </div>
+                <p style={{ marginTop: '16px', fontSize: '13px', color: '#374151', fontWeight: 500 }}>
+                  Los cálculos se realizan automáticamente según la normativa colombiana vigente
+                </p>
+              </div>
+            </>
+          ) : null}
+        </FormularioPasos>
       </form>
     </Modal>
   );

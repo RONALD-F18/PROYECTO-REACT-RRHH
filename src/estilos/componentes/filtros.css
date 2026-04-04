@@ -1,4 +1,30 @@
 /* Bloque de filtros */
+.fila-filtros-checkbox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--gris-200, #e2e8f0);
+}
+
+.filtro-checkbox-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--texto-sm, 0.875rem);
+  color: var(--gris-700, #334155);
+  cursor: pointer;
+  user-select: none;
+}
+
+.filtro-checkbox-etiqueta input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-secundario-oscuro, #2563eb);
+}
+
 .bloque-filtros {
   background: var(--color-fondo-tarjeta);
   border-radius: var(--radio-xl);

@@ -8,9 +8,8 @@ services:
       - "5173:5173"
     environment:
       CHOKIDAR_USEPOLLING: "true"
-    # Garantiza axios en node_modules del volumen al arrancar (sincronía con package.json del host)
-    command: sh -c "npm install axios@^1.13.6 --no-audit --no-fund && exec npm run dev -- --host 0.0.0.0 --port 5173"
+    # npm ci alinea node_modules del volumen con package-lock (evita faltar recharts u otras deps nuevas)
+    command: sh -c "npm ci --no-audit --no-fund && exec npm run dev -- --host 0.0.0.0 --port 5173"
 
-//TODO: Cambiar los servicios por los módulos del sistema
 volumes:
   app_node_modules:

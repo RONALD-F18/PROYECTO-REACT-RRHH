@@ -4,6 +4,7 @@ import { ModalUsuario } from './componentes';
 import { getUsuarios, getUsuarioById, deleteUsuario, extraerFilasUsuarios } from '../../services/usuario';
 import { getRolesActivos } from '../../services/rol';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 
 function esRegistroUsuario(u) {
   return u != null && typeof u === 'object' && !Array.isArray(u);
@@ -195,19 +196,20 @@ function Usuarios() {
       setUsuarioEditar(json.data ?? fila);
       setMostrarModal(true);
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo abrir el usuario', e);
     }
   };
 
   const confirmarEliminar = async (fila) => {
     const cod = fila.cod_usuario;
     if (cod == null) return;
-    if (!window.confirm('¿Eliminar este usuario?')) return;
+    const ok = await confirmarEliminacion({ titulo: '¿Eliminar este usuario?' });
+    if (!ok) return;
     try {
       await deleteUsuario(cod);
       await recargarLista();
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo eliminar el usuario', e);
     }
   };
 

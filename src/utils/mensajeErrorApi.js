@@ -1,3 +1,36 @@
+function primerMensajeCampo(val) {
+  if (Array.isArray(val) && val.length > 0) return String(val[0]).trim();
+  if (typeof val === 'string') return val.trim();
+  return '';
+}
+
+/**
+ * Para 422 con `errors` de Laravel: mensajes por campo del perfil de usuario.
+ * @returns {null | { nombre: string, email: string, contrasena: string, confirmacion: string }}
+ */
+export function mapaErroresValidacionPerfilUsuario(error) {
+  if (error?.response?.status !== 422) return null;
+  const raw = error.response.data;
+  if (!raw || typeof raw !== 'object' || !raw.errors || typeof raw.errors !== 'object') return null;
+  const e = raw.errors;
+
+  const pick = (keys) => {
+    for (const k of keys) {
+      if (e[k] == null) continue;
+      const msg = primerMensajeCampo(e[k]);
+      if (msg) return msg;
+    }
+    return '';
+  };
+
+  return {
+    nombre: pick(['nombre_usuario', 'nombre']),
+    email: pick(['email_usuario', 'email']),
+    contrasena: pick(['contrasena_usuario', 'password']),
+    confirmacion: pick(['contrasena_usuario_confirmation']),
+  };
+}
+
 /** Une mensajes de validación Laravel */
 function unirErroresLaravel(errors) {
   if (!errors || typeof errors !== 'object') return '';
@@ -61,6 +94,60 @@ export function mensajeErrorApi(error) {
   }
 
   return textoPorCodigoHttp(status);
+}
+
+/** Texto bruto del cuerpo de error (para detectar SQL/FK). */
+function textoCrudoRespuestaError(error) {
+  if (!error?.response?.data) return String(error?.message ?? '').trim();
+  const raw = error.response.data;
+  if (typeof raw === 'string') return raw.trim();
+  if (raw && typeof raw === 'object') {
+    const m = raw.message ?? raw.error ?? raw.exception;
+    if (typeof m === 'string' && m.trim()) return m.trim();
+    try {
+      return JSON.stringify(raw);
+    } catch {
+      return '';
+    }
+  }
+  return '';
+}
+
+/**
+ * DELETE bloqueado por integridad referencial (MySQL 1451 / SQLSTATE 23000, etc.).
+ */
+export function esErrorViolacionFkEliminacion(error) {
+  const t = `${textoCrudoRespuestaError(error)} ${error?.message ?? ''}`.toLowerCase();
+  return (
+    t.includes('foreign key') ||
+    t.includes('integrity constraint') ||
+    t.includes('sqlstate[23000]') ||
+    t.includes('cannot delete or update a parent row') ||
+    t.includes('1451') ||
+    t.includes('a foreign key constraint fails')
+  );
+}
+
+/**
+ * Mensaje legible al fallar eliminar contrato o empleado (evita mostrar SQL crudo).
+ * @param {'contrato' | 'empleado'} tipo
+ */
+export function mensajeErrorEliminacion(error, tipo) {
+  const status = error?.response?.status;
+  if (status === 409 && tipo === 'empleado') {
+    return 'No se puede eliminar físicamente a este empleado: el servidor rechazó la operación (conflicto). La baja habitual es marcar el estado como «Retirado» (baja lógica) desde el detalle del empleado, no borrar el registro.';
+  }
+  if (esErrorViolacionFkEliminacion(error)) {
+    if (tipo === 'contrato') {
+      return 'No se puede eliminar este contrato porque hay registros que dependen de él (por ejemplo certificaciones, prestaciones u otros módulos). Elimina o desvincula primero esa información y vuelve a intentarlo.';
+    }
+    return 'No se puede eliminar este empleado porque tiene datos vinculados (contratos, certificaciones, novedades, etc.). Resuelve esas relaciones antes de borrar el registro.';
+  }
+  const base = mensajeErrorApi(error);
+  if (base.length > 320 && (base.includes('SQLSTATE') || base.includes('SQL:'))) {
+    return 'El servidor rechazó la eliminación. Suele deberse a datos relacionados en otros módulos. Revisa certificaciones, contratos y demás registros asociados, o consulta al administrador.';
+  }
+  return base;
 }
 
 function textoPorCodigoHttp(status) {

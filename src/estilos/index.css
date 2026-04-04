@@ -27,6 +27,7 @@
 @import './componentes/tabs.css';
 @import './componentes/sin-datos.css';
 @import './componentes/tarjeta-informacion.css';
+@import './componentes/sweetalert-overrides.css';
 
 /* Módulos */
 @import './modulos/autenticacion.css';
@@ -37,5 +38,7 @@
 @import './modulos/empleados.css';
 @import './modulos/contratos.css';
 @import './modulos/incapacidades.css';
+@import './modulos/inasistencias.css';
 @import './modulos/afiliaciones.css';
+@import './modulos/calendario-actividades.css';
 @import './modulos/comunicaciones-disciplinarias.css';

@@ -5,14 +5,13 @@ import { ModalContrato } from './componentes';
 import {
   getContratos,
   getContratoById,
-  deleteContrato,
   extraerFilasContratos,
   codigoContratoDesde,
-  patchContrato,
 } from '../../services/contratos';
 import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
 import { getCargos, extraerFilasCargos, nombreCargoDesde, codigoCargoDesde } from '../../services/cargos';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { alertaErrorApi } from '../../utils/alertasSwal';
 import { etiquetaEstadoContrato } from './contratoEnums';
 
 
@@ -37,6 +36,12 @@ function formatearSalarioCO(n) {
 
 function estadoContratoActivo(valor) {
   return String(valor || '').toUpperCase() === 'ACTIVO';
+}
+
+/** Para filtrar: INACTIVO (API legada) cuenta como FINALIZADO. */
+function estadoContratoNormalizadoFiltro(valor) {
+  const u = String(valor || '').toUpperCase();
+  return u === 'INACTIVO' ? 'FINALIZADO' : u;
 }
 
 function Contratos() {
@@ -107,27 +112,25 @@ function Contratos() {
       setMensajeLista('');
       setCargando(true);
       try {
-        const jsonCtr = await getContratos();
+        const [rCtr, rEmp, rCar] = await Promise.allSettled([getContratos(), getEmpleados(), getCargos()]);
         if (!activo) return;
-        setLista(extraerFilasContratos(jsonCtr));
+        const partes = [];
+        if (rCtr.status === 'fulfilled') setLista(extraerFilasContratos(rCtr.value));
+        else {
+          setLista([]);
+          partes.push(mensajeErrorApi(rCtr.reason));
+        }
+        if (rEmp.status === 'fulfilled') setEmpleados(extraerFilasEmpleados(rEmp.value));
+        else setEmpleados([]);
+        if (rCar.status === 'fulfilled') setCargos(extraerFilasCargos(rCar.value));
+        else setCargos([]);
+        if (partes.length) setMensajeLista(partes.join(' · '));
       } catch (e) {
         if (!activo) return;
         setLista([]);
         setMensajeLista(mensajeErrorApi(e));
       } finally {
         if (activo) setCargando(false);
-      }
-      try {
-        const jsonEmp = await getEmpleados();
-        if (activo) setEmpleados(extraerFilasEmpleados(jsonEmp));
-      } catch {
-        if (activo) setEmpleados([]);
-      }
-      try {
-        const jsonCar = await getCargos();
-        if (activo) setCargos(extraerFilasCargos(jsonCar));
-      } catch {
-        if (activo) setCargos([]);
       }
     })();
     return () => {
@@ -141,7 +144,7 @@ function Contratos() {
 
     return filasEnriquecidas.filter((row) => {
       if (!row || typeof row !== 'object') return false;
-      if (est && String(row.estado_contrato || '').toUpperCase() !== est) return false;
+      if (est && estadoContratoNormalizadoFiltro(row.estado_contrato) !== est) return false;
       if (q) {
         const nom = String(row._nombre_empleado || '').toLowerCase();
         const cod = String(row.cod_contrato ?? '');
@@ -152,6 +155,13 @@ function Contratos() {
       return true;
     });
   }, [filasEnriquecidas, criteriosFiltro, mapaEmpleados]);
+
+  const resumenContratos = useMemo(() => {
+    const total = filasFiltradas.length;
+    const activos = filasFiltradas.filter((x) => estadoContratoActivo(x.estado_contrato)).length;
+    const finalizados = total - activos;
+    return { total, activos, finalizados };
+  }, [filasFiltradas]);
 
   const abrirNuevo = () => {
     setContratoEditar(null);
@@ -166,39 +176,24 @@ function Contratos() {
       setContratoEditar(json?.data ?? json);
       setMostrarModal(true);
     } catch (err) {
-      window.alert(mensajeErrorApi(err));
+      void alertaErrorApi('No se pudo abrir el contrato', err);
     }
   };
 
   const confirmarEliminar = async (fila) => {
     const cod = codigoContratoDesde(fila);
     if (cod == null) return;
-    if (!window.confirm('¿Eliminar este contrato? Esta acción no se puede deshacer.')) return;
+    const ok = await confirmarEliminacion({
+      titulo: '¿Eliminar este contrato?',
+    });
+    if (!ok) return;
     try {
       await deleteContrato(cod);
       await recargarLista();
       setMensajeExito('Contrato eliminado correctamente.');
       window.setTimeout(() => setMensajeExito(''), 3000);
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
-    }
-  };
-
-  const finalizarContrato = async (fila) => {
-    const cod = codigoContratoDesde(fila);
-    if (cod == null) return;
-    if (!estadoContratoActivo(fila.estado_contrato)) {
-      window.alert('Este contrato ya está finalizado.');
-      return;
-    }
-    if (!window.confirm('¿Marcar este contrato como finalizado (inactivo)?')) return;
-    try {
-      await patchContrato(cod, { estado_contrato: 'INACTIVO' });
-      await recargarLista();
-      setMensajeExito('Contrato actualizado.');
-      window.setTimeout(() => setMensajeExito(''), 3000);
-    } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorEliminacion(e, 'contrato');
     }
   };
 
@@ -233,6 +228,21 @@ function Contratos() {
         ) : null}
         {cargando ? <p className="contrato-pagina-cargando">Cargando contratos…</p> : null}
 
+        <section className="contratos-kpis">
+          <article className="contrato-kpi contrato-kpi--total">
+            <span>Total</span>
+            <strong>{resumenContratos.total}</strong>
+          </article>
+          <article className="contrato-kpi contrato-kpi--activos">
+            <span>Activos</span>
+            <strong>{resumenContratos.activos}</strong>
+          </article>
+          <article className="contrato-kpi contrato-kpi--finalizados">
+            <span>Finalizados</span>
+            <strong>{resumenContratos.finalizados}</strong>
+          </article>
+        </section>
+
         <FiltrosBusqueda
           titulo="Contratos registrados"
           placeholderBusqueda="Buscar por empleado, documento o código…"
@@ -243,20 +253,21 @@ function Contratos() {
               placeholder: 'Todos los estados',
               opciones: [
                 { valor: 'ACTIVO', texto: 'Vigente' },
-                { valor: 'INACTIVO', texto: 'Finalizado' },
+                { valor: 'FINALIZADO', texto: 'Finalizado' },
               ],
             },
           ]}
-          onFiltrar={(filtros) =>
+          onFiltrar={(filtros) => {
             setCriteriosFiltro({
               busqueda: filtros.busqueda || '',
               estado: filtros.estado || '',
-            })
-          }
+            });
+          }}
         />
 
         <div className="contrato-tabla-wrap">
           <TablaDatos
+            accionesAlineacion="center"
             columnas={[
               { campo: 'cod_contrato', encabezado: 'Código' },
               {
@@ -294,29 +305,35 @@ function Contratos() {
             ]}
             datos={filasFiltradas}
             renderAcciones={(contrato) => (
-              <div className="tabla-acciones-contrato">
+              <>
                 <button
                   type="button"
-                  className="tabla-enlace-accion tabla-enlace-accion--ver"
+                  className="btn-accion-tabla btn-accion-ver"
+                  title="Ver detalle"
+                  aria-label="Ver detalle"
                   onClick={() => {
                     const c = codigoContratoDesde(contrato);
                     if (c != null) navegar(`/contratos/${c}`);
                   }}
                 >
-                  Ver
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
                 </button>
-                <button type="button" className="tabla-enlace-accion tabla-enlace-accion--editar" onClick={() => abrirEditar(contrato)}>
-                  Editar
+                <button
+                  type="button"
+                  className="btn-accion-tabla btn-accion-editar"
+                  title="Editar"
+                  aria-label="Editar contrato"
+                  onClick={() => abrirEditar(contrato)}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
                 </button>
-                {estadoContratoActivo(contrato.estado_contrato) ? (
-                  <button type="button" className="tabla-enlace-accion tabla-enlace-accion--finalizar" onClick={() => finalizarContrato(contrato)}>
-                    Finalizar
-                  </button>
-                ) : null}
-                <button type="button" className="tabla-enlace-accion tabla-enlace-accion--eliminar" onClick={() => confirmarEliminar(contrato)}>
-                  Eliminar
-                </button>
-              </div>
+              </>
             )}
           />
         </div>

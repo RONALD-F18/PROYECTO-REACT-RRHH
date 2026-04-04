@@ -37,6 +37,11 @@
   color: var(--gris-600);
 }
 
+.etiqueta-retirado {
+  background: #fef3c7;
+  color: #b45309;
+}
+
 /* Etiquetas de rol */
 .etiqueta-admin {
   background: #fef2f2;

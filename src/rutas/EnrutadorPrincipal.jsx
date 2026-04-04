@@ -10,14 +10,31 @@ import {
   PrestacionesSociales,
   DetallesPrestaciones,
   Incapacidades,
+  Inasistencias,
+  CalendarioActividades,
   DetallesIncapacidad,
   Afiliaciones,
   DetallesAfiliacion,
   Contratos,
   DetallesContrato,
+  Certificaciones,
+  DetalleCertificacion,
   ComunicacionesDisciplinarias,
+  Reportes,
 } from "../modulos";
-import { esAdminSesionLocal } from "../services/autenticacion";
+import { esAdminSesionLocal, haySesionLocalActiva } from "../services/autenticacion";
+
+/**
+ * Bloquea rutas privadas sin sesión en localStorage (lectura síncrona: no hay flash del módulo
+ * ni espera a un 401 del API).
+ */
+function RutaPrivada({ children }) {
+  "use no memo";
+  if (!haySesionLocalActiva()) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
 
 /**
  * La comprobación debe ocurrir al renderizar la ruta (no al armar el árbol de <Route>),
@@ -26,6 +43,9 @@ import { esAdminSesionLocal } from "../services/autenticacion";
  */
 function RutaUsuariosProtegida() {
   "use no memo";
+  if (!haySesionLocalActiva()) {
+    return <Navigate to="/login" replace />;
+  }
   if (!esAdminSesionLocal()) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -46,14 +66,19 @@ export const rutasPrivadas = [
   { ruta: "/empleados/:id", componente: DetallesEmpleado },
   { ruta: "/contratos", componente: Contratos },
   { ruta: "/contratos/:id", componente: DetallesContrato },
+  { ruta: "/certificaciones", componente: Certificaciones },
+  { ruta: "/certificaciones/:id", componente: DetalleCertificacion },
   { ruta: "/usuarios", componente: Usuarios },
   { ruta: "/prestaciones", componente: PrestacionesSociales },
   { ruta: "/prestaciones/:id", componente: DetallesPrestaciones },
   { ruta: "/incapacidades", componente: Incapacidades },
+  { ruta: "/inasistencias", componente: Inasistencias },
+  { ruta: "/actividades", componente: CalendarioActividades },
   { ruta: "/incapacidades/:id", componente: DetallesIncapacidad },
   { ruta: "/afiliaciones", componente: Afiliaciones },
   { ruta: "/afiliaciones/:id", componente: DetallesAfiliacion },
   { ruta: "/comunicaciones-disciplinarias", componente: ComunicacionesDisciplinarias },
+  { ruta: "/reportes", componente: Reportes },
 ];
 
 function EnrutadorPrincipal() {
@@ -66,9 +91,25 @@ function EnrutadorPrincipal() {
         ruta === "/usuarios" ? (
           <Route key={ruta} path={ruta} element={<RutaUsuariosProtegida />} />
         ) : (
-          <Route key={ruta} path={ruta} element={<Componente />} />
+          <Route
+            key={ruta}
+            path={ruta}
+            element={
+              <RutaPrivada>
+                <Componente />
+              </RutaPrivada>
+            }
+          />
         ),
       )}
+      <Route
+        path="/calendario"
+        element={
+          <RutaPrivada>
+            <Navigate to="/actividades" replace />
+          </RutaPrivada>
+        }
+      />
     </Routes>
   );
 }

@@ -12,7 +12,13 @@ import {
 } from '../../services/afiliaciones';
 import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
-import { etiquetaEstadoAfiliacion, estadoAfiliacionDesdeEtiquetaUi, tipoRegimenFormDesdeApi } from '../../utils/afiliacionEstado';
+import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
+import {
+  ETIQUETAS_ESTADO_AFILIACION,
+  etiquetaEstadoAfiliacion,
+  estadoAfiliacionDesdeEtiquetaUi,
+  tipoRegimenFormDesdeApi,
+} from '../../utils/afiliacionEstado';
 import '../../estilos/modulos/afiliaciones.css';
 
 function formatearSoloFecha(valor) {
@@ -44,8 +50,6 @@ function mapaPorCod(lista, clave) {
   }
   return m;
 }
-
-const ESTADOS_UI = ['Activa', 'Aprobada', 'Pendiente', 'En Proceso', 'Rechazada'];
 
 function DetallesAfiliacion() {
   const { id } = useParams();
@@ -88,10 +92,12 @@ function DetallesAfiliacion() {
     let a = true;
     (async () => {
       try {
-        const [je, cat] = await Promise.all([getEmpleados(), obtenerCatalogosAfiliacion()]);
+        const [se, sc] = await Promise.allSettled([getEmpleados(), obtenerCatalogosAfiliacion()]);
         if (!a) return;
-        setEmpleados(extraerFilasEmpleados(je));
-        setCatalogos(cat);
+        if (se.status === 'fulfilled') setEmpleados(extraerFilasEmpleados(se.value));
+        else setEmpleados([]);
+        if (sc.status === 'fulfilled') setCatalogos(sc.value);
+        else setCatalogos(null);
       } catch {
         if (a) {
           setEmpleados([]);
@@ -173,7 +179,7 @@ function DetallesAfiliacion() {
       await patchAfiliacion(cod, { estado_afiliacion: estadoBd });
       setRegistro((prev) => (prev ? { ...prev, estado_afiliacion: estadoBd } : prev));
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo actualizar el estado', e);
     } finally {
       setActualizandoEstado(false);
     }
@@ -182,12 +188,13 @@ function DetallesAfiliacion() {
   const manejarEliminar = async () => {
     const cod = registro ? codigoAfiliacionDesde(registro) : null;
     if (cod == null) return;
-    if (!window.confirm('¿Eliminar esta afiliación?')) return;
+    const ok = await confirmarEliminacion({ titulo: '¿Eliminar esta afiliación?' });
+    if (!ok) return;
     try {
       await deleteAfiliacion(cod);
       navegar('/afiliaciones');
     } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo eliminar la afiliación', e);
     }
   };
 
@@ -258,8 +265,9 @@ function DetallesAfiliacion() {
           </div>
           <div className="detalle-afiliacion-estado">
             {(() => {
-              const estadoVal = vista.estadoUi && vista.estadoUi !== '—' ? vista.estadoUi : 'Aprobada';
-              const opciones = ESTADOS_UI.includes(estadoVal) ? ESTADOS_UI : [...ESTADOS_UI, estadoVal];
+              const estadoVal = ETIQUETAS_ESTADO_AFILIACION.includes(vista.estadoUi)
+                ? vista.estadoUi
+                : ETIQUETAS_ESTADO_AFILIACION[0];
               return (
                 <select
                   value={estadoVal}
@@ -268,7 +276,7 @@ function DetallesAfiliacion() {
                   disabled={actualizandoEstado}
                   aria-busy={actualizandoEstado}
                 >
-                  {opciones.map((est) => (
+                  {ETIQUETAS_ESTADO_AFILIACION.map((est) => (
                     <option key={est} value={est}>
                       {est}
                     </option>

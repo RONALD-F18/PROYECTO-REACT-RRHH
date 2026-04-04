@@ -46,7 +46,56 @@
 
 .tabla-acciones {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   gap: 8px;
+  align-items: center;
+}
+
+/* Especificidad: supera .tabla-datos th { text-align: left } */
+.tabla-datos th.tabla-th-acciones-derecha {
+  text-align: right;
+}
+
+.tabla-datos td.tabla-td-acciones-derecha {
+  text-align: right;
+  vertical-align: middle;
+  white-space: nowrap;
+  min-width: 8.5rem;
+}
+
+.tabla-datos th.tabla-th-acciones-centro {
+  text-align: center;
+}
+
+.tabla-datos td.tabla-td-acciones-centro {
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  min-width: 8.5rem;
+}
+
+.tabla-acciones--fin {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 10px 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.tabla-acciones--centro {
+  justify-content: center;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Cuando solo se usa el modificador (sin .tabla-acciones padre), forzar fila horizontal */
+.tabla-acciones--centro:not(.tabla-acciones) {
+  display: flex;
 }
 
 .btn-accion-tabla {

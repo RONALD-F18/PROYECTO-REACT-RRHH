@@ -84,17 +84,29 @@
   color: #fff;
 }
 
+.btn-danger {
+  background: var(--color-error);
+  color: #fff;
+  border: none;
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
 /* Botones de acceso rápido (Dashboard) */
 .btn-accion-rapida {
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
   padding: 24px 16px;
   border-radius: var(--radio-lg);
   font-size: var(--texto-sm);
   font-weight: 600;
   text-decoration: none;
   transition: all var(--transicion-normal);
+  min-height: 4.5rem;
 }
 
 .btn-accion-rapida:hover {

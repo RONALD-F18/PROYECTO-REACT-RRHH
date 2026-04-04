@@ -1,6 +1,12 @@
 import api from './api';
+import { crearPeticionCompartida } from '../utils/peticionCompartida';
 
 const RUTA = '/comunicaciones_disciplinarias';
+
+const ejecutarGetComunicacionesLista = crearPeticionCompartida(async () => {
+  const { data } = await api.get(RUTA);
+  return data;
+});
 
 export function extraerFilasComunicaciones(cuerpo) {
   if (!cuerpo) return [];
@@ -32,8 +38,7 @@ export function codigoDisciplinarioDesde(registro) {
 }
 
 export async function getComunicacionesDisciplinarias() {
-  const { data } = await api.get(RUTA);
-  return data;
+  return ejecutarGetComunicacionesLista();
 }
 
 export async function getComunicacionDisciplinariaById(cod) {

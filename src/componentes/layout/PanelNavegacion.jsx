@@ -1,13 +1,26 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useMenu } from '../../contextos/MenuContext';
-import { useState, useEffect } from 'react';
-import { cerrarSesion, esAdminSesionLocal } from '../../services/autenticacion';
+import { useState, useEffect, useMemo } from 'react';
+import { cerrarSesion, esAdminSesionLocal, usuarioSesionLocal } from '../../services/autenticacion';
+import ModalMiPerfil from './ModalMiPerfil';
+
+function inicialesNombre(nombre) {
+  const s = String(nombre || '').trim();
+  if (!s) return '?';
+  return s.charAt(0).toUpperCase();
+}
 
 function PanelNavegacion() {
   const ubicacion = useLocation();
   const navegar = useNavigate();
   const { menuAbierto, cerrarMenu } = useMenu();
   const [esMobile, setEsMobile] = useState(window.innerWidth <= 900);
+  const [perfilAbierto, setPerfilAbierto] = useState(false);
+  const [tickSesion, setTickSesion] = useState(0);
+  const sesion = useMemo(() => usuarioSesionLocal(), [tickSesion]);
+  const nombreMostrar = sesion?.nombre?.trim() || 'Usuario';
+  const correoMostrar = sesion?.email?.trim() || '—';
+  const avatarLetra = inicialesNombre(nombreMostrar);
 
   useEffect(() => {
     const manejarResize = () => {
@@ -26,20 +39,29 @@ function PanelNavegacion() {
     { ruta: '/prestaciones', etiqueta: 'Prestaciones Sociales', descripcion: 'Prestaciones y beneficios' },
     { ruta: '/afiliaciones', etiqueta: 'Afiliaciones', descripcion: 'Seguridad social' },
     { ruta: '/contratos', etiqueta: 'Contratos', descripcion: 'Gestión de contratos' },
-    { ruta: '/certificacion', etiqueta: 'Certificación', descripcion: 'Certificados laborales' },
+    { ruta: '/certificaciones', etiqueta: 'Certificaciones', descripcion: 'Certificados laborales y afiliaciones' },
     {
       ruta: '/comunicaciones-disciplinarias',
       etiqueta: 'Comunicaciones Disciplinarias',
       descripcion: 'Memorandos y reconocimientos',
     },
     { ruta: '/inasistencias', etiqueta: 'Inasistencias', descripcion: 'Control de asistencia' },
-    { ruta: '/actividades', etiqueta: 'Actividades', descripcion: 'Actividades y eventos' },
+    {
+      ruta: '/actividades',
+      etiqueta: 'Calendario de Actividades',
+      descripcion: 'Tareas, reuniones y recordatorios',
+    },
     { ruta: '/reportes', etiqueta: 'Reportes', descripcion: 'Reportes y estadísticas' },
   ];
   const esAdmin = esAdminSesionLocal();
   const modulosVisibles = modulos.filter((item) => item.ruta !== '/usuarios' || esAdmin);
 
-  const estaActivo = (ruta) => ubicacion.pathname === ruta;
+  const estaActivo = (ruta) => {
+    if (ruta === '/actividades') {
+      return ubicacion.pathname === '/actividades' || ubicacion.pathname === '/calendario';
+    }
+    return ubicacion.pathname === ruta;
+  };
 
   const manejarClick = () => {
     cerrarMenu();
@@ -91,22 +113,36 @@ function PanelNavegacion() {
 
         <div className="panel-navegacion-footer">
           <div className="panel-navegacion-usuario">
-            <div className="panel-navegacion-avatar">A</div>
-            <div className="panel-navegacion-datos">
-              <span className="panel-navegacion-nombre">Admin</span>
-              <span className="panel-navegacion-correo">admin@talentsphere.com</span>
-            </div>
             <button
               type="button"
-              className="panel-navegacion-cerrar-sesion"
+              className="panel-navegacion-perfil-principal"
+              onClick={() => setPerfilAbierto(true)}
+              aria-label="Abrir mi perfil"
+            >
+              <span className="panel-navegacion-avatar">{avatarLetra}</span>
+              <span className="panel-navegacion-datos">
+                <span className="panel-navegacion-nombre">{nombreMostrar}</span>
+                <span className="panel-navegacion-correo">{correoMostrar}</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="panel-navegacion-boton-perfil panel-navegacion-boton-cerrar-sesion"
               onClick={manejarCerrarSesion}
               title="Cerrar sesión"
+              aria-label="Cerrar sesión"
             >
-              <span className="panel-navegacion-cerrar-sesion-icono">→</span>
+              <span className="panel-navegacion-boton-perfil-icono">→</span>
             </button>
           </div>
         </div>
       </aside>
+
+      <ModalMiPerfil
+        mostrar={perfilAbierto}
+        cerrar={() => setPerfilAbierto(false)}
+        alGuardar={() => setTickSesion((t) => t + 1)}
+      />
     </>
   );
 }

@@ -5,7 +5,6 @@ import { ModalEmpleado } from './componentes';
 import {
   getEmpleados,
   getEmpleadoById,
-  deleteEmpleado,
   extraerFilasEmpleados,
   nombreCompletoEmpleado,
   normalizarRegistroEmpleado,
@@ -13,9 +12,13 @@ import {
 } from '../../services/empleados';
 import { getBancos, extraerFilasBancos } from '../../services/bancos';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { alertaErrorApi } from '../../utils/alertasSwal';
 
-function estadoEmpActivo(valor) {
-  return String(valor || '').toUpperCase() === 'ACTIVO';
+function estadoEmpLista(valor) {
+  const u = String(valor || '').toUpperCase();
+  if (u === 'ACTIVO') return { texto: 'Activo', cls: 'activo' };
+  if (u === 'RETIRADO' || u === 'INACTIVO') return { texto: 'Retirado', cls: 'retirado' };
+  return { texto: valor ? String(valor) : '—', cls: 'inactivo' };
 }
 
 /** fecha_nac del API (YYYY-MM-DD) → dd/mm/yyyy sin cambiar zona horaria */
@@ -62,21 +65,21 @@ function Empleados() {
       setMensajeLista('');
       setCargando(true);
       try {
-        const jsonEmp = await getEmpleados();
+        const [rEmp, rBan] = await Promise.allSettled([getEmpleados(), getBancos()]);
         if (!activo) return;
-        setLista(extraerFilasEmpleados(jsonEmp));
+        if (rEmp.status === 'fulfilled') setLista(extraerFilasEmpleados(rEmp.value));
+        else {
+          setLista([]);
+          setMensajeLista(mensajeErrorApi(rEmp.reason));
+        }
+        if (rBan.status === 'fulfilled') setBancos(extraerFilasBancos(rBan.value));
+        else setBancos([]);
       } catch (e) {
         if (!activo) return;
         setLista([]);
         setMensajeLista(mensajeErrorApi(e));
       } finally {
         if (activo) setCargando(false);
-      }
-      try {
-        const jsonBan = await getBancos();
-        if (activo) setBancos(extraerFilasBancos(jsonBan));
-      } catch {
-        if (activo) setBancos([]);
       }
     })();
     return () => {
@@ -90,7 +93,10 @@ function Empleados() {
 
     return lista.filter((e) => {
       if (!e || typeof e !== 'object') return false;
-      if (est && String(e.estado_emp || '').toUpperCase() !== est) return false;
+      const u = String(e.estado_emp || '').toUpperCase();
+      if (est === 'RETIRADO' && u !== 'RETIRADO' && u !== 'INACTIVO') return false;
+      if (est === 'ACTIVO' && u !== 'ACTIVO') return false;
+      if (est && est !== 'ACTIVO' && est !== 'RETIRADO' && u !== est) return false;
       if (q) {
         const nombre = nombreCompletoEmpleado(e).toLowerCase();
         const doc = String(e.doc_iden ?? '').toLowerCase();
@@ -114,21 +120,7 @@ function Empleados() {
       setEmpleadoEditar(emp && typeof emp === 'object' ? emp : fila);
       setMostrarModal(true);
     } catch (err) {
-      window.alert(mensajeErrorApi(err));
-    }
-  };
-
-  const confirmarEliminar = async (fila) => {
-    const cod = codigoEmpleadoDesde(fila);
-    if (cod == null) return;
-    if (!window.confirm('¿Eliminar este empleado?')) return;
-    try {
-      await deleteEmpleado(cod);
-      await recargarLista();
-      setMensajeExito('Empleado eliminado correctamente.');
-      window.setTimeout(() => setMensajeExito(''), 3000);
-    } catch (e) {
-      window.alert(mensajeErrorApi(e));
+      void alertaErrorApi('No se pudo abrir el empleado', err);
     }
   };
 
@@ -175,16 +167,16 @@ function Empleados() {
               placeholder: 'Todos los estados',
               opciones: [
                 { valor: 'ACTIVO', texto: 'Activo' },
-                { valor: 'INACTIVO', texto: 'Inactivo' },
+                { valor: 'RETIRADO', texto: 'Retirado' },
               ],
             },
           ]}
-          onFiltrar={(filtros) =>
+          onFiltrar={(filtros) => {
             setCriteriosFiltro({
               busqueda: filtros.busqueda || '',
               estado: filtros.estado || '',
-            })
-          }
+            });
+          }}
         />
 
         <div style={{ marginTop: '20px' }}>
@@ -211,14 +203,8 @@ function Empleados() {
                 campo: 'estado_emp',
                 encabezado: 'Estado',
                 renderizar: (v) => {
-                  const activo = estadoEmpActivo(v);
-                  const u = String(v || '').toUpperCase();
-                  const texto = activo ? 'Activo' : u === 'INACTIVO' ? 'Inactivo' : v ? String(v) : '—';
-                  return (
-                    <span className={`etiqueta etiqueta-${activo ? 'activo' : 'inactivo'}`}>
-                      {texto}
-                    </span>
-                  );
+                  const { texto, cls } = estadoEmpLista(v);
+                  return <span className={`etiqueta etiqueta-${cls}`}>{texto}</span>;
                 },
               },
             ]}
@@ -243,14 +229,6 @@ function Empleados() {
                   }}
                 >
                   👁
-                </button>
-                <button
-                  type="button"
-                  className="btn-accion-tabla btn-accion-eliminar"
-                  title="Eliminar"
-                  onClick={() => confirmarEliminar(empleado)}
-                >
-                  🗑
                 </button>
               </>
             )}

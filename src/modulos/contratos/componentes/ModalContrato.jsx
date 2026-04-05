@@ -151,6 +151,16 @@ const CAMPOS_POR_PASO_CONTRATO = [
   ['descripcion'],
 ];
 
+function mensajePrimeroDesdeErrorApi(val) {
+  if (val == null) return '';
+  if (Array.isArray(val)) {
+    const s = val.find((m) => m != null && String(m).trim() !== '');
+    return s != null ? String(s) : '';
+  }
+  if (typeof val === 'string') return val.trim();
+  return String(val);
+}
+
 function campoTieneErrorApiContrato(campo, erroresApi) {
   const x = erroresApi?.[campo];
   if (x == null) return false;
@@ -282,7 +292,8 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
       ? ''
       : new Intl.NumberFormat('es-CO').format(Number(formulario.salario_base));
 
-  const mensajeCampo = (campo) => errores[campo] || (erroresApi[campo] && erroresApi[campo][0]);
+  const mensajeCampo = (campo) =>
+    errores[campo] || (erroresApi[campo] != null ? mensajePrimeroDesdeErrorApi(erroresApi[campo]) : '');
 
   const validarAntesDeSiguiente = (idx) => {
     const camposPorPaso = [
@@ -496,6 +507,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
                   name="estado_contrato"
                   value={formulario.estado_contrato}
                   onChange={manejarCambio}
+                  className={mensajeCampo('estado_contrato') ? 'campo-error' : ''}
                 >
                   {ESTADO_CONTRATO.map((o) => (
                     <option key={o.valor} value={o.valor}>
@@ -503,6 +515,9 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
                     </option>
                   ))}
                 </select>
+                {mensajeCampo('estado_contrato') ? (
+                  <span className="mensaje-error">{mensajeCampo('estado_contrato')}</span>
+                ) : null}
               </div>
             ) : null}
           </div>

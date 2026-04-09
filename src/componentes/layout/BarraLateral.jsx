@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useChatAsistente } from '../../contextos/ChatAsistenteContext';
+import IconoBuho from '../comunes/IconoBuho';
 import { cerrarSesion, esAdminSesionLocal, usuarioSesionLocal } from '../../services/autenticacion';
 import ModalMiPerfil from './ModalMiPerfil';
 
@@ -13,6 +15,7 @@ function inicialesNombre(nombre) {
 }
 
 function BarraLateral({ menuAbierto = false, cerrarMenu }) {
+  const chatAsistente = useChatAsistente();
   const ubicacion = useLocation();
   const navegar = useNavigate();
   const [perfilAbierto, setPerfilAbierto] = useState(false);
@@ -62,7 +65,19 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
     <aside className={`barra-lateral ${menuAbierto ? 'abierta' : ''}`}>
       <div className="barra-lateral-encabezado">
         <div className="barra-lateral-marca">
-          <div className="barra-lateral-icono"></div>
+          {chatAsistente ? (
+            <button
+              type="button"
+              className="barra-lateral-buho-btn"
+              onClick={chatAsistente.abrir}
+              aria-label="Abrir asistente de RRHH"
+              title="Asistente Talent Sphere"
+            >
+              <IconoBuho className="chat-asistente-buho--sidebar" title="" />
+            </button>
+          ) : (
+            <div className="barra-lateral-icono" aria-hidden />
+          )}
           <div className="barra-lateral-texto">
             <span className="barra-lateral-titulo">Talent Sphere</span>
             <span className="barra-lateral-subtitulo">Gestión de RRHH</span>

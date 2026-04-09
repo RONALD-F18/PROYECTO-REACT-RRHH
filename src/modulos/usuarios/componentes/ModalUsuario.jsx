@@ -261,7 +261,7 @@ function ModalUsuario({
         {rolesError ? (
           <div className="usuario-modal-alerta usuario-modal-alerta--advertencia" role="status">
             <strong>No se cargaron los roles</strong>
-            <p>Revisa sesión y el endpoint de roles en el servidor.</p>
+            <p>No se pudieron cargar los roles. Cierre sesión e intente de nuevo o consulte al administrador.</p>
           </div>
         ) : null}
 
@@ -272,7 +272,7 @@ function ModalUsuario({
         {!rolesCargando && !rolesError && rolesLista.length === 0 ? (
           <div className="usuario-modal-alerta usuario-modal-alerta--info" role="status">
             <strong>No hay roles</strong>
-            <p>Crea roles activos en el backend.</p>
+            <p>No hay roles disponibles. El administrador debe crear o activar roles en el sistema.</p>
           </div>
         ) : null}
 

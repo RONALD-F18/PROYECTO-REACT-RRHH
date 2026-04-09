@@ -13,7 +13,44 @@ import {
   estadoAfiliacionDesdeEtiquetaUi,
   ETIQUETAS_ESTADO_AFILIACION,
 } from '../../../utils/afiliacionEstado';
+import {
+  EDAD_MINIMA_LABORAL_COLOMBIA,
+  addYearsCalendar,
+  parseFechaSoloDia,
+} from '../../../utils/validacionEmpleadoFormulario';
+import { mergeCatalogoPorClave } from '../../../utils/mergeCatalogos';
+import { RIESGOS_LABORALES_SUPLEMENTO } from '../../../data/catalogosColombiaSuplemento';
 import '../../../estilos/componentes/formulario-secciones.css';
+
+/**
+ * Misma regla que contratos: ninguna fecha laboral antes del nacimiento ni antes de la edad mínima laboral.
+ */
+function validarFechaAfiliacionLaboral(fechaStr, empleado) {
+  const fecha = parseFechaSoloDia(fechaStr);
+  const fechaNac = parseFechaSoloDia(empleado?.fecha_nac);
+  if (!fecha || !fechaNac) return null;
+  if (fecha < fechaNac) {
+    return 'La fecha de afiliación no puede ser anterior a la fecha de nacimiento.';
+  }
+  const minLegal = addYearsCalendar(fechaNac, EDAD_MINIMA_LABORAL_COLOMBIA);
+  if (minLegal && fecha < minLegal) {
+    return `La fecha de afiliación debe ser igual o posterior a cumplir ${EDAD_MINIMA_LABORAL_COLOMBIA} años.`;
+  }
+  return null;
+}
+
+function validarFechaAfiliacionCampo(valor, empleado) {
+  if (!valor) return 'La fecha de afiliación es requerida';
+  return validarFechaAfiliacionLaboral(valor, empleado);
+}
+
+const CAMPOS_FECHA_AFILIACION = [
+  'fechaAfiliacionEPS',
+  'fechaAfiliacionPensiones',
+  'fechaAfiliacionCesantias',
+  'fechaAfiliacionARL',
+  'fechaAfiliacionCaja',
+];
 
 function estadoVacio(codigoAuto) {
   return {
@@ -118,14 +155,13 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
       })),
     [catalogos],
   );
-  const opcionesRiesgo = useMemo(
-    () =>
-      (catalogos?.riesgos ?? []).map((r) => ({
-        valor: String(r.cod_riesgo),
-        texto: r.nombre_riesgo ?? `Riesgo ${r.cod_riesgo}`,
-      })),
-    [catalogos],
-  );
+  const opcionesRiesgo = useMemo(() => {
+    const merged = mergeCatalogoPorClave(catalogos?.riesgos ?? [], RIESGOS_LABORALES_SUPLEMENTO, 'cod_riesgo');
+    return merged.map((r) => ({
+      valor: String(r.cod_riesgo),
+      texto: r.nombre_riesgo ?? `Riesgo ${r.cod_riesgo}`,
+    }));
+  }, [catalogos]);
   const opcionesARL = useMemo(
     () =>
       (catalogos?.arls ?? []).map((a) => ({
@@ -179,6 +215,12 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
 
   const opcionesTipoAfiliacion = ['Contributivo', 'Subsidiado'];
 
+  const empleadoRelacionado = useMemo(() => {
+    if (!formulario.cod_empleado) return null;
+    const cod = String(formulario.cod_empleado).trim();
+    return empleados.find((e) => String(codigoEmpleadoDesde(e) ?? '').trim() === cod) ?? null;
+  }, [empleados, formulario.cod_empleado]);
+
   const validarCampo = (nombre, valor) => {
     switch (nombre) {
       case 'documento':
@@ -199,8 +241,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
       case 'fechaAfiliacionCesantias':
       case 'fechaAfiliacionARL':
       case 'fechaAfiliacionCaja':
-        if (!valor) return 'La fecha de afiliación es requerida';
-        return null;
+        return validarFechaAfiliacionCampo(valor, empleadoRelacionado);
       case 'estadoAfiliacionUi':
         if (!esEdicion) return null;
         if (!valor) return 'Seleccione el estado';
@@ -237,27 +278,55 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
       setErrores(nuevosErrores);
       return Object.keys(nuevosErrores).length === 0;
     },
-    [formulario, esEdicion],
+    [formulario, esEdicion, empleadoRelacionado],
   );
 
   const manejarCambio = (e) => {
     const { name, value } = e.target;
+    const esFechaAfiliacion = CAMPOS_FECHA_AFILIACION.includes(name);
+    const esDocumento = name === 'documento';
+
     if (name === 'estadoAfiliacionUi') {
       setEstadoBdEdicion(estadoAfiliacionDesdeEtiquetaUi(value));
     }
+
+    let empDocumentoAct = null;
+    if (esDocumento && !esEdicion) {
+      empDocumentoAct = empleadoPorDocumento(empleados, value);
+    }
+
     setFormulario((prev) => {
       const next = { ...prev, [name]: value };
-      if (name === 'documento' && !esEdicion) {
-        const emp = empleadoPorDocumento(empleados, value);
+      if (esDocumento && !esEdicion) {
+        const emp = empDocumentoAct;
         if (emp) {
           next.nombre = nombreCompletoEmpleado(emp);
           next.cod_empleado = String(codigoEmpleadoDesde(emp) ?? '');
+        } else {
+          next.nombre = '';
+          next.cod_empleado = '';
         }
       }
       return next;
     });
-    if (camposTocados[name]) {
+
+    if (esDocumento && !esEdicion) {
+      setErrores((prev) => {
+        const next = { ...prev };
+        for (const fk of CAMPOS_FECHA_AFILIACION) {
+          if (camposTocados[fk]) {
+            next[fk] = validarFechaAfiliacionCampo(formulario[fk], empDocumentoAct);
+          }
+        }
+        return next;
+      });
+    }
+
+    if (camposTocados[name] || esFechaAfiliacion || esDocumento) {
       setErrores((prev) => ({ ...prev, [name]: validarCampo(name, value) }));
+      if (esFechaAfiliacion || esDocumento) {
+        setCamposTocados((p) => ({ ...p, [name]: true }));
+      }
     }
   };
 
@@ -395,7 +464,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
           tipo: 'text',
           requerido: false,
           deshabilitado: true,
-          hint: 'Generado en pantalla; el identificador en API es numérico.',
+          hint: 'Referencia visible en pantalla; el identificador interno del sistema es numérico.',
         },
         ...(esEdicion
           ? [
@@ -568,6 +637,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
               camposTocados={camposTocados}
               onChange={manejarCambio}
               onBlur={manejarBlur}
+              onKeyUp={manejarBlur}
               obtenerClaseCampo={obtenerClaseCampo}
               mostrarMensaje={mostrarMensaje}
             />
@@ -579,7 +649,8 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
                   <h3 className="seccion-descripcion-titulo">Descripción y Notas</h3>
                 </div>
                 <p className="seccion-descripcion-instruccion">
-                  Obligatoria en API (máx. 200 caracteres). Si la deja vacía, se envía un texto por defecto.
+                  Obligatoria al guardar (máx. 200 caracteres). Si la deja vacía, el sistema puede usar un texto
+                  predeterminado.
                 </p>
                 <textarea
                   name="descripcion"
@@ -596,7 +667,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
                 <ul className="seccion-informacion-lista">
                   <li>Verifique que todos los datos estén correctos antes de registrar.</li>
                   <li>Los campos marcados con * son obligatorios.</li>
-                  <li>Clase de riesgo corresponde al catálogo de riesgos laborales del API.</li>
+                  <li>La clase de riesgo debe elegirse según el catálogo de riesgos laborales del sistema.</li>
                 </ul>
               </div>
             </>

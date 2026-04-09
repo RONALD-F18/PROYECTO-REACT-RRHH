@@ -1,6 +1,7 @@
 import api from './api';
 import { nombreCompletoEmpleado } from './empleados';
 import { nombreCargoDesde } from './cargos';
+import { mensajeErrorApi } from '../utils/mensajeErrorApi';
 
 function extraerData(cuerpo) {
   if (!cuerpo || typeof cuerpo !== 'object') return null;
@@ -119,6 +120,18 @@ export async function getContratoPrestaciones(codContrato) {
 export async function postCalcularPrestacionesContrato(codContrato) {
   const { data } = await api.post(`/contratos/${codContrato}/calcular-prestaciones`, {});
   return data;
+}
+
+/**
+ * Mensaje de error para pantallas de prestaciones: reutiliza mensajeErrorApi y, en 422 sin detalle claro,
+ * añade orientación sobre parametrización legal (salario mínimo / auxilio por año) para el usuario.
+ */
+export function mensajeErrorPrestacionesSociales(error) {
+  const msg = mensajeErrorApi(error);
+  if (error?.response?.status !== 422) return msg;
+  const textoYaDiceParam = /par[aá]metro|parametro|laboral|smmlv|auxilio|año/i.test(msg);
+  if (textoYaDiceParam) return msg;
+  return `${msg} Si falta el salario mínimo legal o el valor del auxilio de transporte de algún año en la parametrización, pídale al administrador que los registre. Esta pantalla solo muestra el resultado del cálculo del sistema.`;
 }
 
 export async function postGestionarPrestacionSocial({ cod_prestacion_social_periodo, estado_pago }) {

@@ -11,12 +11,19 @@ import {
 import { nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../../services/empleados';
 import { nombreCargoDesde, codigoCargoDesde } from '../../../services/cargos';
 import {
+  EDAD_MINIMA_LABORAL_COLOMBIA,
+  addYearsCalendar,
+  parseFechaSoloDia,
+} from '../../../utils/validacionEmpleadoFormulario';
+import {
   TIPO_CONTRATO_OPCIONES,
   FORMA_DE_PAGO_OPCIONES,
   MODALIDAD_TRABAJO_OPCIONES,
   HORARIO_TRABAJO_OPCIONES,
   ESTADO_CONTRATO,
 } from '../contratoEnums';
+import { mergeCatalogoPorClave } from '../../../utils/mergeCatalogos';
+import { CARGOS_REFERENCIA_SUPLEMENTO } from '../../../data/catalogosColombiaSuplemento';
 
 import '../../../estilos/componentes/formulario-secciones.css';
 
@@ -120,7 +127,7 @@ function construirPayloadApi(formulario) {
   };
 }
 
-function validar(formulario, esEdicion) {
+function validar(formulario, esEdicion, empleadoRelacionado = null) {
   const e = {};
   if (!esEdicion) {
     const doc = String(formulario.doc_iden ?? '').trim();
@@ -132,6 +139,20 @@ function validar(formulario, esEdicion) {
   if (!formulario.tipo_contrato.trim()) e.tipo_contrato = 'Seleccione o indique el tipo de contrato.';
   if (!formulario.forma_de_pago.trim()) e.forma_de_pago = 'Indique la forma de pago.';
   if (!formulario.fecha_ingreso) e.fecha_ingreso = 'La fecha de ingreso es obligatoria.';
+  if (formulario.fecha_ingreso) {
+    const fechaIngreso = parseFechaSoloDia(formulario.fecha_ingreso);
+    const fechaNac = parseFechaSoloDia(empleadoRelacionado?.fecha_nac);
+    if (fechaIngreso && fechaNac) {
+      if (fechaIngreso < fechaNac) {
+        e.fecha_ingreso = 'La fecha de ingreso no puede ser anterior a la fecha de nacimiento.';
+      } else {
+        const minIngresoLegal = addYearsCalendar(fechaNac, EDAD_MINIMA_LABORAL_COLOMBIA);
+        if (minIngresoLegal && fechaIngreso < minIngresoLegal) {
+          e.fecha_ingreso = `La fecha de ingreso debe ser igual o posterior a cumplir ${EDAD_MINIMA_LABORAL_COLOMBIA} años.`;
+        }
+      }
+    }
+  }
   if (!formulario.cod_cargo) e.cod_cargo = 'Seleccione el cargo.';
   if (!formulario.modalidad_trabajo.trim()) e.modalidad_trabajo = 'Indique la modalidad.';
   if (!formulario.horario_trabajo.trim()) e.horario_trabajo = 'Indique el horario de trabajo.';
@@ -150,6 +171,16 @@ const CAMPOS_POR_PASO_CONTRATO = [
   ['salario_base', 'cod_cargo', 'modalidad_trabajo', 'horario_trabajo'],
   ['descripcion'],
 ];
+
+function mensajePrimeroDesdeErrorApi(val) {
+  if (val == null) return '';
+  if (Array.isArray(val)) {
+    const s = val.find((m) => m != null && String(m).trim() !== '');
+    return s != null ? String(s) : '';
+  }
+  if (typeof val === 'string') return val.trim();
+  return String(val);
+}
 
 function campoTieneErrorApiContrato(campo, erroresApi) {
   const x = erroresApi?.[campo];
@@ -177,6 +208,13 @@ function empleadoPorDocumento(empleados, doc) {
   return empleados.find((x) => String(x.doc_iden ?? '').trim() === t) ?? null;
 }
 
+function empleadoDesdeContratoEdicion(datosContrato) {
+  const r = normalizarRegistroContrato(datosContrato) ?? datosContrato;
+  if (!r || typeof r !== 'object') return null;
+  if (r.empleado && typeof r.empleado === 'object' && !Array.isArray(r.empleado)) return r.empleado;
+  return null;
+}
+
 function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alExito }) {
   const esEdicion = datosContrato != null && codigoContratoDesde(datosContrato) != null;
   const codEdicion = esEdicion ? codigoContratoDesde(datosContrato) : null;
@@ -189,9 +227,14 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
   const [enviando, setEnviando] = useState(false);
   const [pasoActual, setPasoActual] = useState(0);
 
+  const cargosConReferencia = useMemo(
+    () => mergeCatalogoPorClave(Array.isArray(cargos) ? cargos : [], CARGOS_REFERENCIA_SUPLEMENTO, 'cod_cargo'),
+    [cargos],
+  );
+
   const cargosOpciones = [
     ...((formulario._cargosExtra && Array.isArray(formulario._cargosExtra) ? formulario._cargosExtra : []) || []),
-    ...cargos,
+    ...cargosConReferencia,
   ];
   const cargosUnicos = [];
   const vistos = new Set();
@@ -206,7 +249,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
   const sincronizarDesdeProps = useCallback(() => {
     if (!mostrar) return;
     if (esEdicion && datosContrato) {
-      const f = contratoApiAFormulario(datosContrato, cargos);
+      const f = contratoApiAFormulario(datosContrato, cargosConReferencia);
       const { _cargosExtra, ...rest } = f;
       setFormulario({ ...rest, _cargosExtra });
       const payload = construirPayloadApi(rest);
@@ -219,7 +262,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
     setErroresApi({});
     setErrorGeneral('');
     setPasoActual(0);
-  }, [mostrar, esEdicion, datosContrato, cargos]);
+  }, [mostrar, esEdicion, datosContrato, cargosConReferencia]);
 
   useEffect(() => {
     sincronizarDesdeProps();
@@ -255,18 +298,39 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
     return o;
   }, [formulario.modalidad_trabajo]);
 
+  const empleadoRelacionado = esEdicion
+    ? empleadoDesdeContratoEdicion(datosContrato)
+    : empleadoPorDocumento(empleados, formulario.doc_iden);
+
   const nombreEmpleadoMostrar = esEdicion
     ? nombreCompletoEmpleado(
         normalizarRegistroContrato(datosContrato)?.empleado ?? datosContrato?.empleado ?? {},
       )
-    : nombreCompletoEmpleado(empleadoPorDocumento(empleados, formulario.doc_iden) ?? {});
+    : nombreCompletoEmpleado(empleadoRelacionado ?? {});
 
   const manejarCambio = (ev) => {
     const { name, value, type, checked } = ev.target;
-    setFormulario((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    setFormulario((prev) => {
+      const next = {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value,
+      };
+
+      // Validación inmediata de fechas (incluye reglas legales de edad mínima).
+      if (name === 'fecha_ingreso' || name === 'fecha_fin') {
+        const v = validar(next, esEdicion, empleadoRelacionado);
+        setErrores((prevErr) => {
+          const nextErr = { ...prevErr };
+          if (v.fecha_ingreso) nextErr.fecha_ingreso = v.fecha_ingreso;
+          else delete nextErr.fecha_ingreso;
+          if (v.fecha_fin) nextErr.fecha_fin = v.fecha_fin;
+          else delete nextErr.fecha_fin;
+          return nextErr;
+        });
+      }
+
+      return next;
+    });
   };
 
   const manejarSalario = (ev) => {
@@ -282,7 +346,8 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
       ? ''
       : new Intl.NumberFormat('es-CO').format(Number(formulario.salario_base));
 
-  const mensajeCampo = (campo) => errores[campo] || (erroresApi[campo] && erroresApi[campo][0]);
+  const mensajeCampo = (campo) =>
+    errores[campo] || (erroresApi[campo] != null ? mensajePrimeroDesdeErrorApi(erroresApi[campo]) : '');
 
   const validarAntesDeSiguiente = (idx) => {
     const camposPorPaso = [
@@ -291,7 +356,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
     ];
 
     const campos = camposPorPaso[idx] ?? [];
-    const v = validar(formulario, esEdicion);
+    const v = validar(formulario, esEdicion, empleadoRelacionado);
 
     const subset = {};
     for (const c of campos) {
@@ -305,7 +370,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
     ev.preventDefault();
     setErrorGeneral('');
     setErroresApi({});
-    const v = validar(formulario, esEdicion);
+    const v = validar(formulario, esEdicion, empleadoRelacionado);
     setErrores(v);
     if (Object.keys(v).length > 0) {
       setPasoActual(primerPasoConErroresContrato(v, {}));
@@ -496,6 +561,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
                   name="estado_contrato"
                   value={formulario.estado_contrato}
                   onChange={manejarCambio}
+                  className={mensajeCampo('estado_contrato') ? 'campo-error' : ''}
                 >
                   {ESTADO_CONTRATO.map((o) => (
                     <option key={o.valor} value={o.valor}>
@@ -503,6 +569,9 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
                     </option>
                   ))}
                 </select>
+                {mensajeCampo('estado_contrato') ? (
+                  <span className="mensaje-error">{mensajeCampo('estado_contrato')}</span>
+                ) : null}
               </div>
             ) : null}
           </div>

@@ -1,8 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ContenedorPrincipal, EncabezadoModulo, Modal, SinDatos } from '../../componentes';
-import { generateGeneralReport } from '../../services/api/reportesApi';
+import {
+  crearRegistroReporte,
+  eliminarRegistroReporte,
+  extraerRegistrosReportes,
+  generateGeneralReport,
+  listarRegistrosReportes,
+} from '../../services/api/reportesApi';
 import { confirmarAccion } from '../../utils/alertasSwal';
+import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import '../../estilos/modulos/reportes.css';
+
+/** Alineado con ReporteRequest: tipo requerido, hoy siempre resumen por módulo. */
+const TIPO_REPORTE_RESUMEN = 'resumen_general';
 
 const MODULOS = [
   { value: 'empleados', label: 'Empleados', descripcion: 'Estados y encargados' },
@@ -17,32 +27,18 @@ const MODULOS = [
 function estadoLabel(status) {
   if (status === 401) return 'Sesion expirada. Inicia sesion de nuevo.';
   if (status === 403) return 'No tienes permisos para generar reportes.';
-  if (status === 500) return 'Error del servidor al generar el reporte.';
+  if (status === 500) return 'No se pudo generar el reporte. Intente más tarde o consulte al administrador.';
   return '';
 }
-
-const HISTORIAL_KEY = 'reportes_historial_sesion_v2';
 
 function moduloData(value) {
   return MODULOS.find((m) => m.value === value) || MODULOS[0];
 }
 
-function historialInicial() {
-  try {
-    const raw = sessionStorage.getItem(HISTORIAL_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function persistirHistorial(items) {
-  try {
-    sessionStorage.setItem(HISTORIAL_KEY, JSON.stringify(items.slice(0, 30)));
-  } catch {
-    // ignore
-  }
+function etiquetaModuloReporte(value) {
+  const v = String(value || '').toLowerCase();
+  const m = MODULOS.find((x) => x.value === v);
+  return m ? m.label : String(value || '—');
 }
 
 function fechaHoraCorta(iso) {
@@ -99,10 +95,40 @@ function Reportes() {
   const [exito, setExito] = useState('');
   const [cargando, setCargando] = useState(false);
   const [cargandoRegistroId, setCargandoRegistroId] = useState('');
-  const [filtroRegistro, setFiltroRegistro] = useState({ modulo: '', fecha: '' });
-  const [historial, setHistorial] = useState(() => historialInicial());
+  const [filtroRegistro, setFiltroRegistro] = useState({
+    modulo: '',
+    fechaDesde: '',
+    fechaHasta: '',
+  });
+  const [historial, setHistorial] = useState([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState(true);
+  const [errorHistorial, setErrorHistorial] = useState('');
 
   const moduloOptions = useMemo(() => MODULOS, []);
+
+  const cargarHistorial = useCallback(async () => {
+    setErrorHistorial('');
+    setCargandoHistorial(true);
+    try {
+      const res = await listarRegistrosReportes();
+      setHistorial(extraerRegistrosReportes(res));
+    } catch (e) {
+      setHistorial([]);
+      if (e?.response?.status === 404) {
+        setErrorHistorial(
+          'El servidor no tiene la ruta de historial. En Laravel agrega GET /api/v1/reportes/registros (mismo grupo auth que reportes/generar).',
+        );
+      } else {
+        setErrorHistorial(mensajeErrorApi(e));
+      }
+    } finally {
+      setCargandoHistorial(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void cargarHistorial();
+  }, [cargarHistorial]);
 
   const kpis = useMemo(() => {
     const total = historial.length;
@@ -139,8 +165,8 @@ function Reportes() {
   const construirPayload = () => {
     const texto = String(descripcion || '').trim();
     return texto
-      ? { modulo: moduloSeleccionado, tipo: 'general', params: { descripcion: texto } }
-      : { modulo: moduloSeleccionado, tipo: 'general', params: {} };
+      ? { modulo: moduloSeleccionado, tipo: TIPO_REPORTE_RESUMEN, params: { descripcion: texto } }
+      : { modulo: moduloSeleccionado, tipo: TIPO_REPORTE_RESUMEN, params: {} };
   };
 
   const abrirBlob = (blob, filename) => {
@@ -168,45 +194,62 @@ function Reportes() {
     setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
   };
 
-  const guardarEvento = (estado) => {
-    const item = {
-      id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-      fecha: new Date().toISOString(),
-      modulo: moduloSeleccionado,
-      tipo: 'general',
-      estado,
-      descripcion: String(descripcion || '').trim(),
-    };
-    setHistorial((prev) => {
-      const next = [item, ...prev].slice(0, 30);
-      persistirHistorial(next);
-      return next;
-    });
+  const registrarEventoServidor = async (estado) => {
+    const texto = String(descripcion || '').trim();
+    try {
+      setErrorHistorial('');
+      await crearRegistroReporte({
+        modulo: moduloSeleccionado,
+        tipo: TIPO_REPORTE_RESUMEN,
+        estado,
+        ...(texto ? { descripcion: texto } : {}),
+      });
+      await cargarHistorial();
+    } catch (e) {
+      if (e?.response?.status === 404) {
+        setErrorHistorial(
+          'No se guardó la fila en el historial: falta POST /api/v1/reportes/registros en el backend.',
+        );
+      } else {
+        setErrorHistorial(
+          `${mensajeErrorApi(e)} El PDF puede haberse generado; revisa si el registro aparece al recargar.`,
+        );
+      }
+    }
   };
 
   const eliminarEventoHistorial = async (id) => {
     const ok = await confirmarAccion({
       titulo: 'Eliminar registro',
-      texto: 'Se eliminará este registro del historial local.',
+      texto: 'Se eliminará este registro del sistema. Los demás usuarios dejarán de verlo en la tabla.',
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar',
     });
     if (!ok) return;
-    setHistorial((prev) => {
-      const next = prev.filter((x) => x.id !== id);
-      persistirHistorial(next);
-      return next;
-    });
+    setErrorHistorial('');
+    try {
+      await eliminarRegistroReporte(id);
+      await cargarHistorial();
+    } catch (e) {
+      if (e?.response?.status === 404) {
+        setErrorHistorial(
+          'No se pudo eliminar: falta DELETE /api/v1/reportes/registros/{id} en el backend.',
+        );
+      } else {
+        setErrorHistorial(mensajeErrorApi(e));
+      }
+    }
   };
 
   const redescargarPdfRegistro = async (item) => {
     setErrorGlobal('');
+    setErrorHistorial('');
     setExito('');
     setCargandoRegistroId(item.id);
     try {
       const payload = item.descripcion
-        ? { modulo: item.modulo, tipo: 'general', params: { descripcion: item.descripcion } }
-        : { modulo: item.modulo, tipo: 'general', params: {} };
+        ? { modulo: item.modulo, tipo: TIPO_REPORTE_RESUMEN, params: { descripcion: item.descripcion } }
+        : { modulo: item.modulo, tipo: TIPO_REPORTE_RESUMEN, params: {} };
       const { blob, filename } = await generateGeneralReport(payload);
       descargarBlob(blob, filename);
       setExito(`PDF descargado de nuevo para ${moduloData(item.modulo).label}.`);
@@ -241,6 +284,7 @@ function Reportes() {
     const nextErrores = validar();
     setErrores(nextErrores);
     setErrorGlobal('');
+    setErrorHistorial('');
     setExito('');
     if (Object.keys(nextErrores).length) return;
 
@@ -250,7 +294,7 @@ function Reportes() {
       const { blob, filename } = await generateGeneralReport(payload);
       abrirBlob(blob, filename);
       setExito(`Reporte generado correctamente para ${moduloData(payload.modulo).label}.`);
-      guardarEvento('Generado');
+      await registrarEventoServidor('Generado');
       setPasoModal(0);
     } catch (error) {
       const status = error?.response?.status;
@@ -265,7 +309,7 @@ function Reportes() {
           error?.message ||
           'No se pudo generar el reporte.',
       );
-      guardarEvento(`Error ${status || ''}`.trim());
+      await registrarEventoServidor(`Error ${status || ''}`.trim());
     } finally {
       setCargando(false);
     }
@@ -284,6 +328,7 @@ function Reportes() {
         />
 
         {errorGlobal ? <div className="reportes-alerta reportes-alerta--error">{errorGlobal}</div> : null}
+        {errorHistorial ? <div className="reportes-alerta reportes-alerta--error">{errorHistorial}</div> : null}
         {exito ? <div className="reportes-alerta reportes-alerta--ok">{exito}</div> : null}
 
         <section className="reportes-kpis">
@@ -341,19 +386,28 @@ function Reportes() {
 
         <section className="reportes-card">
           <h3>Registro</h3>
-          {historialFiltrado.length === 0 ? (
-            <SinDatos mensaje="Sin reportes generados en esta sesion." />
+          {cargandoHistorial ? (
+            <p className="reportes-note">Cargando…</p>
+          ) : historialFiltrado.length === 0 ? (
+            <SinDatos
+              mensaje={
+                historial.length > 0 ? 'Ningún resultado con estos filtros.' : 'Sin registros aún.'
+              }
+            />
           ) : (
             <div className="reportes-historial">
               {historialFiltrado.map((item) => (
                 <article key={item.id} className="reportes-item">
                   <div className="reportes-item-main">
-                    <strong>{moduloData(item.modulo).label}</strong>
+                    <strong>{etiquetaModuloReporte(item.modulo)}</strong>
                     <small>{fechaHoraCorta(item.fecha)}</small>
+                    {item.generadoPor ? (
+                      <small className="reportes-item-autor">Por {item.generadoPor}</small>
+                    ) : null}
                   </div>
                   <div className="reportes-item-meta">
                     <span className={`reportes-pill ${item.estado === 'Generado' ? 'ok' : 'err'}`}>{item.estado}</span>
-                    <span className="reportes-pill muted">General</span>
+                    <span className="reportes-pill muted">Resumen general</span>
                     <div className="reportes-registro-acciones">
                       <button
                         type="button"

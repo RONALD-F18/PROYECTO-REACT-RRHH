@@ -6,9 +6,11 @@ import {
   buildAttendanceCalendar,
   CALENDAR_STATUS,
   ESTADO_UI,
+  filtrarInasistencias,
   formatearFechaCorta,
   inicialesEmpleado,
   limpiarMotivoPersistido,
+  listaSoloNovedadesRegistrables,
   nombreCompleto,
   obtenerCodigoEmpleado,
   estadoUiDesdeMotivo,
@@ -51,14 +53,42 @@ function Inasistencias() {
   const [fechaPreseleccionada, setFechaPreseleccionada] = useState('');
   const [selectorMesAnioAbierto, setSelectorMesAnioAbierto] = useState(false);
 
-  const empleadosFiltrados = useMemo(() => {
+  /** Registros que cumplen mes / año / tipo del filtro (sin restringir por empleado). Sin filas "Presente" redundantes. */
+  const inasistenciasCriterioGlobal = useMemo(
+    () =>
+      filtrarInasistencias(listaSoloNovedadesRegistrables(inasistenciasTodas), {
+        ...filtros,
+        codEmpleado: '',
+      }),
+    [inasistenciasTodas, filtros.mes, filtros.anio, filtros.tipo],
+  );
+
+  const conteoInasistenciasPorEmpleado = useMemo(() => {
+    const m = new Map();
+    for (const row of inasistenciasCriterioGlobal) {
+      const c = String(row.cod_empleado ?? '');
+      if (!c) continue;
+      m.set(c, (m.get(c) || 0) + 1);
+    }
+    return m;
+  }, [inasistenciasCriterioGlobal]);
+
+  /** Solo empleados con al menos un registro que coincide con el filtro; búsqueda por nombre, documento o código. */
+  const empleadosListaIzquierda = useMemo(() => {
     const q = busquedaEmpleado.toLowerCase().trim();
-    if (!q) return empleados;
     return empleados.filter((e) => {
+      const cod = String(obtenerCodigoEmpleado(e) ?? '');
+      const n = conteoInasistenciasPorEmpleado.get(cod) || 0;
+      if (n === 0) return false;
+      if (!q) return true;
       const nombre = nombreCompleto(e).toLowerCase();
-      return nombre.includes(q) || String(e.doc_iden || '').toLowerCase().includes(q);
+      return (
+        nombre.includes(q) ||
+        String(e.doc_iden || '').toLowerCase().includes(q) ||
+        cod.toLowerCase().includes(q)
+      );
     });
-  }, [empleados, busquedaEmpleado]);
+  }, [empleados, conteoInasistenciasPorEmpleado, busquedaEmpleado]);
 
   const empleadoSeleccionado = useMemo(
     () => empleados.find((e) => String(obtenerCodigoEmpleado(e)) === String(filtros.codEmpleado)) || null,
@@ -161,6 +191,22 @@ function Inasistencias() {
     setFiltrosDraft(filtros);
   }, [filtros]);
 
+  useEffect(() => {
+    if (filtros.tipo !== ESTADO_UI.PRESENTE && filtrosDraft.tipo !== ESTADO_UI.PRESENTE) return;
+    setFiltros((p) => (p.tipo === ESTADO_UI.PRESENTE ? { ...p, tipo: '' } : p));
+    setFiltrosDraft((p) => (p.tipo === ESTADO_UI.PRESENTE ? { ...p, tipo: '' } : p));
+  }, [filtros.tipo, filtrosDraft.tipo]);
+
+  useEffect(() => {
+    if (!filtros.codEmpleado) return;
+    const cod = String(filtros.codEmpleado);
+    const visible = empleadosListaIzquierda.some((e) => String(obtenerCodigoEmpleado(e)) === cod);
+    if (!visible) {
+      setFiltros((p) => ({ ...p, codEmpleado: '' }));
+      setFiltrosDraft((p) => ({ ...p, codEmpleado: '' }));
+    }
+  }, [empleadosListaIzquierda, filtros.codEmpleado]);
+
   const handleDelete = async (item) => {
     const ok = await confirmarAccion({
       titulo: 'Eliminar inasistencia',
@@ -186,7 +232,7 @@ function Inasistencias() {
       <div className="inasistencias-modulo">
         <EncabezadoModulo
           titulo="Inasistencias"
-          subtitulo="Control de asistencia del personal"
+          subtitulo="Registra solo novedades; sin registro en un día = asistencia desde la fecha de ingreso"
           textoBoton="Nueva Inasistencia"
           alHacerClic={() => {
             setRegistroEditar(null);
@@ -235,7 +281,6 @@ function Inasistencias() {
               <option value="">Todos los tipos</option>
               <option value={ESTADO_UI.AUSENTE}>Ausente</option>
               <option value={ESTADO_UI.TARDE}>Tardanza</option>
-              <option value={ESTADO_UI.PRESENTE}>Presente</option>
               <option value={ESTADO_UI.LIBRE}>Libre</option>
             </select>
             <select
@@ -290,7 +335,10 @@ function Inasistencias() {
           <aside className="inasistencias-empleados">
             <div className="inasistencias-empleados-header">
               <h3>Empleados</h3>
-              <span>{empleados.length} total</span>
+              <span>
+                {empleadosListaIzquierda.length} con registros
+                {busquedaEmpleado.trim() ? ' (búsqueda)' : ''}
+              </span>
             </div>
             <input
               type="search"
@@ -299,10 +347,13 @@ function Inasistencias() {
               onChange={(e) => setBusquedaEmpleado(e.target.value)}
             />
             <div className="inasistencias-empleados-lista">
-              {empleadosFiltrados.map((emp) => {
+              {empleadosListaIzquierda.length === 0 ? (
+                <p className="inasistencias-empleados-vacio">Ningún empleado coincide con el filtro actual.</p>
+              ) : null}
+              {empleadosListaIzquierda.map((emp) => {
                 const cod = obtenerCodigoEmpleado(emp);
                 const activo = String(cod) === String(filtros.codEmpleado);
-                const totalEmp = inasistenciasTodas.filter((x) => String(x.cod_empleado) === String(cod)).length;
+                const totalEmp = conteoInasistenciasPorEmpleado.get(String(cod)) ?? 0;
                 return (
                   <button
                     key={String(cod)}
@@ -455,7 +506,6 @@ function Inasistencias() {
                         const statusDia = info?.status || '';
                         const coincideTipo =
                           !filtros.tipo ||
-                          (filtros.tipo === ESTADO_UI.PRESENTE && codigo === 'P') ||
                           (filtros.tipo === ESTADO_UI.AUSENTE && codigo === 'A') ||
                           (filtros.tipo === ESTADO_UI.TARDE && codigo === 'L') ||
                           (filtros.tipo === ESTADO_UI.LIBRE && codigo === 'Wo');
@@ -515,13 +565,9 @@ function Inasistencias() {
                       >
                         <span className="leg-dot leg-dot-all" /> Todos
                       </button>
-                      <button
-                        type="button"
-                        className={`leg-item leg-item-button ${filtros.tipo === ESTADO_UI.PRESENTE ? 'activo' : ''}`}
-                        onClick={() => setFiltros((p) => ({ ...p, tipo: ESTADO_UI.PRESENTE }))}
-                      >
-                        <span className="leg-dot leg-dot-p" /> Presente(P)
-                      </button>
+                      <span className="leg-item leg-item-info" title="Sin fila de novedad en la base de datos">
+                        <span className="leg-dot leg-dot-p" /> P asistió (sin novedad)
+                      </span>
                       <button
                         type="button"
                         className={`leg-item leg-item-button ${filtros.tipo === ESTADO_UI.AUSENTE ? 'activo' : ''}`}
@@ -548,7 +594,7 @@ function Inasistencias() {
                     <div className="summary-grid">
                       <div className="sum-card sum-p">
                         <div className="sn">{calendarioAsistencia.totals.presentes}</div>
-                        <div className="sl">Presentes</div>
+                        <div className="sl">Sin novedad (P)</div>
                       </div>
                       <div className="sum-card sum-a">
                         <div className="sn">{calendarioAsistencia.totals.inasistencias}</div>

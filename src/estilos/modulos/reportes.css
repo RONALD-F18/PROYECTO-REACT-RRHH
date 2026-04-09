@@ -181,6 +181,12 @@
   font-size: 11px;
 }
 
+.reportes-item-autor {
+  display: block;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
 .reportes-item-meta {
   display: flex;
   align-items: center;

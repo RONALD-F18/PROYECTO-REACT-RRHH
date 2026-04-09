@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
 import { alertaErrorApi, confirmarEliminacion } from '../../../utils/alertasSwal';
+import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 import {
   getComunicacionDisciplinariaById,
   patchComunicacionDisciplinaria,
@@ -43,12 +44,6 @@ function docEmpleadoDesdeRegistro(r) {
   const emp = r?.empleado && typeof r.empleado === 'object' ? r.empleado : null;
   if (emp?.doc_iden) return String(emp.doc_iden);
   return r?._docEmpleado ?? '—';
-}
-
-function nombreEmisorDesdeRegistro(r) {
-  const u = r?.usuario && typeof r.usuario === 'object' ? r.usuario : null;
-  if (u) return String(u.nombre_usuario ?? u.nombre ?? '—');
-  return r?._nombreEmisor ?? '—';
 }
 
 function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizado, onEditar, onEliminado }) {
@@ -94,6 +89,7 @@ function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizad
   }, [mostrar, cod, cargar]);
 
   const r = detalle;
+
   const radicado = r ? radicadoDesdeCod(codigoDisciplinarioDesde(r)) : '';
   const tipoTxt = r ? etiquetaTipo(r.tipo_comunicacion) : '';
   const estadoApi = r ? canonicalEstadoApi(r.estado_comunicacion) : 'EMITIDO';
@@ -217,19 +213,6 @@ function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizad
                   El trabajador tiene derecho a presentar descargos o defensas dentro de los cinco (5) días hábiles
                   siguientes a la notificación, conforme al Código Sustantivo del Trabajo.
                 </p>
-              </div>
-
-              <div className="disc-paper-firmas">
-                <div>
-                  <div className="disc-paper-firma-linea" />
-                  <p className="disc-paper-firma-nombre">{nombreEmisorDesdeRegistro(r)}</p>
-                  <span className="disc-paper-firma-rol">Quien emite · Firma y sello</span>
-                </div>
-                <div>
-                  <div className="disc-paper-firma-linea" />
-                  <p className="disc-paper-firma-nombre">{nombreEmpleadoDesdeRegistro(r)}</p>
-                  <span className="disc-paper-firma-rol">Empleado · Firma de recibido</span>
-                </div>
               </div>
 
               <footer className="disc-paper-footer">

@@ -40,17 +40,17 @@ function unirErroresLaravel(errors) {
     .join(' ');
 }
 
-/** Texto legible desde error de Axios (Laravel, red, CORS, HTML, etc.) */
+/** Texto legible desde error de red o respuesta HTTP (para mostrar al usuario final). */
 export function mensajeErrorApi(error) {
   if (!error.response) {
     const codigo = error.code;
     if (codigo === 'ERR_NETWORK' || error.message === 'Network Error') {
-      return 'No hay conexión con el servidor. Comprueba que Laravel esté en marcha, la variable VITE_API_URL en .env y que CORS permita tu origen con credenciales.';
+      return 'No hay conexión. Compruebe su internet o la red de la empresa e intente de nuevo. Si el problema continúa, consulte al administrador del sistema.';
     }
     if (codigo === 'ECONNABORTED' || codigo === 'ETIMEDOUT') {
-      return 'La petición tardó demasiado (tiempo agotado). Revisa que Laravel responda, que VITE_API_URL termine en /api/v1 y CORS permita credenciales. Si el back es lento (Docker, muchos datos), sube VITE_API_TIMEOUT_MS en .env (p. ej. 180000 o 300000). En desarrollo puedes usar VITE_API_URL=/api/v1 con el proxy de Vite para evitar CORS.';
+      return 'La operación tardó demasiado y se canceló. Intente de nuevo en unos minutos. Si se repite, consulte al administrador del sistema.';
     }
-    return error.message?.trim() || 'No se pudo conectar con el servidor.';
+    return error.message?.trim() || 'No se pudo completar la conexión. Intente de nuevo o consulte al administrador del sistema.';
   }
 
   const status = error.response.status;
@@ -62,7 +62,7 @@ export function mensajeErrorApi(error) {
       return textoPorCodigoHttp(status);
     }
     if (t.startsWith('<!') || t.includes('<!DOCTYPE') || t.includes('<html')) {
-      return `El servidor devolvió una página HTML (${status}), no JSON. Suele indicar URL incorrecta: revisa VITE_API_URL (debe terminar en /api/v1) y la ruta POST /login.`;
+      return 'La respuesta no es la esperada. Compruebe la dirección del sistema o consulte al administrador.';
     }
     return t.length > 320 ? `${t.slice(0, 320)}…` : t;
   }
@@ -76,7 +76,7 @@ export function mensajeErrorApi(error) {
         m.includes('not authenticated') ||
         m.includes('debe autenticarse')
       ) {
-        return 'Tu sesión expiró o el servidor no recibió la autenticación (cookie o token). Cierra sesión e inicia de nuevo.';
+        return 'Su sesión expiró o no se pudo verificar su identidad. Cierre sesión e inicie de nuevo.';
       }
     }
     const candidato = raw.message ?? raw.error ?? raw.mensaje;
@@ -135,7 +135,7 @@ export function esErrorViolacionFkEliminacion(error) {
 export function mensajeErrorEliminacion(error, tipo) {
   const status = error?.response?.status;
   if (status === 409 && tipo === 'empleado') {
-    return 'No se puede eliminar físicamente a este empleado: el servidor rechazó la operación (conflicto). La baja habitual es marcar el estado como «Retirado» (baja lógica) desde el detalle del empleado, no borrar el registro.';
+    return 'No se puede borrar este empleado del registro. Lo habitual es marcarlo como «Retirado» desde su ficha, sin eliminar el historial.';
   }
   if (esErrorViolacionFkEliminacion(error)) {
     if (tipo === 'contrato') {
@@ -145,7 +145,7 @@ export function mensajeErrorEliminacion(error, tipo) {
   }
   const base = mensajeErrorApi(error);
   if (base.length > 320 && (base.includes('SQLSTATE') || base.includes('SQL:'))) {
-    return 'El servidor rechazó la eliminación. Suele deberse a datos relacionados en otros módulos. Revisa certificaciones, contratos y demás registros asociados, o consulta al administrador.';
+    return 'No se pudo eliminar porque hay información relacionada (contratos, certificaciones u otros registros). Revise esos datos o consulte al administrador.';
   }
   return base;
 }
@@ -155,22 +155,22 @@ function textoPorCodigoHttp(status) {
     case 401:
       return 'Correo o contraseña incorrectos.';
     case 403:
-      return 'Acceso denegado. Tu usuario no puede iniciar sesión desde aquí.';
+      return 'No tiene permiso para acceder. Si cree que es un error, consulte al administrador.';
     case 404:
-      return 'No se encontró esa ruta en el API (404). Verifica VITE_API_URL (debe ser …/api/v1) y que existan las rutas públicas POST /forgot-password y /login en Laravel.';
+      return 'No se encontró lo solicitado. Verifique la dirección o consulte al administrador.';
     case 419:
-      return 'Token de seguridad expirado (419). Recarga la página e inténtalo de nuevo.';
+      return 'La página dejó de ser válida por seguridad. Recargue e intente de nuevo.';
     case 422:
-      return 'Los datos enviados no son válidos. Revisa correo y contraseña.';
+      return 'Algunos datos no son válidos. Revíselos e intente de nuevo.';
     case 429:
-      return 'Demasiados intentos. Espera un momento e inténtalo de nuevo.';
+      return 'Demasiados intentos. Espere un momento e intente de nuevo.';
     case 500:
     case 502:
     case 503:
-      return 'Error en el servidor. Revisa los logs de Laravel o inténtalo más tarde.';
+      return 'El sistema tuvo un fallo temporal. Intente más tarde o consulte al administrador.';
     default:
       return status
-        ? `Respuesta del servidor no reconocida (código ${status}).`
-        : 'Respuesta inesperada del servidor.';
+        ? `No se pudo completar la operación (código ${status}). Intente de nuevo o consulte al administrador.`
+        : 'Ocurrió un error inesperado. Intente de nuevo o consulte al administrador.';
   }
 }

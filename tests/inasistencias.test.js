@@ -49,6 +49,21 @@ test('payload conserva tipo tardanza aunque el motivo sea libre', () => {
   assert.equal(payload.motivo_inasistencia, 'Tardanza - Trancon fuerte');
 });
 
+test('payload: rechaza estado presente (asistencia implícita)', () => {
+  assert.throws(
+    () =>
+      construirPayloadInasistencia({
+        motivo: 'x',
+        estado: 'presente',
+        fecha: '2026-03-12',
+        cod_empleado: '1003',
+        observaciones: '',
+        justificado: false,
+      }),
+    /No se persiste/,
+  );
+});
+
 test('manejo 422: extrae mensaje por campo', () => {
   const err = {
     validation: {
@@ -63,15 +78,24 @@ test('manejo 422: extrae mensaje por campo', () => {
 
 test('kpis: calcula ausencias, tardanzas y justificadas', () => {
   const lista = [
-    { motivo_inasistencia: 'Enfermedad', justificado: 'SI' },
-    { motivo_inasistencia: 'Llegada tarde', justificado: 'NO' },
+    { cod_empleado: 1, motivo_inasistencia: 'Enfermedad', justificado: 'SI' },
+    { cod_empleado: 2, motivo_inasistencia: 'Llegada tarde', justificado: 'NO' },
   ];
-  const k = calcularKpisInasistencias(lista, [{}, {}]);
+  const k = calcularKpisInasistencias(lista);
   assert.equal(k.total, 2);
   assert.equal(k.ausencias, 1);
   assert.equal(k.retardos, 1);
   assert.equal(k.justificadas, 1);
   assert.equal(k.empleados, 2);
+});
+
+test('kpis: no cuenta registros tipo Presente', () => {
+  const k = calcularKpisInasistencias([
+    { cod_empleado: 1, motivo_inasistencia: 'Presente - OK', justificado: 'NO' },
+    { cod_empleado: 1, motivo_inasistencia: 'Enfermedad', justificado: 'SI' },
+  ]);
+  assert.equal(k.total, 1);
+  assert.equal(k.empleados, 1);
 });
 
 test('calendario: ingreso en mitad del mes actual sin novedades', () => {
@@ -125,4 +149,18 @@ test('calendario: mes vigente con dos inasistencias descuenta presentes', () => 
     today: '2026-03-20',
   });
   assert.deepEqual(totals, { presentes: 18, inasistencias: 2, noAplica: 0, pendientes: 11 });
+});
+
+test('calendario: ignora filas guardadas como Presente', () => {
+  const { days, totals } = buildAttendanceCalendar({
+    year: 2026,
+    month: 3,
+    fechaIngreso: '2026-03-01',
+    inasistencias: [{ fecha_inasistencia: '2026-03-10', motivo_inasistencia: 'Presente - reunión' }],
+    today: '2026-03-31',
+  });
+  const d10 = days.find((x) => x.date === '2026-03-10');
+  assert.equal(d10.status, 'presente');
+  assert.equal(d10.inasistenciaTipo, null);
+  assert.deepEqual(totals, { presentes: 31, inasistencias: 0, noAplica: 0, pendientes: 0 });
 });

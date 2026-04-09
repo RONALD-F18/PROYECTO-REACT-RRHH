@@ -4,14 +4,14 @@ import {
   formatearMonedaCop,
   textoPeriodoPrestacion,
   postGestionarPrestacionSocial,
+  mensajeErrorPrestacionesSociales,
 } from '../../../services/prestacionesSociales';
 import { nombreCompletoEmpleado } from '../../../services/empleados';
 import { nombreCargoDesde } from '../../../services/cargos';
-import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 
 /**
- * Cambio de estado Pendiente → Pagado | Trasladado (único flujo soportado por el API).
- * No hay edición manual de montos ni fechas en el backend actual.
+ * Cambio de estado Pendiente → Pagado | Trasladado (flujo permitido por el sistema).
+ * No hay edición manual de montos ni fechas en esta pantalla.
  */
 function ModalGestionarPrestacion({
   mostrar,
@@ -54,7 +54,7 @@ function ModalGestionarPrestacion({
       if (alExito) alExito();
       cerrar();
     } catch (e) {
-      setErrorLocal(mensajeErrorApi(e));
+      setErrorLocal(mensajeErrorPrestacionesSociales(e));
     } finally {
       setEnviando(false);
     }

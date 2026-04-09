@@ -15,9 +15,13 @@ export const CALENDAR_STATUS = {
 const PREFIJO_POR_ESTADO = {
   [ESTADO_UI.AUSENTE]: '',
   [ESTADO_UI.TARDE]: 'Tardanza',
-  [ESTADO_UI.PRESENTE]: 'Presente',
   [ESTADO_UI.LIBRE]: 'Dia libre',
 };
+
+/** Registros que no son "Presente" antiguo: solo esas filas son novedades reales. */
+export function listaSoloNovedadesRegistrables(lista) {
+  return (lista || []).filter((x) => estadoUiDesdeMotivo(x?.motivo_inasistencia) !== ESTADO_UI.PRESENTE);
+}
 
 export function obtenerCodigoEmpleado(empleado) {
   if (!empleado || typeof empleado !== 'object') return null;
@@ -73,6 +77,9 @@ export function extraerMensajeValidacion(error, campo) {
 }
 
 export function construirPayloadInasistencia(formulario) {
+  if (String(formulario?.estado) === ESTADO_UI.PRESENTE) {
+    throw new Error('No se persiste asistencia explícita: use ausencia, tardanza o día libre.');
+  }
   return {
     motivo_inasistencia: construirMotivoPersistido(formulario).slice(0, 50),
     fecha_inasistencia: formulario.fecha,
@@ -136,8 +143,9 @@ function esFinDeSemana(year, month, day) {
  * Construye el calendario mensual de asistencia con reglas de negocio:
  * - antes de ingreso => no_aplica
  * - después de hoy => pendiente
- * - día válido con novedad => inasistencia
- * - día válido sin novedad => presente
+ * - día válido con novedad (ausente/tarde/libre) => inasistencia
+ * - día válido sin novedad => asistencia implícita (P); no hace falta fila en BD
+ * - filas guardadas como "Presente" (legacy) se ignoran aquí: equivalen a sin novedad
  */
 export function buildAttendanceCalendar({ year, month, fechaIngreso, inasistencias = [], today = new Date(), onlyBusinessDays = false }) {
   const y = Number(year);
@@ -157,8 +165,10 @@ export function buildAttendanceCalendar({ year, month, fechaIngreso, inasistenci
   for (const item of inasistencias || []) {
     const fecha = ymdDesdeValor(item?.fecha_inasistencia ?? item?.date ?? item);
     if (!fecha) continue;
-    if (novedadesPorFecha.has(fecha)) continue; // dedupe por fecha
-    novedadesPorFecha.set(fecha, estadoUiDesdeMotivo(item?.motivo_inasistencia));
+    const tipoMotivo = estadoUiDesdeMotivo(item?.motivo_inasistencia);
+    if (tipoMotivo === ESTADO_UI.PRESENTE) continue;
+    if (novedadesPorFecha.has(fecha)) continue;
+    novedadesPorFecha.set(fecha, tipoMotivo);
   }
 
   const totals = { presentes: 0, inasistencias: 0, noAplica: 0, pendientes: 0 };
@@ -190,16 +200,20 @@ export function buildAttendanceCalendar({ year, month, fechaIngreso, inasistenci
   return { days, totals };
 }
 
-export function calcularKpisInasistencias(lista, empleados) {
-  const total = lista.length;
-  const ausencias = lista.filter((x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.AUSENTE).length;
-  const retardos = lista.filter((x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.TARDE).length;
-  const justificadas = lista.filter((x) => String(x.justificado || '').toUpperCase() === 'SI').length;
+export function calcularKpisInasistencias(lista) {
+  const novedades = listaSoloNovedadesRegistrables(lista);
+  const total = novedades.length;
+  const ausencias = novedades.filter((x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.AUSENTE).length;
+  const retardos = novedades.filter((x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.TARDE).length;
+  const justificadas = novedades.filter((x) => String(x.justificado || '').toUpperCase() === 'SI').length;
+  const empleadosConRegistro = new Set(
+    novedades.map((x) => String(x.cod_empleado ?? '')).filter((c) => c !== ''),
+  ).size;
   return {
     total,
     ausencias,
     retardos,
     justificadas,
-    empleados: empleados.length,
+    empleados: empleadosConRegistro,
   };
 }

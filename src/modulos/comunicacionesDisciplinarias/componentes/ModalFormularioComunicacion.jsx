@@ -322,7 +322,7 @@ function ModalFormularioComunicacion({
             <label className="disc-field disc-field--full">
               <span className="disc-field-label">
                 {esFelicitacion ? 'Motivo del reconocimiento *' : 'Motivo *'}{' '}
-                <small className="disc-hint">(máx. {MAX_MOTIVO_CHARS} caracteres en API)</small>
+                <small className="disc-hint">(máx. {MAX_MOTIVO_CHARS} caracteres)</small>
               </span>
               <input
                 type="text"

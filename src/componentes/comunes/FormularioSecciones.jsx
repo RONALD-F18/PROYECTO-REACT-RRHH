@@ -8,6 +8,7 @@ import '../../estilos/componentes/formulario-secciones.css';
  * @param {Object} camposTocados - Objeto que indica qué campos han sido tocados
  * @param {function} onChange - Función para manejar cambios en los campos
  * @param {function} onBlur - Función para manejar blur en los campos
+ * @param {function} [onKeyUp] - Opcional: validación al escribir (p. ej. igual que onBlur)
  * @param {function} obtenerClaseCampo - Función para obtener clase CSS del campo
  * @param {function} mostrarMensaje - Función para mostrar mensajes de validación
  */
@@ -18,6 +19,7 @@ function FormularioSecciones({
   camposTocados = {},
   onChange,
   onBlur,
+  onKeyUp,
   obtenerClaseCampo,
   mostrarMensaje,
   /** Oculta número + título de sección (p. ej. cuando el padre ya usa `FormularioPasos`). */
@@ -42,6 +44,7 @@ function FormularioSecciones({
             value={valor}
             onChange={onChange}
             onBlur={onBlur}
+            onKeyUp={onKeyUp}
             className={claseCampo}
             disabled={campo.deshabilitado}
           >
@@ -73,6 +76,7 @@ function FormularioSecciones({
             value={valor}
             onChange={onChange}
             onBlur={onBlur}
+            onKeyUp={onKeyUp}
             className={claseCampo}
             placeholder={campo.placeholder}
           />
@@ -94,6 +98,7 @@ function FormularioSecciones({
             value={valor}
             onChange={onChange}
             onBlur={onBlur}
+            onKeyUp={onKeyUp}
             className={claseCampo}
             placeholder={campo.placeholder}
             rows={campo.filas || 4}
@@ -134,6 +139,7 @@ function FormularioSecciones({
           value={valor}
           onChange={onChange}
           onBlur={onBlur}
+          onKeyUp={onKeyUp}
           className={claseCampo}
           placeholder={campo.placeholder}
           disabled={campo.deshabilitado}

@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ContenedorPrincipal, EncabezadoModulo, TablaDatos } from '../../componentes';
 import { ModalGestionarPrestacion } from './componentes';
 import Swal from 'sweetalert2';
-import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { nombreCompletoEmpleado } from '../../services/empleados';
 import { nombreCargoDesde } from '../../services/cargos';
 import {
@@ -12,9 +11,10 @@ import {
   deletePrestacionSocialPeriodo,
   formatearMonedaCop,
   textoPeriodoPrestacion,
+  mensajeErrorPrestacionesSociales,
 } from '../../services/prestacionesSociales';
 
-/** Contrato API: boolean/0-1 y opcionalmente monto mensual (nombres habituales en Laravel). */
+/** Auxilio de transporte en el contrato (varios formatos booleano/numérico). */
 function datosAuxilioTransporteContrato(c) {
   if (!c || typeof c !== 'object') {
     return { activo: false, monto: null, sinMonto: false };
@@ -40,9 +40,9 @@ function datosAuxilioTransporteContrato(c) {
 /**
  * Detalle por cod_contrato (ruta /prestaciones/:id).
  *
- * El backend no ofrece PUT/PATCH para fechas ni montos de un período: solo
- * POST calcular-prestaciones (período nuevo hasta hoy), POST gestionar (Pendiente→Pagado|Trasladado)
- * y DELETE si el período sigue Pendiente.
+ * Cálculo por tramos anuales (salario mínimo y auxilio por año), fecha de corte según contrato;
+ * montos en pantalla = resultado del sistema al cargar o al pulsar Calcular.
+ * Flujos: POST calcular-prestaciones, POST gestionar, DELETE si Pendiente.
  */
 function DetallesPrestaciones() {
   const { id: codContratoParam } = useParams();
@@ -80,7 +80,7 @@ function DetallesPrestaciones() {
       if (status === 404) {
         setError('No se encontró ese contrato o no tiene datos de prestaciones.');
       } else {
-        setError(mensajeErrorApi(e));
+        setError(mensajeErrorPrestacionesSociales(e));
       }
     } finally {
       setCargando(false);
@@ -110,7 +110,11 @@ function DetallesPrestaciones() {
       });
       await recargar();
     } catch (e) {
-      await Swal.fire({ icon: 'error', title: 'No se pudo calcular', text: mensajeErrorApi(e) });
+      await Swal.fire({
+        icon: 'error',
+        title: 'No se pudo calcular',
+        text: mensajeErrorPrestacionesSociales(e),
+      });
     } finally {
       setCalculando(false);
     }
@@ -138,7 +142,7 @@ function DetallesPrestaciones() {
       await Swal.fire({ icon: 'success', title: 'Período eliminado' });
       await recargar();
     } catch (e) {
-      await Swal.fire({ icon: 'error', title: 'Error', text: mensajeErrorApi(e) });
+      await Swal.fire({ icon: 'error', title: 'Error', text: mensajeErrorPrestacionesSociales(e) });
     }
   };
 
@@ -216,8 +220,7 @@ function DetallesPrestaciones() {
           </div>
 
           <p className="prestaciones-nota-api" style={{ color: 'var(--gris-600)', fontSize: 'var(--texto-sm)' }}>
-            El servidor calcula el período hasta la fecha actual; no se pueden editar montos ni fechas por
-            formulario. Para corregir un período en Pendiente, elimínelo y vuelva a calcular.
+            La tabla muestra el resultado del cálculo; si un período pendiente está mal, elimínelo y pulse Calcular de nuevo.
           </p>
 
           <h2 className="detalles-titulo">Cálculos</h2>

@@ -28,6 +28,8 @@ import {
   codigoEmpleadoDesde,
 } from '../../../services/empleados';
 import { getContratos, extraerFilasContratos, esContratoVigenteParaEmpleado } from '../../../services/contratos';
+import { mergeCatalogoPorClave } from '../../../utils/mergeCatalogos';
+import { BANCOS_COLOMBIA_SUPLEMENTO } from '../../../data/catalogosColombiaSuplemento';
 import {
   TIPO_DOCUMENTO,
   TIPO_CUENTA,
@@ -196,9 +198,14 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
   /** Payload al abrir el modal en edición (para PATCH solo con cambios). */
   const payloadInicialEdicionRef = useRef(null);
 
-  const codigosBancoPermitidos = useMemo(
-    () => new Set(bancos.map((b) => String(b.cod_banco))),
+  const bancosOpciones = useMemo(
+    () => mergeCatalogoPorClave(bancos, BANCOS_COLOMBIA_SUPLEMENTO, 'cod_banco'),
     [bancos],
+  );
+
+  const codigosBancoPermitidos = useMemo(
+    () => new Set(bancosOpciones.map((b) => String(b.cod_banco))),
+    [bancosOpciones],
   );
   const ctxValidacionRef = useRef({ codigosBancoPermitidos });
   ctxValidacionRef.current = { codigosBancoPermitidos };
@@ -722,7 +729,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 className={mensajeCampo('cod_banco') ? 'campo-error' : ''}
               >
                 <option value="">Sin especificar</option>
-                {bancos.map((b) => (
+                {bancosOpciones.map((b) => (
                   <option key={b.cod_banco} value={String(b.cod_banco)}>
                     {b.nombre_banco ?? `Banco ${b.cod_banco}`}
                   </option>

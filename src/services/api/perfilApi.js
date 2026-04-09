@@ -87,8 +87,8 @@ export async function updateMiPerfilApi(cuerpo) {
     const cr = cod_rol != null ? Number(cod_rol) : NaN;
     if (!Number.isFinite(cr)) {
       const err = new Error(
-        'El servidor no tiene la ruta PUT /perfil y no pudimos obtener tu rol para usar /usuarios. ' +
-          'Implementa GET/PUT /perfil en el API o vuelve a iniciar sesión.',
+        'No se pudo actualizar el perfil con la configuración actual del sistema. Cierre sesión e inicie de nuevo. ' +
+          'Si el problema continúa, consulte al administrador.',
       );
       err.isPerfilLegacySinRol = true;
       throw err;

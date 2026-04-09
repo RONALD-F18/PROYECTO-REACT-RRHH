@@ -316,7 +316,7 @@ function ModalMiPerfil({ mostrar, cerrar, alGuardar }) {
           </h3>
           {rolNombre ? <p className="usuario-modal-rol-lectura">Rol asignado: {rolNombre}</p> : null}
           <p className="usuario-modal-mi-perfil-ayuda">
-            Reglas alineadas al form request de usuarios en Laravel. Los mensajes se actualizan al escribir (cada tecla o al pegar texto).
+            Los avisos bajo cada campo se actualizan mientras escribe o pega texto.
           </p>
           <div className="usuario-modal-grid">
             <div className={`usuario-modal-campo${errorNombre ? ' usuario-modal-campo--invalido' : ''}`}>
@@ -371,8 +371,8 @@ function ModalMiPerfil({ mostrar, cerrar, alGuardar }) {
             >
               <label htmlFor="mi-perfil-pass">Nueva contraseña</label>
               <p className="usuario-modal-reglas-contrasena">
-                <strong>Deja en blanco</strong> para conservar la actual. Si cambias: entre 8 y 64 caracteres, como en la
-                validación del servidor al actualizar.
+                <strong>Deja en blanco</strong> para conservar la contraseña actual. Si la cambia: entre 8 y 64
+                caracteres, con al menos una mayúscula y un número (mismas reglas que al crear usuario).
               </p>
               <input
                 id="mi-perfil-pass"

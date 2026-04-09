@@ -77,12 +77,18 @@ function ModalInasistencia({
     const next = {};
     if (!formulario.fecha) next.fecha = 'La fecha es requerida.';
     if (!formulario.cod_empleado) next.cod_empleado = 'Seleccione un empleado.';
+    if (formulario.estado === ESTADO_UI.PRESENTE) {
+      next.estado =
+        'No se registra asistencia explícita: sin novedad en un día ya cuenta como asistencia. Elimina este registro antiguo o elige ausencia, tardanza o día libre.';
+    }
     if (!formulario.motivo.trim()) next.motivo = 'El motivo es requerido.';
     if (formulario.motivo.length > 50) next.motivo = 'Maximo 50 caracteres.';
     if (formulario.observaciones.length > 80) next.observaciones = 'Maximo 80 caracteres.';
     setErrores(next);
     return Object.keys(next).length === 0;
   };
+
+  const errorEstado = errores.estado;
 
   const manejarSubmit = async (e) => {
     e.preventDefault();
@@ -172,7 +178,11 @@ function ModalInasistencia({
             <span className="paso-numero paso-numero--paso2">2</span>Tipo de registro
           </h4>
 
-          <div className="inasistencia-micro-label">Estado Del Día</div>
+          <div className="inasistencia-micro-label">Novedad del día</div>
+          <p className="inasistencia-hint-asistencia">
+            Solo registras excepciones (ausencia, tardanza, día libre). Si no hay registro en un día, se entiende que
+            asistió desde su fecha de ingreso al contrato.
+          </p>
 
           <div className="inasistencia-estados">
             <button
@@ -193,14 +203,6 @@ function ModalInasistencia({
             </button>
             <button
               type="button"
-              className={`chip-estado chip-presente ${formulario.estado === ESTADO_UI.PRESENTE ? 'activo' : ''}`}
-              onClick={() => setFormulario((p) => ({ ...p, estado: ESTADO_UI.PRESENTE }))}
-            >
-              <span className="chip-punto chip-punto--presente" aria-hidden />
-              Presente
-            </button>
-            <button
-              type="button"
               className={`chip-estado chip-libre ${formulario.estado === ESTADO_UI.LIBRE ? 'activo' : ''}`}
               onClick={() => setFormulario((p) => ({ ...p, estado: ESTADO_UI.LIBRE }))}
             >
@@ -208,6 +210,7 @@ function ModalInasistencia({
               Libre
             </button>
           </div>
+          {errorEstado ? <small className="campo-seccion-error inasistencia-error-estado">{errorEstado}</small> : null}
 
           <label className="inasistencia-label-motivo">
             <span>MOTIVO *</span>

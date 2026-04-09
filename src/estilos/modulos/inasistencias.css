@@ -205,6 +205,15 @@
   padding-bottom: 10px;
 }
 
+.inasistencias-empleados-vacio {
+  padding: 1rem 14px;
+  margin: 4px 8px;
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+  line-height: 1.4;
+}
+
 .fila-empleado {
   border: none;
   border-top: 1px solid #ece9fa;
@@ -1476,6 +1485,13 @@
   background: #eef2ff;
 }
 
+.leg-item-info {
+  cursor: help;
+  padding: 2px 6px;
+  font-weight: 500;
+  color: #64748b;
+}
+
 .leg-dot {
   width: 12px;
   height: 12px;
@@ -1678,6 +1694,18 @@
   color: #3b5a9a !important;
   text-transform: none !important;
   letter-spacing: 0.02em !important;
+}
+
+.inasistencia-hint-asistencia {
+  margin: -4px 0 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.inasistencia-error-estado {
+  display: block;
+  margin: 8px 0 0;
 }
 
 @media (max-width: 768px) {

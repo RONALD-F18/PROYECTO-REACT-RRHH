@@ -55,10 +55,7 @@ export function useInasistencias() {
     [inasistencias, filtros],
   );
 
-  const kpis = useMemo(
-    () => calcularKpisInasistencias(inasistenciasFiltradas, empleados),
-    [inasistenciasFiltradas, empleados],
-  );
+  const kpis = useMemo(() => calcularKpisInasistencias(inasistenciasFiltradas), [inasistenciasFiltradas]);
 
   const guardarInasistencia = useCallback(
     async ({ id, payload }) => {

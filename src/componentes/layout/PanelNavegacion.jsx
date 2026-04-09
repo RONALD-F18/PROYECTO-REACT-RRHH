@@ -1,5 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useMenu } from '../../contextos/MenuContext';
+import { useChatAsistente } from '../../contextos/ChatAsistenteContext';
+import IconoBuho from '../comunes/IconoBuho';
 import { useState, useEffect, useMemo } from 'react';
 import { cerrarSesion, esAdminSesionLocal, usuarioSesionLocal } from '../../services/autenticacion';
 import ModalMiPerfil from './ModalMiPerfil';
@@ -11,6 +13,7 @@ function inicialesNombre(nombre) {
 }
 
 function PanelNavegacion() {
+  const chatAsistente = useChatAsistente();
   const ubicacion = useLocation();
   const navegar = useNavigate();
   const { menuAbierto, cerrarMenu } = useMenu();
@@ -81,7 +84,22 @@ function PanelNavegacion() {
       <aside className="panel-navegacion">
         <div className="panel-navegacion-header">
           <div className="panel-navegacion-marca">
-            <div className="panel-navegacion-icono"></div>
+            {chatAsistente ? (
+              <button
+                type="button"
+                className="panel-navegacion-buho-btn"
+                onClick={() => {
+                  chatAsistente.abrir();
+                  cerrarMenu();
+                }}
+                aria-label="Abrir asistente de RRHH"
+                title="Asistente Talent Sphere"
+              >
+                <IconoBuho className="chat-asistente-buho--sidebar" title="" />
+              </button>
+            ) : (
+              <div className="panel-navegacion-icono" aria-hidden />
+            )}
             <div className="panel-navegacion-texto">
               <span className="panel-navegacion-titulo">Talent Sphere</span>
               <span className="panel-navegacion-subtitulo">Gestión de RRHH</span>

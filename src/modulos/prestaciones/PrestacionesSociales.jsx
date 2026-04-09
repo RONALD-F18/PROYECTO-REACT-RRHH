@@ -174,7 +174,7 @@ function PrestacionesSociales() {
     ];
   }, [montosPorEstado, errorListadoPeriodos, totalesPendientes]);
 
-  /** Contratos que el API incluye en el resumen para la pestaña «Contratos a liquidar». */
+  /** Contratos incluidos en el resumen de la pestaña «Contratos a liquidar». */
   const codigosContratoLiquidacion = useMemo(() => {
     const s = new Set();
     for (const c of contratosRaw) {
@@ -253,6 +253,11 @@ function PrestacionesSociales() {
 
         <h2 style={{ marginBottom: '24px', color: '#1e293b' }}>Prestaciones sociales</h2>
 
+        <p className="prestaciones-nota-api" style={{ marginTop: -16, marginBottom: 20, color: 'var(--gris-600)' }}>
+          Los montos y fechas que ve aquí son los que calcula el sistema (por años de vigencia y normativa aplicable en
+          cada año). Esta pantalla solo los muestra; no los vuelve a calcular en su equipo.
+        </p>
+
         {errorResumen ? (
           <p className="mensaje-error" style={{ marginBottom: 16 }}>
             {errorResumen}
@@ -260,8 +265,8 @@ function PrestacionesSociales() {
         ) : null}
         {errorListadoPeriodos && !errorResumen ? (
           <p className="prestaciones-nota-api" style={{ marginBottom: 16, color: 'var(--gris-600)' }}>
-            No se pudo cargar el listado de períodos: {errorListadoPeriodos} Los totales superiores usan solo el
-            resumen del servidor si está disponible.
+            No se pudo cargar el listado completo de períodos: {errorListadoPeriodos} Las cifras de las tarjetas
+            superiores pueden mostrarse igualmente si hay resumen disponible.
           </p>
         ) : null}
 
@@ -324,14 +329,14 @@ function PrestacionesSociales() {
             <div className="prestaciones-contenedor-principal">
               <h2 className="prestaciones-titulo-seccion">Empleados con prestaciones</h2>
               <p className="prestaciones-nota-api" style={{ marginTop: -12, marginBottom: 16 }}>
-                Los filtros se aplican en el navegador; el API no expone parámetros de búsqueda en esta ruta.
+                Puede filtrar la tabla desde aquí; la búsqueda y los filtros se aplican sobre la lista ya cargada.
               </p>
               {!cargandoResumen && contratosFiltrados.length === 0 && periodosFueraDeLiquidacion ? (
                 <p className="prestaciones-nota-api prestaciones-nota-historial" role="note">
-                  <strong>Sin contratos en esta lista:</strong> el servidor no devolvió contratos en el resumen de
-                  liquidación, pero en <strong>Todos los períodos</strong> puede haber registros históricos (p. ej.
-                  pendientes ligados a un contrato que ya no se considera vigente para liquidar). Revisa el módulo{' '}
-                  <strong>Contratos</strong> o los datos en backend.
+                  <strong>Sin contratos en esta lista:</strong> el resumen de liquidación no incluye contratos en este
+                  momento, pero en <strong>Todos los períodos</strong> puede ver registros anteriores (por ejemplo
+                  pendientes de un contrato que ya no entra en liquidación). Revise el módulo <strong>Contratos</strong>{' '}
+                  o consulte al administrador si los datos no coinciden con lo esperado.
                 </p>
               ) : null}
 
@@ -409,12 +414,11 @@ function PrestacionesSociales() {
               </p>
               {periodosFueraDeLiquidacion ? (
                 <p className="prestaciones-nota-api prestaciones-nota-historial" role="note">
-                  <strong>¿Por qué un período «pendiente» no aparece en Contratos a liquidar?</strong> Esa pestaña solo
-                  muestra los contratos que el API envía como vigentes para liquidar (campo{' '}
-                  <span className="prestaciones-nota-campo">contratos_vigentes</span>).
-                  Aquí ves el <strong>historial completo</strong> de períodos: si el contrato ya no entra en ese resumen
-                  (finalizado, retirado del listado, etc.), el período puede seguir figurando aquí hasta que el backend lo
-                  archive, pague o elimine.
+                  <strong>¿Por qué un período «pendiente» no aparece en Contratos a liquidar?</strong> Esa pestaña muestra
+                  solo los contratos que el sistema considera vigentes para liquidar ahora. En esta vista ve el{' '}
+                  <strong>historial completo</strong>: si el contrato ya no entra en liquidación (finalizado, retirado,
+                  etc.), el período puede seguir apareciendo aquí hasta que se gestione el pago, se archive o se elimine
+                  según las reglas del sistema.
                 </p>
               ) : null}
 

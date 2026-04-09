@@ -17,6 +17,7 @@ import {
   codigoIncapacidadDesde,
 } from '../../services/incapacidades';
 import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
+import { getContratos, extraerFilasContratos } from '../../services/contratos';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 function diasEntre(fechaInicio, fechaFin) {
@@ -57,6 +58,7 @@ function Incapacidades() {
   const navegar = useNavigate();
   const [lista, setLista] = useState([]);
   const [empleados, setEmpleados] = useState([]);
+  const [contratos, setContratos] = useState([]);
   const [resumenApi, setResumenApi] = useState(null);
   const [tiposCatalogo, setTiposCatalogo] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -192,11 +194,12 @@ function Incapacidades() {
       setMensajeLista('');
       setCargando(true);
       try {
-        const [si, se, sr, st] = await Promise.allSettled([
+        const [si, se, sr, st, sc] = await Promise.allSettled([
           getIncapacidades(),
           getEmpleados(),
           getResumenIncapacidades(),
           getTiposIncapacidad(),
+          getContratos(),
         ]);
         if (!activo) return;
         const partes = [];
@@ -211,6 +214,8 @@ function Incapacidades() {
         else setResumenApi(null);
         if (st.status === 'fulfilled') setTiposCatalogo(extraerFilasCatalogo(st.value));
         else setTiposCatalogo([]);
+        if (sc.status === 'fulfilled') setContratos(extraerFilasContratos(sc.value));
+        else setContratos([]);
         if (se.status === 'rejected') partes.push(mensajeErrorApi(se.reason));
         if (sr.status === 'rejected') partes.push(mensajeErrorApi(sr.reason));
         if (partes.length) setMensajeLista(partes.join(' · '));
@@ -436,6 +441,7 @@ function Incapacidades() {
         }}
         datosIncapacidad={incapacidadEditar}
         empleados={empleados}
+        contratos={contratos}
         alExito={alExitoGuardado}
       />
     </ContenedorPrincipal>

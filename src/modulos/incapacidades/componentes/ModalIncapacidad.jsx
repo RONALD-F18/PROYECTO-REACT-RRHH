@@ -23,9 +23,18 @@ import {
   estadoIncapacidadEdicionDesdeApi,
   estadoIncapacidadApiDesdeEtiquetaEdicion,
 } from '../../../utils/incapacidadEstado';
+import {
+  fechaIngresoLaboralReferencia,
+  mensajeSiFechaAntesDeContrato,
+  mensajeSiFechaInvalidaParaEmpleadoLaboral,
+} from '../../../utils/fechaIngresoLaboralEmpleado';
+import { mergeClasificacionesEnfermedad } from '../../../utils/mergeCatalogos';
+import { CLASIFICACION_CIE_REFERENCIA_SUPLEMENTO } from '../../../data/catalogosColombiaSuplemento';
 import '../../../estilos/componentes/formulario-secciones.css';
 
 const DESCRIPCION_MAX = 200;
+
+const CAMPOS_FECHA_INCAP = ['fechaInicio', 'fechaFin', 'fechaRadicacion'];
 
 function estadoFormularioVacio() {
   return {
@@ -51,7 +60,7 @@ function combinarDescripcionParaApi(diagnostico, notas) {
   if (s.length > DESCRIPCION_MAX) {
     return {
       ok: false,
-      error: `Diagnóstico y notas no pueden superar ${DESCRIPCION_MAX} caracteres en total (límite de la API).`,
+      error: `Diagnóstico y notas no pueden superar ${DESCRIPCION_MAX} caracteres en total.`,
     };
   }
   return { ok: true, value: s || undefined };
@@ -122,7 +131,7 @@ function construirPayloadIncapacidad(formulario, codEmpleado, incluirEstadoEdici
   return payload;
 }
 
-function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados = [], alExito }) {
+function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados = [], contratos = [], alExito }) {
   const esEdicion = !!datosIncapacidad && codigoIncapacidadDesde(datosIncapacidad) != null;
 
   const [formulario, setFormulario] = useState(() => estadoFormularioVacio());
@@ -195,18 +204,40 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     [tiposCatalogo],
   );
 
+  const clasifCatalogoAmpliado = useMemo(
+    () => mergeClasificacionesEnfermedad(clasifCatalogo, CLASIFICACION_CIE_REFERENCIA_SUPLEMENTO),
+    [clasifCatalogo],
+  );
+
   const opcionesClasif = useMemo(
     () =>
-      clasifCatalogo.map((c) => {
+      clasifCatalogoAmpliado.map((c) => {
         const cod = c.codigo_cie10 != null ? String(c.codigo_cie10).trim() : '';
         const nom = c.nombre_clasificacion != null ? String(c.nombre_clasificacion).trim() : '';
         const texto = [cod, nom].filter(Boolean).join(' — ') || String(c.cod_clasificacion_enfermedad);
         return { valor: String(c.cod_clasificacion_enfermedad), texto };
       }),
-    [clasifCatalogo],
+    [clasifCatalogoAmpliado],
   );
 
-  const validarCampo = (nombre, valor) => {
+  const empleadoRelacionado = useMemo(
+    () => buscarEmpleadoPorDocumento(empleados, formulario.documento),
+    [empleados, formulario.documento],
+  );
+
+  const fechaContratoReferencia = useMemo(
+    () => fechaIngresoLaboralReferencia(empleadoRelacionado, contratos),
+    [empleadoRelacionado, contratos],
+  );
+
+  const validarCampo = (
+    nombre,
+    valor,
+    empleadoCtx = empleadoRelacionado,
+    fechaContratoCtx = fechaContratoReferencia,
+    formSnap = formulario,
+  ) => {
+    const f = formSnap || formulario;
     switch (nombre) {
       case 'documento':
         return validarNumeroDocumento(valor);
@@ -214,17 +245,34 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
         return validarNombres(valor);
       case 'tipoIncapacidad':
         return !valor ? 'Debe seleccionar un tipo de incapacidad' : null;
-      case 'fechaInicio':
+      case 'fechaInicio': {
         if (!valor) return 'La fecha de inicio es requerida';
-        return null;
-      case 'fechaFin':
+        const c = mensajeSiFechaAntesDeContrato(valor, fechaContratoCtx);
+        if (c) return c;
+        return mensajeSiFechaInvalidaParaEmpleadoLaboral(valor, empleadoCtx);
+      }
+      case 'fechaFin': {
         if (!valor) return 'La fecha de fin es requerida';
-        if (formulario.fechaInicio && valor < formulario.fechaInicio) {
+        if (f.fechaInicio && valor < f.fechaInicio) {
           return 'La fecha de fin debe ser igual o posterior a la fecha de inicio';
         }
+        const c = mensajeSiFechaAntesDeContrato(valor, fechaContratoCtx);
+        if (c) return c;
+        return mensajeSiFechaInvalidaParaEmpleadoLaboral(valor, empleadoCtx);
+      }
+      case 'fechaRadicacion': {
+        if (!valor) return null;
+        const c = mensajeSiFechaAntesDeContrato(valor, fechaContratoCtx);
+        if (c) return c;
+        const n = mensajeSiFechaInvalidaParaEmpleadoLaboral(valor, empleadoCtx);
+        if (n) return n;
+        if (f.fechaInicio && valor < f.fechaInicio) {
+          return 'La fecha de radicación no puede ser anterior al inicio de la incapacidad.';
+        }
         return null;
+      }
       case 'diagnostico': {
-        const comb = combinarDescripcionParaApi(valor, formulario.descripcion);
+        const comb = combinarDescripcionParaApi(valor, f.descripcion);
         if (!comb.ok) return comb.error;
         if (!String(valor ?? '').trim()) return 'El diagnóstico es requerido';
         return null;
@@ -242,7 +290,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     (idx) => {
       const grupos = [
         esEdicion ? ['documento', 'nombre', 'estadoIncapacidadUi'] : ['documento', 'nombre'],
-        ['tipoIncapacidad', 'fechaInicio', 'fechaFin'],
+        ['tipoIncapacidad', 'fechaInicio', 'fechaFin', 'fechaRadicacion'],
         ['diagnostico'],
       ];
       if (idx < 0 || idx >= grupos.length) return true;
@@ -263,23 +311,76 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
       setErrores(nuevosErrores);
       return Object.keys(nuevosErrores).length === 0;
     },
-    [formulario, esEdicion],
+    [formulario, esEdicion, empleadoRelacionado, fechaContratoReferencia],
   );
 
   const manejarCambio = (e) => {
     const { name, value } = e.target;
+    const esFechaIncap = CAMPOS_FECHA_INCAP.includes(name);
+    const esDocumento = name === 'documento';
+
+    let empDocumentoAct = null;
+    if (esDocumento && !esEdicion) {
+      empDocumentoAct = buscarEmpleadoPorDocumento(empleados, value);
+    }
+
     setFormulario((prev) => {
       const next = { ...prev, [name]: value };
-      if (name === 'documento' && !esEdicion) {
-        const emp = buscarEmpleadoPorDocumento(empleados, value);
+      if (esDocumento && !esEdicion) {
+        const emp = empDocumentoAct;
         if (emp) next.nombre = nombreCompletoEmpleado(emp);
+        else next.nombre = '';
       }
       return next;
     });
 
-    if (camposTocados[name]) {
-      const error = validarCampo(name, value);
-      setErrores((prev) => ({ ...prev, [name]: error }));
+    const fechaContratoDoc = fechaIngresoLaboralReferencia(empDocumentoAct ?? undefined, contratos);
+
+    if (esDocumento && !esEdicion) {
+      setErrores((prev) => {
+        const next = { ...prev };
+        for (const fk of CAMPOS_FECHA_INCAP) {
+          if (camposTocados[fk]) {
+            next[fk] = validarCampo(fk, formulario[fk], empDocumentoAct, fechaContratoDoc);
+          }
+        }
+        return next;
+      });
+    }
+
+    if (camposTocados[name] || esFechaIncap || esDocumento) {
+      const errCtxEmp = esDocumento && !esEdicion ? empDocumentoAct : empleadoRelacionado;
+      const errCtxFecha = esDocumento && !esEdicion ? fechaContratoDoc : fechaContratoReferencia;
+      setErrores((prev) => ({ ...prev, [name]: validarCampo(name, value, errCtxEmp, errCtxFecha) }));
+      if (esFechaIncap || esDocumento) {
+        setCamposTocados((p) => ({ ...p, [name]: true }));
+      }
+    }
+
+    if (name === 'fechaInicio') {
+      const snap = { ...formulario, fechaInicio: value };
+      setErrores((prev) => {
+        const out = { ...prev };
+        if (camposTocados.fechaFin && snap.fechaFin) {
+          out.fechaFin = validarCampo(
+            'fechaFin',
+            snap.fechaFin,
+            empleadoRelacionado,
+            fechaContratoReferencia,
+            snap,
+          );
+        }
+        if (camposTocados.fechaRadicacion && snap.fechaRadicacion) {
+          out.fechaRadicacion = validarCampo(
+            'fechaRadicacion',
+            snap.fechaRadicacion,
+            empleadoRelacionado,
+            fechaContratoReferencia,
+            snap,
+          );
+        }
+        return out;
+      });
     }
   };
 
@@ -300,6 +401,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
       'tipoIncapacidad',
       'fechaInicio',
       'fechaFin',
+      'fechaRadicacion',
       'diagnostico',
     ];
     for (const campo of campos) {
@@ -315,7 +417,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
   const pasoPorErroresIncap = (errs) => {
     const grupos = [
       esEdicion ? ['documento', 'nombre', 'estadoIncapacidadUi'] : ['documento', 'nombre'],
-      ['tipoIncapacidad', 'fechaInicio', 'fechaFin'],
+      ['tipoIncapacidad', 'fechaInicio', 'fechaFin', 'fechaRadicacion'],
       ['diagnostico'],
     ];
     for (let i = 0; i < grupos.length; i++) {
@@ -403,7 +505,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
           tipo: 'text',
           requerido: true,
           placeholder: 'Ej: 1128455781',
-          hint: 'Ingrese el documento de identidad del empleado. Se usará para enviar cod_empleado al API.',
+          hint: 'Ingrese el documento de identidad del empleado; el sistema lo usará para vincular el registro.',
           deshabilitado: esEdicion,
         },
         {
@@ -448,6 +550,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
           tipo: 'date',
           requerido: true,
           placeholder: 'dd/mm/aaaa',
+          hint: 'Debe ser igual o posterior al ingreso al cargo (contrato) y a la mayoría de edad laboral.',
         },
         {
           nombre: 'fechaFin',
@@ -455,6 +558,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
           tipo: 'date',
           requerido: true,
           placeholder: 'dd/mm/aaaa',
+          hint: 'Igual o posterior al inicio; misma regla de contrato y edad laboral que el inicio.',
         },
         {
           nombre: 'fechaRadicacion',
@@ -462,7 +566,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
           tipo: 'date',
           requerido: false,
           placeholder: 'Opcional',
-          hint: 'Si no se envía, el servidor puede asignar la fecha actual.',
+          hint: 'Si la deja vacía, puede registrarse automáticamente la fecha de hoy.',
         },
         {
           nombre: 'diasCalculados',
@@ -487,7 +591,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
           requerido: true,
           placeholder: 'Describa el diagnóstico completo...',
           filas: 4,
-          hint: `Se envía como descripcion en la API (máx. ${DESCRIPCION_MAX} caracteres junto con notas).`,
+          hint: `Texto de diagnóstico (máx. ${DESCRIPCION_MAX} caracteres junto con las notas).`,
         },
         {
           nombre: 'cod_clasificacion_enfermedad',
@@ -537,6 +641,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
               camposTocados={camposTocados}
               onChange={manejarCambio}
               onBlur={manejarBlur}
+              onKeyUp={manejarBlur}
               obtenerClaseCampo={obtenerClaseCampo}
               mostrarMensaje={mostrarMensaje}
             />
@@ -550,6 +655,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
               camposTocados={camposTocados}
               onChange={manejarCambio}
               onBlur={manejarBlur}
+              onKeyUp={manejarBlur}
               obtenerClaseCampo={obtenerClaseCampo}
               mostrarMensaje={mostrarMensaje}
             />
@@ -563,6 +669,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
               camposTocados={camposTocados}
               onChange={manejarCambio}
               onBlur={manejarBlur}
+              onKeyUp={manejarBlur}
               obtenerClaseCampo={obtenerClaseCampo}
               mostrarMensaje={mostrarMensaje}
             />

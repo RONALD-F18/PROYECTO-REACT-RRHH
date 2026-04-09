@@ -36,7 +36,7 @@ function EmissionStep({ form, onChange, errores = {} }) {
           onBlur={(e) => onChange('fecha_emision', e.target.value)}
         />
         {errores.fecha_emision ? <span className="campo-seccion-error">{errores.fecha_emision}</span> : null}
-        <p className="cert-campo-ayuda">Obligatoria. No puede ser una fecha futura. Se envía al API como yyyy-mm-dd.</p>
+        <p className="cert-campo-ayuda">Obligatoria. No puede ser una fecha futura (use año-mes-día).</p>
       </div>
 
       <div className="cert-step-grid cert-step-grid--full">

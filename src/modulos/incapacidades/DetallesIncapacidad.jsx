@@ -12,6 +12,7 @@ import {
   codigoIncapacidadDesde,
 } from '../../services/incapacidades';
 import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
+import { getContratos, extraerFilasContratos } from '../../services/contratos';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import {
@@ -67,6 +68,7 @@ function DetallesIncapacidad() {
   const [registro, setRegistro] = useState(null);
   const [distribucionPagos, setDistribucionPagos] = useState(null);
   const [empleados, setEmpleados] = useState([]);
+  const [contratos, setContratos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [mostrarModal, setMostrarModal] = useState(false);
@@ -106,11 +108,17 @@ function DetallesIncapacidad() {
     let a = true;
     (async () => {
       try {
-        const je = await getEmpleados();
+        const [je, jc] = await Promise.allSettled([getEmpleados(), getContratos()]);
         if (!a) return;
-        setEmpleados(extraerFilasEmpleados(je));
+        if (je.status === 'fulfilled') setEmpleados(extraerFilasEmpleados(je.value));
+        else setEmpleados([]);
+        if (jc.status === 'fulfilled') setContratos(extraerFilasContratos(jc.value));
+        else setContratos([]);
       } catch {
-        if (a) setEmpleados([]);
+        if (a) {
+          setEmpleados([]);
+          setContratos([]);
+        }
       }
     })();
     return () => {
@@ -404,6 +412,7 @@ function DetallesIncapacidad() {
         cerrar={() => setMostrarModal(false)}
         datosIncapacidad={registro}
         empleados={empleados}
+        contratos={contratos}
         alExito={async () => {
           await cargar();
           setMostrarModal(false);

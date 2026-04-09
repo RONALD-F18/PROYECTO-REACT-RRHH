@@ -400,16 +400,17 @@ function CalendarioActividades() {
 
   const guardar = async (e) => {
     e.preventDefault();
-    const errores = validarFormulario(form);
+    const formParaValidar = {
+      ...form,
+      cod_usuario: codUsuario != null ? String(codUsuario) : form.cod_usuario,
+    };
+    const errores = validarFormulario(formParaValidar);
     setErroresForm(errores);
     setErrorGlobalForm('');
     if (Object.keys(errores).length > 0) return;
     setGuardando(true);
     try {
-      const payload = construirPayload({
-        ...form,
-        cod_usuario: codUsuario != null ? String(codUsuario) : form.cod_usuario,
-      });
+      const payload = construirPayload(formParaValidar);
       if (actividadEditar?.cod_actividad != null) {
         await actualizarCalendarioActividadApi(actividadEditar.cod_actividad, payload);
       } else {
@@ -672,6 +673,11 @@ function CalendarioActividades() {
             <strong>{formatearFechaVista(fechaSeleccionadaModal || form.fecha_inicio)}</strong>
           </div>
           {errorGlobalForm ? <p className="mensaje-error">{errorGlobalForm}</p> : null}
+          {erroresForm.cod_usuario ? (
+            <p className="mensaje-error" role="alert">
+              {erroresForm.cod_usuario}
+            </p>
+          ) : null}
           <section className="cal-form-section">
             <div className="cal-form-section-title"><span>1</span>Informacion general</div>
             <label>
@@ -789,16 +795,6 @@ function CalendarioActividades() {
                   ))}
                 </select>
                 {erroresForm.estado ? <small className="campo-seccion-error">{erroresForm.estado}</small> : null}
-              </label>
-              <label className="cal-form-col-span">
-                <span>cod_usuario *</span>
-                <input
-                  value={form.cod_usuario}
-                  onChange={(e) => setForm((p) => ({ ...p, cod_usuario: e.target.value.replace(/\D/g, '') }))}
-                  inputMode="numeric"
-                  readOnly
-                />
-                {erroresForm.cod_usuario ? <small className="campo-seccion-error">{erroresForm.cod_usuario}</small> : null}
               </label>
             </div>
           </section>

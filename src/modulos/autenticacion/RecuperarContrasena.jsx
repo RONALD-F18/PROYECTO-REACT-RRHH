@@ -86,7 +86,7 @@ function RecuperarContrasena() {
             style={{ margin: '0 0 16px', fontSize: 'var(--texto-sm)', color: 'var(--color-texto-claro)' }}
           >
             {enviando ? (
-              <strong style={{ color: 'var(--color-primario)' }}>Enviando solicitud al servidor…</strong>
+              <strong style={{ color: 'var(--color-primario)' }}>Enviando solicitud…</strong>
             ) : exito ? (
               <strong style={{ color: '#047857' }}>Solicitud enviada correctamente.</strong>
             ) : (
@@ -120,11 +120,14 @@ function RecuperarContrasena() {
                   lineHeight: 1.55,
                 }}
               >
-                <strong>¿No ves el mensaje?</strong>
+                <strong>¿No recibe el correo?</strong>
                 <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
-                  <li>Revisa la carpeta de <strong>spam</strong> o promociones.</li>
-                  <li>En desarrollo, Laravel suele usar <code>MAIL_MAILER=log</code>: el correo no se envía, aparece en <code>storage/logs/laravel.log</code>.</li>
-                  <li>Confirma en el servidor que exista el usuario con ese correo y que el mail esté configurado (<code>.env</code> MAIL_*)</li>
+                  <li>Revise la carpeta de <strong>correo no deseado</strong> o promociones.</li>
+                  <li>Espere unos minutos y vuelva a comprobar la bandeja de entrada.</li>
+                  <li>
+                    Si sigue sin llegar, compruebe que escribió bien el correo o pida ayuda al administrador del
+                    sistema (correo del usuario y envío de mensajes deben estar bien configurados).
+                  </li>
                 </ul>
               </div>
 
@@ -157,18 +160,18 @@ function RecuperarContrasena() {
                   tabIndex={-1}
                 >
                   <div className="login-alerta-cuerpo">
-                    <strong className="login-alerta-titulo">La petición no se completó</strong>
+                    <strong className="login-alerta-titulo">No se pudo enviar la solicitud</strong>
                     <p className="login-alerta-mensaje">{errorServidor}</p>
                     <p className="login-alerta-mensaje" style={{ marginTop: 10, fontSize: 'var(--texto-xs)' }}>
-                      Comprueba la consola del navegador (F12 → Red) si la petición a{' '}
-                      <code>/forgot-password</code> aparece en rojo (CORS, 404 o 500).
+                      Intente de nuevo más tarde. Si el problema continúa, consulte al administrador del sistema.
                     </p>
                   </div>
                 </div>
               ) : null}
 
               <p style={{ margin: '0 0 18px', fontSize: 'var(--texto-sm)', color: 'var(--color-texto-claro)', lineHeight: 1.5 }}>
-                Escribe el correo de tu cuenta. El servidor intentará enviarte un enlace (según su configuración de correo).
+                Escriba el correo asociado a su cuenta. Si existe en el sistema, recibirá instrucciones para restablecer
+                la contraseña.
               </p>
 
               <div className="login-campo">

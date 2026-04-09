@@ -1,4 +1,5 @@
 import { useMenu } from '../../contextos/MenuContext';
+import { ChatAsistenteProvider } from '../../contextos/ChatAsistenteContext';
 import BarraLateral from './BarraLateral';
 import PanelNavegacion from './PanelNavegacion';
 import { useState, useEffect } from 'react';
@@ -17,14 +18,14 @@ function ContenedorPrincipal({ children }) {
   }, []);
 
   return (
-    <div className="contenedor-app">
-      <div className={`overlay-menu ${menuAbierto ? 'activo' : ''}`} onClick={cerrarMenu}></div>
-      {!esMobile && <BarraLateral />}
-      {esMobile && <PanelNavegacion />}
-      <main className="contenido-principal">
-        {children}
-      </main>
-    </div>
+    <ChatAsistenteProvider>
+      <div className="contenedor-app">
+        <div className={`overlay-menu ${menuAbierto ? 'activo' : ''}`} onClick={cerrarMenu}></div>
+        {!esMobile && <BarraLateral />}
+        {esMobile && <PanelNavegacion />}
+        <main className="contenido-principal">{children}</main>
+      </div>
+    </ChatAsistenteProvider>
   );
 }
 

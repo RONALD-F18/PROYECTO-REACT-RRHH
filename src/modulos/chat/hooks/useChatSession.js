@@ -15,6 +15,8 @@ import {
   respuestaAyudaTieneShapeV2,
   temasAgrupadosParaUi,
 } from '../utils/normalizarAyudaApi';
+import { normalizarPresentacionChatPost } from '../utils/normalizarPresentacionChat';
+import { esSugerenciaFueraDeModulo } from '../utils/filtrarSugerenciasFueraDeModulo';
 
 export function useChatSession(modalAbierto) {
   const { pathname } = useLocation();
@@ -33,6 +35,13 @@ export function useChatSession(modalAbierto) {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
   const [errorEnvio, setErrorEnvio] = useState('');
+  /** Último texto enviado (para excluirlo de chips de seguimiento). */
+  const [ultimoMensajeEnviado, setUltimoMensajeEnviado] = useState('');
+  /**
+   * Sugerencias del último POST (sustituyen al turno anterior).
+   * Ancla: cod_chat_mensaje del usuario o created_at si el id aún no viene.
+   */
+  const [postTurnoSugerencias, setPostTurnoSugerencias] = useState(null);
   const conversacionIdRef = useRef(null);
   conversacionIdRef.current = conversacionId;
 
@@ -40,7 +49,10 @@ export function useChatSession(modalAbierto) {
   const lastPathname = useRef(pathname);
 
   const ayudaV2 = useMemo(() => normalizarPayloadAyuda(payloadAyudaRaw), [payloadAyudaRaw]);
-  const temasUi = useMemo(() => temasAgrupadosParaUi(ayudaV2.temasAgrupados), [ayudaV2.temasAgrupados]);
+  const temasUi = useMemo(
+    () => temasAgrupadosParaUi(ayudaV2.temasAgrupados, { moduloAyuda: queryModuloAyuda }),
+    [ayudaV2.temasAgrupados, queryModuloAyuda],
+  );
   const catalogoOrdenado = useMemo(
     () =>
       [...ayudaV2.catalogoModulos].sort((a, b) => Number(a?.orden ?? 0) - Number(b?.orden ?? 0)),
@@ -55,6 +67,7 @@ export function useChatSession(modalAbierto) {
     const res = await listarMensajesChat(cod);
     const list = Array.isArray(res.data) ? res.data : [];
     setMensajes(list);
+    setPostTurnoSugerencias(null);
     return list;
   }, []);
 
@@ -139,6 +152,8 @@ export function useChatSession(modalAbierto) {
           setConversaciones(lista);
           setMensajes([]);
           setMostrarPanelAyuda(true);
+          setUltimoMensajeEnviado('');
+          setPostTurnoSugerencias(null);
         } else {
           const idUsar = prevValido ? Number(prev) : Number(lista[0].cod_chat_conversacion);
           setConversaciones(lista);
@@ -167,6 +182,8 @@ export function useChatSession(modalAbierto) {
       if (!Number.isFinite(id)) return;
       setConversacionId(id);
       setErrorEnvio('');
+      setUltimoMensajeEnviado('');
+      setPostTurnoSugerencias(null);
       setCargandoLista(true);
       try {
         const list = await cargarMensajes(id);
@@ -183,6 +200,8 @@ export function useChatSession(modalAbierto) {
   const nuevaConversacion = useCallback(async () => {
     setError('');
     setErrorEnvio('');
+    setUltimoMensajeEnviado('');
+    setPostTurnoSugerencias(null);
     setCargandoLista(true);
     try {
       const creada = await crearConversacionChat({});
@@ -204,6 +223,8 @@ export function useChatSession(modalAbierto) {
   const borrarConversacionActiva = useCallback(async () => {
     if (conversacionId == null) return;
     setError('');
+    setUltimoMensajeEnviado('');
+    setPostTurnoSugerencias(null);
     setCargandoLista(true);
     try {
       await eliminarConversacionChat(conversacionId);
@@ -223,6 +244,7 @@ export function useChatSession(modalAbierto) {
           setConversaciones([]);
           setConversacionId(null);
           setMensajes([]);
+          setPostTurnoSugerencias(null);
         }
       } else {
         setConversaciones(lista);
@@ -245,16 +267,34 @@ export function useChatSession(modalAbierto) {
       setErrorEnvio('');
       setEnviando(true);
       try {
-        const res = await enviarMensajeChat(conversacionId, t);
+        const res = await enviarMensajeChat(conversacionId, t, { moduloAyuda: queryModuloAyuda });
         const data = res?.data;
         if (data?.mensaje_usuario && data?.mensaje_asistente) {
-          setMensajes((prev) => [...prev, data.mensaje_usuario, data.mensaje_asistente]);
+          const prep = normalizarPresentacionChatPost(data);
+          const chipsTurno = prep.chips.filter((c) => !esSugerenciaFueraDeModulo(c, queryModuloAyuda));
+          const mu = data.mensaje_usuario;
+          setMensajes((prev) => {
+            const next = [...prev, data.mensaje_usuario, data.mensaje_asistente];
+            return next.sort((a, b) => {
+              const ta = new Date(a?.created_at || 0).getTime();
+              const tb = new Date(b?.created_at || 0).getTime();
+              return ta - tb;
+            });
+          });
+          setPostTurnoSugerencias({
+            usuarioCod: mu?.cod_chat_mensaje ?? null,
+            usuarioCreatedAt: mu?.created_at ?? null,
+            chips: chipsTurno,
+            registroEstilo: prep.registroEstilo,
+            meta: prep.sugerenciasMeta,
+          });
         } else {
           await cargarMensajes(conversacionId);
         }
         const resConv = await listarConversacionesChat();
         setConversaciones(Array.isArray(resConv.data) ? resConv.data : []);
         setMostrarPanelAyuda(false);
+        setUltimoMensajeEnviado(t);
       } catch (e) {
         const msg = e?.response?.data?.errors?.contenido?.[0] || mensajeErrorApi(e);
         setErrorEnvio(msg);
@@ -262,7 +302,7 @@ export function useChatSession(modalAbierto) {
         setEnviando(false);
       }
     },
-    [cargarMensajes, conversacionId],
+    [cargarMensajes, conversacionId, queryModuloAyuda],
   );
 
   const reiniciarAlCerrar = useCallback(() => {
@@ -295,6 +335,8 @@ export function useChatSession(modalAbierto) {
     seleccionarConversacion,
     nuevaConversacion,
     borrarConversacionActiva,
+    ultimoMensajeEnviado,
+    postTurnoSugerencias,
     enviar,
     reiniciarAlCerrar,
   };

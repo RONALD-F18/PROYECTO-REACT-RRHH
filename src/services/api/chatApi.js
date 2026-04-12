@@ -21,6 +21,8 @@ export function normalizarModuloAyudaQuery(modulo) {
  * GET /chat/ayuda
  * Opcional: ?modulo=prestaciones_sociales — el servidor filtra; inválido → sin query (todo).
  * Respuesta: data[], sugerencias_rapidas[] (etiqueta, enviar, modulo, cod_entrada_ayuda).
+ * POST mensajes puede incluir `modulo_ayuda` (misma clave que ?modulo=) si el backend lo reconoce.
+ * Respuesta típica: `mensaje_usuario`, `mensaje_asistente`, opcional `presentacion_chat` (registro_estilo, sugerencias_relacionadas + chips).
  */
 export async function getAyudaChat(modulo) {
   const mod = normalizarModuloAyudaQuery(modulo);
@@ -54,8 +56,14 @@ export async function listarMensajesChat(codConversacion) {
   return { ...data, data: filasDesdeRespuesta(data) };
 }
 
-/** POST /chat/conversaciones/:id/mensajes */
-export async function enviarMensajeChat(codConversacion, contenido) {
-  const { data } = await api.post(`/chat/conversaciones/${codConversacion}/mensajes`, { contenido });
+/**
+ * POST /chat/conversaciones/:id/mensajes
+ * @param {string} contenido
+ * @param {{ moduloAyuda?: string | null }} [opciones] — si el backend lo acepta, fija el contexto RRHH (misma clave que GET /chat/ayuda?modulo=).
+ */
+export async function enviarMensajeChat(codConversacion, contenido, opciones = {}) {
+  const mod = normalizarModuloAyudaQuery(opciones.moduloAyuda);
+  const body = mod ? { contenido, modulo_ayuda: mod } : { contenido };
+  const { data } = await api.post(`/chat/conversaciones/${codConversacion}/mensajes`, body);
   return data;
 }

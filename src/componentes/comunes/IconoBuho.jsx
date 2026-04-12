@@ -1,13 +1,12 @@
 import { useId } from 'react';
 
 /**
- * Mascota búho — SVG en tonos azules claros (legible en header blanco y FAB con gradiente).
+ * Mascota RRHH — silueta sencilla, menos “robot con gafas”, legible en claro y oscuro.
  */
 function IconoBuho({ className = '', title = 'Talent Sphere', ...rest }) {
   const uid = useId().replace(/:/g, '');
-  const gBody = `buho-body-${uid}`;
-  const gBelly = `buho-belly-${uid}`;
-  const gBeak = `buho-beak-${uid}`;
+  const gCuerpo = `buho-c-${uid}`;
+  const gVientre = `buho-v-${uid}`;
 
   return (
     <svg
@@ -21,74 +20,66 @@ function IconoBuho({ className = '', title = 'Talent Sphere', ...rest }) {
       {...rest}
     >
       <defs>
-        <radialGradient id={gBody} cx="42%" cy="32%" r="70%">
-          <stop offset="0%" stopColor="#93c5fd" />
-          <stop offset="45%" stopColor="#3b82f6" />
-          <stop offset="85%" stopColor="#2563eb" />
-          <stop offset="100%" stopColor="#1d4ed8" />
-        </radialGradient>
-        <linearGradient id={gBelly} x1="50%" y1="10%" x2="50%" y2="95%">
-          <stop offset="0%" stopColor="#e0f2fe" />
-          <stop offset="35%" stopColor="#7dd3fc" />
-          <stop offset="70%" stopColor="#60a5fa" />
-          <stop offset="100%" stopColor="#818cf8" />
+        <linearGradient id={gCuerpo} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#7eb8e8" />
+          <stop offset="55%" stopColor="#4e8fc9" />
+          <stop offset="100%" stopColor="#3d6fa8" />
         </linearGradient>
-        <linearGradient id={gBeak} x1="50%" y1="0%" x2="50%" y2="100%">
-          <stop offset="0%" stopColor="#fde047" />
-          <stop offset="100%" stopColor="#f59e0b" />
+        <linearGradient id={gVientre} x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stopColor="#f0f7fc" />
+          <stop offset="100%" stopColor="#c5ddf0" />
         </linearGradient>
       </defs>
 
-      <ellipse cx="60" cy="108" rx="28" ry="5" fill="#1e3a8a" opacity="0.12" />
+      <ellipse cx="60" cy="108" rx="26" ry="4" fill="#1e3a5f" opacity="0.11" />
 
+      {/* Orejas discretas */}
+      <path d="M28 44 Q22 22 36 34 Q32 48 28 44 Z" fill={`url(#${gCuerpo})`} opacity="0.95" />
+      <path d="M92 44 Q98 22 84 34 Q88 48 92 44 Z" fill={`url(#${gCuerpo})`} opacity="0.95" />
+
+      <ellipse cx="60" cy="62" rx="40" ry="36" fill={`url(#${gCuerpo})`} />
+      <ellipse cx="60" cy="68" rx="28" ry="24" fill={`url(#${gVientre})`} opacity="0.92" />
+
+      {/* Ojos pequeños, sin lentes amarillas llamativas */}
+      <ellipse cx="46" cy="52" rx="10" ry="11" fill="#fff" />
+      <ellipse cx="74" cy="52" rx="10" ry="11" fill="#fff" />
+      <circle cx="46" cy="53" r="5" fill="#334155" />
+      <circle cx="74" cy="53" r="5" fill="#334155" />
+      <circle cx="47.5" cy="50.5" r="1.8" fill="#fff" />
+      <circle cx="75.5" cy="50.5" r="1.8" fill="#fff" />
+
+      {/* Pico */}
+      <path d="M54 66 L60 74 L66 66 Q60 63 54 66 Z" fill="#e8a87c" stroke="#c97d50" strokeWidth="0.4" />
+
+      {/* Cejas suaves */}
       <path
-        d="M18 68 Q8 52 14 38 Q22 44 26 60 Q22 76 16 82 Q12 74 18 68 Z"
-        fill="#2563eb"
+        d="M36 44 Q46 38 56 42"
+        fill="none"
+        stroke="#2d4a6f"
+        strokeWidth="2"
+        strokeLinecap="round"
+        opacity="0.35"
       />
       <path
-        d="M102 68 Q112 52 106 38 Q98 44 94 60 Q98 76 104 82 Q108 74 102 68 Z"
-        fill="#2563eb"
+        d="M64 42 Q74 38 84 44"
+        fill="none"
+        stroke="#2d4a6f"
+        strokeWidth="2"
+        strokeLinecap="round"
+        opacity="0.35"
       />
-
-      <ellipse cx="60" cy="66" rx="44" ry="40" fill={`url(#${gBody})`} />
-
-      <ellipse cx="60" cy="72" rx="30" ry="28" fill={`url(#${gBelly})`} opacity="0.98" />
-      <ellipse cx="60" cy="68" rx="24" ry="9" fill="#fff" opacity="0.35" />
-
-      <circle cx="60" cy="44" r="38" fill="#3b82f6" />
-      <circle cx="60" cy="44" r="36" fill={`url(#${gBody})`} opacity="0.55" />
-
-      <path d="M42 12 Q36 2 44 10 Q48 6 46 16 Z" fill="#1d4ed8" />
-      <path d="M78 12 Q84 2 76 10 Q72 6 74 16 Z" fill="#1d4ed8" />
-
-      <ellipse cx="60" cy="46" rx="34" ry="30" fill="#bfdbfe" opacity="0.5" />
-
-      <circle cx="38" cy="52" r="5" fill="#f472b6" opacity="0.35" />
-      <circle cx="82" cy="52" r="5" fill="#f472b6" opacity="0.35" />
-
-      <ellipse cx="44" cy="42" rx="16" ry="17" fill="#fff" />
-      <ellipse cx="76" cy="42" rx="16" ry="17" fill="#fff" />
-      <circle cx="44" cy="42" r="13" fill="#facc15" />
-      <circle cx="76" cy="42" r="13" fill="#facc15" />
-      <circle cx="44" cy="42" r="8.5" fill="#fef9c3" />
-      <circle cx="76" cy="42" r="8.5" fill="#fef9c3" />
-      <circle cx="45" cy="43" r="5" fill="#334155" />
-      <circle cx="77" cy="43" r="5" fill="#334155" />
-      <circle cx="47.5" cy="39" r="2.5" fill="#fff" />
-      <circle cx="79.5" cy="39" r="2.5" fill="#fff" />
 
       <path
-        d="M52 58 L60 72 L68 58 Q60 54 52 58 Z"
-        fill={`url(#${gBeak})`}
-        stroke="#b45309"
-        strokeWidth="0.5"
-        strokeLinejoin="round"
+        d="M48 82 Q60 88 72 82"
+        fill="none"
+        stroke="#3d6fa8"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        opacity="0.45"
       />
 
-      <path d="M46 98 L42 112 L52 112 L50 98 Z" fill="#2563eb" />
-      <path d="M70 98 L66 112 L76 112 L74 98 Z" fill="#2563eb" />
-      <ellipse cx="47" cy="113" rx="7" ry="3.5" fill="#1d4ed8" />
-      <ellipse cx="73" cy="113" rx="7" ry="3.5" fill="#1d4ed8" />
+      <ellipse cx="44" cy="96" rx="9" ry="5" fill={`url(#${gCuerpo})`} />
+      <ellipse cx="76" cy="96" rx="9" ry="5" fill={`url(#${gCuerpo})`} />
     </svg>
   );
 }

@@ -4,6 +4,8 @@ import IconoBuho from '../../../componentes/comunes/IconoBuho';
 import { useChatSession } from '../hooks/useChatSession';
 import ChatMessageList from './ChatMessageList';
 import ChatInput from './ChatInput';
+import { esSugerenciaFueraDeModulo } from '../utils/filtrarSugerenciasFueraDeModulo';
+import { esChipAyudaRuidoso } from '../utils/filtrarRuidoAyuda';
 
 function etiquetaModuloAmigable(clave) {
   const m = {
@@ -65,6 +67,8 @@ function ChatModal({ abierto, cerrar }) {
     seleccionarConversacion,
     nuevaConversacion,
     borrarConversacionActiva,
+    ultimoMensajeEnviado,
+    postTurnoSugerencias,
     enviar,
     reiniciarAlCerrar,
   } = chat;
@@ -126,6 +130,79 @@ function ChatModal({ abierto, cerrar }) {
     };
   }, [abierto, manejarCerrar]);
 
+  const sugerenciasLegacyFiltradas = useMemo(
+    () =>
+      sugerenciasRapidasLegacy.filter(
+        (c) =>
+          !esSugerenciaFueraDeModulo(c, queryModuloAyuda) && !esChipAyudaRuidoso(c.etiqueta, c.enviar),
+      ),
+    [sugerenciasRapidasLegacy, queryModuloAyuda],
+  );
+
+  const sugerenciasRelacionadas = useMemo(() => {
+    if (mostrarPanelAyuda) return [];
+    const excl = String(ultimoMensajeEnviado || '').trim().toLowerCase();
+    const seen = new Set();
+
+    const incluir = (lista, p) => {
+      const env = String(p?.enviar || '').trim();
+      if (!env) return;
+      if (env.toLowerCase() === excl) return;
+      if (esChipAyudaRuidoso(p.etiqueta, p.enviar)) return;
+      if (esSugerenciaFueraDeModulo(p, queryModuloAyuda)) return;
+      const k = env.toLowerCase();
+      if (seen.has(k)) return;
+      seen.add(k);
+      lista.push(p);
+    };
+
+    const out = [];
+    if (ultimoGrupoSeleccionado?.preguntas?.length) {
+      for (const p of ultimoGrupoSeleccionado.preguntas) {
+        if (String(p.enviar) === String(ultimoGrupoSeleccionado.enviada)) continue;
+        incluir(out, p);
+      }
+    }
+    for (const g of temasAgrupadosUi) {
+      for (const p of g.preguntas) {
+        if (out.length >= 10) return out;
+        incluir(out, p);
+      }
+    }
+    return out.slice(0, 10);
+  }, [mostrarPanelAyuda, ultimoGrupoSeleccionado, temasAgrupadosUi, ultimoMensajeEnviado, queryModuloAyuda]);
+
+  const ultimoUsuarioMensaje = useMemo(() => {
+    if (!mensajes?.length) return null;
+    for (let i = mensajes.length - 1; i >= 0; i--) {
+      if (String(mensajes[i].rol || '').toLowerCase() === 'usuario') return mensajes[i];
+    }
+    return null;
+  }, [mensajes]);
+
+  const anclaSugerencias = useMemo(() => {
+    if (mostrarPanelAyuda) return null;
+    if (postTurnoSugerencias) {
+      return {
+        usuarioCod: postTurnoSugerencias.usuarioCod,
+        usuarioCreatedAt: postTurnoSugerencias.usuarioCreatedAt,
+      };
+    }
+    if (!ultimoUsuarioMensaje) return null;
+    return {
+      usuarioCod: ultimoUsuarioMensaje.cod_chat_mensaje ?? null,
+      usuarioCreatedAt: ultimoUsuarioMensaje.created_at ?? null,
+    };
+  }, [mostrarPanelAyuda, postTurnoSugerencias, ultimoUsuarioMensaje]);
+
+  const chipsDebajoUsuario = useMemo(() => {
+    if (mostrarPanelAyuda) return [];
+    if (postTurnoSugerencias?.chips?.length) return postTurnoSugerencias.chips;
+    return sugerenciasRelacionadas;
+  }, [mostrarPanelAyuda, postTurnoSugerencias, sugerenciasRelacionadas]);
+
+  const registroEstiloChat = postTurnoSugerencias?.registroEstilo || 'mensajeria';
+
   if (!abierto) return null;
 
   const enviarDeshabilitado = enviando || cargandoInicial || conversacionId == null;
@@ -140,7 +217,7 @@ function ChatModal({ abierto, cerrar }) {
     (moduloContexto != null || temasAgrupadosUi.length > 0 || accionesNavegacion.length > 0);
 
   const legacyHay =
-    sugerenciasRapidasLegacy.length > 0 || chipsPalabrasLegacy.length > 0;
+    sugerenciasLegacyFiltradas.length > 0 || chipsPalabrasLegacy.length > 0;
   const mostrarLegacy =
     mostrarPanelAyuda &&
     legacyHay &&
@@ -150,24 +227,19 @@ function ChatModal({ abierto, cerrar }) {
   const mostrarAcciones = mostrarPanelAyuda && vistaModuloV2 && accionesNavegacion.length > 0;
   const mostrarCatalogo = mostrarPanelAyuda && vistaCatalogo;
 
-  const sugerenciasRelacionadas = useMemo(() => {
-    if (!ultimoGrupoSeleccionado || mostrarPanelAyuda) return [];
-    const base = Array.isArray(ultimoGrupoSeleccionado.preguntas) ? ultimoGrupoSeleccionado.preguntas : [];
-    return base
-      .filter((p) => String(p?.enviar || '').trim())
-      .filter((p) => String(p.enviar) !== String(ultimoGrupoSeleccionado.enviada))
-      .slice(0, 4);
-  }, [ultimoGrupoSeleccionado, mostrarPanelAyuda]);
+  const hayPanelSoloAcciones =
+    mostrarPanelAyuda &&
+    vistaModuloV2 &&
+    mostrarAcciones &&
+    !mostrarTemasModulo &&
+    !mostrarCatalogo &&
+    !mostrarLegacy;
 
-  const renderSugerenciasCompactas = () => {
-    if (!mostrarPanelAyuda) {
-      return (
-        <button type="button" className="chat-asistente-mostrar-temas" onClick={restablecerPanelAyuda}>
-          Ver sugerencias
-        </button>
-      );
-    }
+  const hayPanelTemasVisible =
+    mostrarPanelAyuda &&
+    (mostrarCatalogo || mostrarTemasModulo || mostrarLegacy || hayPanelSoloAcciones);
 
+  const renderPanelAyudaContenido = () => {
     if (mostrarCatalogo) {
       return (
         <section className="chat-asistente-suggest-box" aria-label="Áreas del sistema">
@@ -217,7 +289,7 @@ function ChatModal({ abierto, cerrar }) {
               <div key={grupo.key} className="chat-asistente-tema-grupo">
                 <p className="chat-asistente-tema-grupo-titulo">{truncar(grupo.titulo, 56)}</p>
                 <div className="chat-asistente-pills-col" role="group">
-                  {grupo.preguntas.slice(0, 3).map((p) => (
+                  {grupo.preguntas.slice(0, 8).map((p) => (
                     <button
                       key={p.key}
                       type="button"
@@ -237,15 +309,37 @@ function ChatModal({ abierto, cerrar }) {
       );
     }
 
+    if (hayPanelSoloAcciones) {
+      return (
+        <section className="chat-asistente-suggest-box" aria-label="Acciones del módulo">
+          <p className="chat-asistente-pills-contexto">
+            Módulo: <strong>{truncar(tituloContexto, 32)}</strong>
+          </p>
+          <div className="chat-asistente-acciones-nav" role="toolbar" aria-label="Acciones">
+            {accionesNavegacion.map((a) => (
+              <button
+                key={String(a.id ?? a.etiqueta)}
+                type="button"
+                className="chat-asistente-btn-accion-nav"
+                onClick={() => ejecutarAccionNav(a)}
+              >
+                {truncar(a.etiqueta, 26)}
+              </button>
+            ))}
+          </div>
+        </section>
+      );
+    }
+
     if (mostrarLegacy) {
       return (
         <section className="chat-asistente-suggest-box" aria-label="Sugerencias">
           <p className="chat-asistente-pills-contexto">
             Módulo: <strong>{truncar(tituloContexto, 32)}</strong>
           </p>
-          {sugerenciasRapidasLegacy.length > 0 ? (
+          {sugerenciasLegacyFiltradas.length > 0 ? (
             <div className="chat-asistente-pills-col" role="group">
-              {sugerenciasRapidasLegacy.slice(0, 8).map((c) => (
+              {sugerenciasLegacyFiltradas.slice(0, 8).map((c) => (
                 <button
                   key={c.key}
                   type="button"
@@ -340,74 +434,81 @@ function ChatModal({ abierto, cerrar }) {
               </div>
             ) : null}
 
-            <div className="chat-asistente-scroll">
+            <div className="chat-asistente-hilo-column">
               {cargandoAyuda ? (
-                <p className="chat-asistente-placeholder chat-asistente-placeholder--inline">Cargando temas de ayuda…</p>
-              ) : null}
-
-              {listaVacia ? (
-                <div className="chat-asistente-bienvenida">
-                  <div className="chat-asistente-burbuja chat-asistente-burbuja--asistente">
-                    <span className="chat-asistente-burbuja-rol">Asistente</span>
-                    <p className="chat-asistente-burbuja-texto">Hola 👋 Elige un tema o escribe tu consulta.</p>
-                  </div>
-                </div>
-              ) : null}
-
-              {mostrarPanelAyuda ? renderSugerenciasCompactas() : null}
-
-              <div className="chat-asistente-chat-zone">
-                <ChatMessageList mensajes={mensajes} cargando={cargandoInicial} vacioSilencioso />
-              </div>
-
-              {!mostrarPanelAyuda ? (
-                <section className="chat-asistente-followup" aria-label="Sugerencias relacionadas">
-                  <div className="chat-asistente-followup-head">
-                    <button type="button" className="chat-asistente-mostrar-temas" onClick={restablecerPanelAyuda}>
-                      Volver al menú
-                    </button>
-                  </div>
-                  {sugerenciasRelacionadas.length > 0 ? (
-                    <div className="chat-asistente-pills-col chat-asistente-pills-col--sec" role="group">
-                      {sugerenciasRelacionadas.map((p) => (
-                        <button
-                          key={p.key}
-                          type="button"
-                          className="chat-asistente-pill chat-asistente-pill--secundario"
-                          onClick={() => void enviar(p.enviar)}
-                          disabled={enviarDeshabilitado}
-                          title={p.etiqueta}
-                        >
-                          {truncar(p.etiqueta, 40)}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </section>
-              ) : null}
-
-              {!cargandoAyuda &&
-              esShapeV2 &&
-              !mostrarCatalogo &&
-              !vistaModuloV2 &&
-              !mostrarLegacy &&
-              mostrarPanelAyuda &&
-              queryModuloAyuda == null ? (
-                <p className="chat-asistente-sin-temas">
-                  El servidor aún no devuelve el catálogo de módulos. Cuando esté disponible, verás tarjetas por área
-                  (Prestaciones, Empleados…).
+                <p className="chat-asistente-placeholder chat-asistente-placeholder--inline chat-asistente-ayuda-cargando">
+                  Cargando temas de ayuda…
                 </p>
               ) : null}
 
-              {!cargandoAyuda &&
-              esShapeV2 &&
-              queryModuloAyuda != null &&
-              !mostrarTemasModulo &&
-              !mostrarLegacy &&
-              mostrarPanelAyuda ? (
-                <p className="chat-asistente-sin-temas">No hay preguntas sugeridas para este módulo.</p>
-              ) : null}
+              <div className="chat-asistente-messages-scroll">
+                {listaVacia ? (
+                  <div className="chat-asistente-bienvenida">
+                    <div className="chat-asistente-burbuja chat-asistente-burbuja--asistente">
+                      <span className="chat-asistente-burbuja-rol">Asistente</span>
+                      <p className="chat-asistente-burbuja-texto">Hola 👋 Elige un tema o escribe tu consulta.</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {!mostrarPanelAyuda && mensajes?.length > 0 ? (
+                  <div className="chat-asistente-toolbar-chat">
+                    <button type="button" className="chat-asistente-mostrar-temas" onClick={restablecerPanelAyuda}>
+                      Volver al menú de temas
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="chat-asistente-chat-zone chat-asistente-chat-zone--principal">
+                  <ChatMessageList
+                    mensajes={mensajes}
+                    cargando={cargandoInicial}
+                    vacioSilencioso
+                    anclaSugerencias={anclaSugerencias}
+                    chipsDebajoUsuario={chipsDebajoUsuario}
+                    registroEstilo={registroEstiloChat}
+                    onChipEnviar={(txt) => void enviar(txt)}
+                    chipsDeshabilitados={enviarDeshabilitado}
+                  />
+                </div>
+
+                {!cargandoAyuda &&
+                esShapeV2 &&
+                !mostrarCatalogo &&
+                !vistaModuloV2 &&
+                !mostrarLegacy &&
+                mostrarPanelAyuda &&
+                queryModuloAyuda == null ? (
+                  <p className="chat-asistente-sin-temas">
+                    El servidor aún no devuelve el catálogo de módulos. Cuando esté disponible, verás tarjetas por área
+                    (Prestaciones, Empleados…).
+                  </p>
+                ) : null}
+
+                {!cargandoAyuda &&
+                esShapeV2 &&
+                queryModuloAyuda != null &&
+                !mostrarTemasModulo &&
+                !mostrarLegacy &&
+                mostrarPanelAyuda ? (
+                  <p className="chat-asistente-sin-temas">No hay preguntas sugeridas para este módulo.</p>
+                ) : null}
+              </div>
             </div>
+
+            {hayPanelTemasVisible ? (
+              <div className="chat-asistente-ayuda-compacta" aria-label="Temas de ayuda">
+                {renderPanelAyudaContenido()}
+              </div>
+            ) : null}
+
+            {!mostrarPanelAyuda ? (
+              <div className="chat-asistente-ver-sugerencias-bar">
+                <button type="button" className="chat-asistente-mostrar-temas" onClick={restablecerPanelAyuda}>
+                  Ver sugerencias de temas
+                </button>
+              </div>
+            ) : null}
 
             <ChatInput ref={inputRef} onEnviar={enviar} deshabilitado={enviarDeshabilitado} errorInline={errorEnvio} />
           </div>

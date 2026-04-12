@@ -1,4 +1,6 @@
 import { esTextoTecnicoVisible } from './filtrarAyudaFuncionario';
+import { esSugerenciaFueraDeModulo } from './filtrarSugerenciasFueraDeModulo';
+import { esChipAyudaRuidoso, esTituloGrupoProductoGeneral } from './filtrarRuidoAyuda';
 
 /**
  * Respuesta GET /chat/ayuda (contrato v2: catálogo, módulo, temas agrupados).
@@ -32,12 +34,18 @@ export function respuestaAyudaTieneShapeV2(raw) {
 }
 
 /**
- * Temas agrupados con preguntas filtradas (sin chips técnicos).
+ * Temas agrupados con preguntas filtradas (sin chips técnicos ni ruido de producto en vista por módulo).
+ * @param {object[]} grupos temas_agrupados del API
+ * @param {{ moduloAyuda?: string | null }} [opciones] clave GET ?modulo= (empleados, general…)
  */
-export function temasAgrupadosParaUi(grupos) {
+export function temasAgrupadosParaUi(grupos, opciones = {}) {
   if (!Array.isArray(grupos)) return [];
+  const moduloAyuda = opciones.moduloAyuda != null ? String(opciones.moduloAyuda).trim() : null;
   return grupos
     .map((g, gi) => {
+      const tituloGrupo = String(g?.titulo ?? '').trim() || 'Tema';
+      if (esTituloGrupoProductoGeneral(tituloGrupo, moduloAyuda)) return null;
+
       const preguntasRaw = Array.isArray(g?.preguntas) ? g.preguntas : [];
       const preguntas = preguntasRaw
         .map((p, pi) => {
@@ -45,6 +53,8 @@ export function temasAgrupadosParaUi(grupos) {
           const etiqueta = String(p?.etiqueta ?? enviar).trim();
           if (!enviar) return null;
           if (esTextoTecnicoVisible(etiqueta, enviar)) return null;
+          if (esChipAyudaRuidoso(etiqueta, enviar)) return null;
+          if (esSugerenciaFueraDeModulo({ etiqueta, enviar }, moduloAyuda)) return null;
           return {
             key: `p-${g?.cod_entrada_ayuda ?? gi}-${pi}-${enviar.slice(0, 24)}`,
             etiqueta,
@@ -55,7 +65,7 @@ export function temasAgrupadosParaUi(grupos) {
       if (preguntas.length === 0) return null;
       return {
         key: `g-${g?.cod_entrada_ayuda ?? gi}-${String(g?.titulo ?? '').slice(0, 20)}`,
-        titulo: String(g?.titulo ?? '').trim() || 'Tema',
+        titulo: tituloGrupo,
         modulo: g?.modulo,
         cod_entrada_ayuda: g?.cod_entrada_ayuda,
         preguntas,

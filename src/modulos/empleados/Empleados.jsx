@@ -12,6 +12,7 @@ import {
 } from '../../services/empleados';
 import { getBancos, extraerFilasBancos } from '../../services/bancos';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
 import { alertaErrorApi } from '../../utils/alertasSwal';
 
 function estadoEmpLista(valor) {
@@ -49,7 +50,7 @@ function Empleados() {
     setMensajeLista('');
     setCargando(true);
     try {
-      const jsonEmp = await getEmpleados();
+      const jsonEmp = await getEmpleados({ forzar: true });
       setLista(extraerFilasEmpleados(jsonEmp));
     } catch (e) {
       setLista([]);
@@ -61,27 +62,26 @@ function Empleados() {
 
   useEffect(() => {
     let activo = true;
-    (async () => {
-      setMensajeLista('');
-      setCargando(true);
-      try {
-        const [rEmp, rBan] = await Promise.allSettled([getEmpleados(), getBancos()]);
+    setMensajeLista('');
+    setCargando(true);
+    void ejecutarCargaEnFases({
+      principal: (op) => getEmpleados(op),
+      secundarios: [(op) => getBancos(op)],
+      onPrincipal: (json, err) => {
         if (!activo) return;
-        if (rEmp.status === 'fulfilled') setLista(extraerFilasEmpleados(rEmp.value));
-        else {
+        if (err) {
           setLista([]);
-          setMensajeLista(mensajeErrorApi(rEmp.reason));
+          setMensajeLista(mensajeErrorApi(err));
+        } else {
+          setLista(extraerFilasEmpleados(json));
         }
-        if (rBan.status === 'fulfilled') setBancos(extraerFilasBancos(rBan.value));
-        else setBancos([]);
-      } catch (e) {
+        setCargando(false);
+      },
+      onSecundario: (_i, json) => {
         if (!activo) return;
-        setLista([]);
-        setMensajeLista(mensajeErrorApi(e));
-      } finally {
-        if (activo) setCargando(false);
-      }
-    })();
+        setBancos(extraerFilasBancos(json));
+      },
+    });
     return () => {
       activo = false;
     };

@@ -11,6 +11,7 @@ import {
 import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
 import { getCargos, extraerFilasCargos, nombreCargoDesde, codigoCargoDesde } from '../../services/cargos';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
 import { alertaErrorApi } from '../../utils/alertasSwal';
 import { etiquetaEstadoContrato } from './contratoEnums';
 
@@ -96,7 +97,7 @@ function Contratos() {
     setMensajeLista('');
     setCargando(true);
     try {
-      const json = await getContratos();
+      const json = await getContratos({ forzar: true });
       setLista(extraerFilasContratos(json));
     } catch (e) {
       setLista([]);
@@ -108,31 +109,27 @@ function Contratos() {
 
   useEffect(() => {
     let activo = true;
-    (async () => {
-      setMensajeLista('');
-      setCargando(true);
-      try {
-        const [rCtr, rEmp, rCar] = await Promise.allSettled([getContratos(), getEmpleados(), getCargos()]);
+    setMensajeLista('');
+    setCargando(true);
+    void ejecutarCargaEnFases({
+      principal: (op) => getContratos(op),
+      secundarios: [(op) => getEmpleados(op), (op) => getCargos(op)],
+      onPrincipal: (json, err) => {
         if (!activo) return;
-        const partes = [];
-        if (rCtr.status === 'fulfilled') setLista(extraerFilasContratos(rCtr.value));
-        else {
+        if (err) {
           setLista([]);
-          partes.push(mensajeErrorApi(rCtr.reason));
+          setMensajeLista(mensajeErrorApi(err));
+        } else {
+          setLista(extraerFilasContratos(json));
         }
-        if (rEmp.status === 'fulfilled') setEmpleados(extraerFilasEmpleados(rEmp.value));
-        else setEmpleados([]);
-        if (rCar.status === 'fulfilled') setCargos(extraerFilasCargos(rCar.value));
-        else setCargos([]);
-        if (partes.length) setMensajeLista(partes.join(' · '));
-      } catch (e) {
+        setCargando(false);
+      },
+      onSecundario: (indice, json) => {
         if (!activo) return;
-        setLista([]);
-        setMensajeLista(mensajeErrorApi(e));
-      } finally {
-        if (activo) setCargando(false);
-      }
-    })();
+        if (indice === 0) setEmpleados(extraerFilasEmpleados(json));
+        if (indice === 1) setCargos(extraerFilasCargos(json));
+      },
+    });
     return () => {
       activo = false;
     };

@@ -1,12 +1,12 @@
 import api from './api';
-import { crearPeticionCompartida } from '../utils/peticionCompartida';
+import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
 
 const RUTA = '/comunicaciones_disciplinarias';
 
 const ejecutarGetComunicacionesLista = crearPeticionCompartida(async () => {
   const { data } = await api.get(RUTA);
   return data;
-});
+}, { ttlMs: TTL_CACHE_LISTAS_MS });
 
 export function extraerFilasComunicaciones(cuerpo) {
   if (!cuerpo) return [];
@@ -37,8 +37,8 @@ export function codigoDisciplinarioDesde(registro) {
   return null;
 }
 
-export async function getComunicacionesDisciplinarias() {
-  return ejecutarGetComunicacionesLista();
+export async function getComunicacionesDisciplinarias(opciones = {}) {
+  return ejecutarGetComunicacionesLista(opciones);
 }
 
 export async function getComunicacionDisciplinariaById(cod) {

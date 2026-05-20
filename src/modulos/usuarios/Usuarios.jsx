@@ -4,6 +4,7 @@ import { ModalUsuario } from './componentes';
 import { getUsuarios, getUsuarioById, deleteUsuario, extraerFilasUsuarios } from '../../services/usuario';
 import { getRolesActivos } from '../../services/rol';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 
 function esRegistroUsuario(u) {
@@ -99,7 +100,7 @@ function Usuarios() {
     setMensajeLista('');
     setCargando(true);
     try {
-      const json = await getUsuarios();
+      const json = await getUsuarios({ forzar: true });
       setListaUsuarios(extraerFilasUsuarios(json));
     } catch (e) {
       setListaUsuarios([]);
@@ -115,34 +116,41 @@ function Usuarios() {
     window.setTimeout(() => setMensajeExito(''), 3000);
   };
 
-  const cargarPagina = useCallback(async () => {
+  const cargarPagina = useCallback(async (forzar = false) => {
     setMensajeLista('');
     setCargando(true);
     setRolesPendientes(true);
-    const [resUsuarios, resRoles] = await Promise.allSettled([getUsuarios(), getRolesActivos()]);
-    if (resUsuarios.status === 'fulfilled') {
-      const json = resUsuarios.value;
-      setListaUsuarios(extraerFilasUsuarios(json));
-    } else {
-      setListaUsuarios([]);
-      setMensajeLista(mensajeErrorApi(resUsuarios.reason));
-    }
-    if (resRoles.status === 'fulfilled') {
-      const lista = Array.isArray(resRoles.value) ? resRoles.value : [];
-      setRolesCatalogo(lista);
-      setNombresRolCatalogo(
-        lista
-          .filter((r) => r && typeof r === 'object' && r.nombre_rol != null && String(r.nombre_rol).trim())
-          .map((r) => String(r.nombre_rol).trim()),
-      );
-      setRolesFallo(false);
-    } else {
-      setRolesCatalogo([]);
-      setNombresRolCatalogo([]);
-      setRolesFallo(true);
-    }
-    setCargando(false);
-    setRolesPendientes(false);
+    await ejecutarCargaEnFases({
+      opciones: { forzar },
+      principal: (op) => getUsuarios(op),
+      secundarios: [() => getRolesActivos()],
+      onPrincipal: (json, err) => {
+        if (err) {
+          setListaUsuarios([]);
+          setMensajeLista(mensajeErrorApi(err));
+        } else {
+          setListaUsuarios(extraerFilasUsuarios(json));
+        }
+        setCargando(false);
+      },
+      onSecundario: (_i, json, err) => {
+        if (err) {
+          setRolesCatalogo([]);
+          setNombresRolCatalogo([]);
+          setRolesFallo(true);
+        } else {
+          const lista = Array.isArray(json) ? json : [];
+          setRolesCatalogo(lista);
+          setNombresRolCatalogo(
+            lista
+              .filter((r) => r && typeof r === 'object' && r.nombre_rol != null && String(r.nombre_rol).trim())
+              .map((r) => String(r.nombre_rol).trim()),
+          );
+          setRolesFallo(false);
+        }
+        setRolesPendientes(false);
+      },
+    });
   }, []);
 
   useEffect(() => {

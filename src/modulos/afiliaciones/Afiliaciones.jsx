@@ -13,6 +13,7 @@ import {
 import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
 import { etiquetaEstadoAfiliacion } from '../../utils/afiliacionEstado';
 import '../../estilos/modulos/afiliaciones.css';
 
@@ -170,7 +171,7 @@ function Afiliaciones() {
     setMensajeLista('');
     setCargando(true);
     try {
-      const json = await getAfiliaciones();
+      const json = await getAfiliaciones({ forzar: true });
       setLista(extraerFilasAfiliaciones(json));
     } catch (e) {
       setLista([]);
@@ -190,38 +191,33 @@ function Afiliaciones() {
       cesantias: [],
       compensaciones: [],
     };
-    (async () => {
-      setMensajeLista('');
-      setCargando(true);
-      try {
-        const [sa, se, sc] = await Promise.allSettled([
-          getAfiliaciones(),
-          getEmpleados(),
-          obtenerCatalogosAfiliacion(),
-        ]);
+    setMensajeLista('');
+    setCargando(true);
+    void ejecutarCargaEnFases({
+      principal: (op) => getAfiliaciones(op),
+      secundarios: [(op) => getEmpleados(op), () => obtenerCatalogosAfiliacion()],
+      onPrincipal: (json, err) => {
         if (!activo) return;
-        const partes = [];
-        if (sa.status === 'fulfilled') setLista(extraerFilasAfiliaciones(sa.value));
-        else {
+        if (err) {
           setLista([]);
-          partes.push(mensajeErrorApi(sa.reason));
+          setMensajeLista(mensajeErrorApi(err));
+        } else {
+          setLista(extraerFilasAfiliaciones(json));
         }
-        if (se.status === 'fulfilled') setEmpleados(extraerFilasEmpleados(se.value));
-        else {
-          setEmpleados([]);
-          partes.push(mensajeErrorApi(se.reason));
-        }
-        if (sc.status === 'fulfilled') setCatalogos(sc.value);
-        else setCatalogos(catalogoVacio);
-        if (partes.length) setMensajeLista(partes.join(' · '));
-      } catch (e) {
+        setCargando(false);
+      },
+      onSecundario: (indice, json, err) => {
         if (!activo) return;
-        setLista([]);
-        setMensajeLista(mensajeErrorApi(e));
-      } finally {
-        if (activo) setCargando(false);
-      }
-    })();
+        if (indice === 0) {
+          if (err) setEmpleados([]);
+          else setEmpleados(extraerFilasEmpleados(json));
+        }
+        if (indice === 1) {
+          if (err) setCatalogos(catalogoVacio);
+          else setCatalogos(json);
+        }
+      },
+    });
     return () => {
       activo = false;
     };

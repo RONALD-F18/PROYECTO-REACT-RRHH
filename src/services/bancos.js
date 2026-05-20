@@ -1,4 +1,10 @@
 import api from './api';
+import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
+
+const ejecutarGetBancosLista = crearPeticionCompartida(async () => {
+  const { data } = await api.get('/bancos');
+  return data;
+}, { ttlMs: TTL_CACHE_LISTAS_MS });
 
 export function extraerFilasBancos(cuerpo) {
   if (!cuerpo) return [];
@@ -7,9 +13,8 @@ export function extraerFilasBancos(cuerpo) {
   return [];
 }
 
-export async function getBancos() {
-  const { data } = await api.get('/bancos');
-  return data;
+export async function getBancos(opciones = {}) {
+  return ejecutarGetBancosLista(opciones);
 }
 
 export async function getBancoById(codBanco) {

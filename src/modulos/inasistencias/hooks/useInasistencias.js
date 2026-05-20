@@ -10,6 +10,7 @@ import {
 import { getContratos, extraerFilasContratos } from '../../../services/contratos';
 import { calcularKpisInasistencias, filtrarInasistencias } from '../utils/inasistencias.mapper';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
+import { ejecutarCargaEnFases } from '../../../utils/cargaEnFases';
 
 export function useInasistencias() {
   const [empleados, setEmpleados] = useState([]);
@@ -24,26 +25,28 @@ export function useInasistencias() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
 
-  const cargarTodo = useCallback(async () => {
+  const cargarTodo = useCallback(async (forzar = false) => {
     setError('');
     setCargando(true);
-    try {
-      const [empRes, inaRes, ctrRes] = await Promise.allSettled([
-        listarEmpleadosApi(),
-        listarInasistenciasApi(),
-        getContratos(),
-      ]);
-      setEmpleados(empRes.status === 'fulfilled' ? extraerEmpleadosApi(empRes.value) : []);
-      setInasistencias(inaRes.status === 'fulfilled' ? extraerInasistenciasApi(inaRes.value) : []);
-      setContratos(ctrRes.status === 'fulfilled' ? extraerFilasContratos(ctrRes.value) : []);
-      if (empRes.status !== 'fulfilled' && inaRes.status !== 'fulfilled' && ctrRes.status !== 'fulfilled') {
-        throw empRes.reason || inaRes.reason || ctrRes.reason;
-      }
-    } catch (e) {
-      setError(mensajeErrorApi(e));
-    } finally {
-      setCargando(false);
-    }
+    const opciones = { forzar };
+    await ejecutarCargaEnFases({
+      opciones,
+      principal: (op) => listarInasistenciasApi(op),
+      secundarios: [(op) => listarEmpleadosApi(op), (op) => getContratos(op)],
+      onPrincipal: (json, err) => {
+        if (err) {
+          setInasistencias([]);
+          setError(mensajeErrorApi(err));
+        } else {
+          setInasistencias(extraerInasistenciasApi(json));
+        }
+        setCargando(false);
+      },
+      onSecundario: (indice, json, err) => {
+        if (indice === 0) setEmpleados(err ? [] : extraerEmpleadosApi(json));
+        if (indice === 1) setContratos(err ? [] : extraerFilasContratos(json));
+      },
+    });
   }, []);
 
   useEffect(() => {
@@ -64,7 +67,7 @@ export function useInasistencias() {
       } else {
         await crearInasistenciaApi(payload);
       }
-      await cargarTodo();
+      await cargarTodo(true);
     },
     [cargarTodo],
   );
@@ -72,7 +75,7 @@ export function useInasistencias() {
   const borrarInasistencia = useCallback(
     async (id) => {
       await eliminarInasistenciaApi(id);
-      await cargarTodo();
+      await cargarTodo(true);
     },
     [cargarTodo],
   );

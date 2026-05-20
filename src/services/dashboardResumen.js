@@ -225,20 +225,29 @@ export async function obtenerDatosDashboard({ forzar = false, onProgreso } = {})
 
   notificar();
 
-  await Promise.allSettled(
-    FUENTES_DASHBOARD.map(async (fuente) => {
-      try {
-        const valor = await fuente.cargar(opciones);
-        filas[fuente.clave] = fuente.extraer(valor);
-      } catch {
-        filas.errores.push(fuente.claveError);
-        filas[fuente.clave] = fuente.extraer(null);
-      } finally {
-        pendientes -= 1;
-        notificar();
-      }
-    }),
-  );
+  const procesarFuente = async (fuente) => {
+    try {
+      const valor = await fuente.cargar(opciones);
+      filas[fuente.clave] = fuente.extraer(valor);
+    } catch {
+      filas.errores.push(fuente.claveError);
+      filas[fuente.clave] = fuente.extraer(null);
+    } finally {
+      pendientes -= 1;
+      notificar();
+    }
+  };
+
+  /** Lotes de 3: menos presión al API; la cola global limita a 4 HTTP simultáneos. */
+  const lotes = [
+    FUENTES_DASHBOARD.slice(0, 3),
+    FUENTES_DASHBOARD.slice(3, 5),
+    FUENTES_DASHBOARD.slice(5),
+  ];
+
+  for (const lote of lotes) {
+    await Promise.allSettled(lote.map((fuente) => procesarFuente(fuente)));
+  }
 
   return armarResumenDashboard(filas);
 }

@@ -8,6 +8,6 @@ export function extraerEmpleadosApi(json) {
 }
 
 /** Misma lista que `getEmpleados` (comparte deduplicación en vuelo). */
-export async function listarEmpleadosApi() {
-  return getEmpleados();
+export async function listarEmpleadosApi(opciones = {}) {
+  return getEmpleados(opciones);
 }

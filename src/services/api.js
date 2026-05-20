@@ -1,5 +1,8 @@
 import axios from 'axios';
+import { crearAdapterConCola } from '../utils/colaConcurrenciaApi';
 import { obtenerTokenBearerDesdeSesion, limpiarAlmacenSesionCliente } from './sesionLocal';
+
+const adapterHttp = crearAdapterConCola(axios.defaults.adapter);
 
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 const baseNormalizada = baseURL.replace(/\/$/, '');
@@ -52,6 +55,7 @@ const api = axios.create({
   withCredentials: usarCredencialesCors(),
   headers: cabecerasJson,
   timeout: API_REQUEST_TIMEOUT_MS,
+  adapter: adapterHttp,
 });
 
 api.interceptors.request.use((config) => {
@@ -94,6 +98,7 @@ export const apiPublica = axios.create({
   withCredentials: false,
   headers: cabecerasJson,
   timeout: API_REQUEST_TIMEOUT_MS,
+  adapter: adapterHttp,
 });
 
 export default api;

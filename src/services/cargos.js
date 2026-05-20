@@ -1,10 +1,10 @@
 import api from './api';
-import { crearPeticionCompartida } from '../utils/peticionCompartida';
+import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
 
 const ejecutarGetCargosLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/cargos');
   return data;
-});
+}, { ttlMs: TTL_CACHE_LISTAS_MS });
 
 export function extraerFilasCargos(cuerpo) {
   if (!cuerpo) return [];
@@ -13,8 +13,8 @@ export function extraerFilasCargos(cuerpo) {
   return [];
 }
 
-export async function getCargos() {
-  return ejecutarGetCargosLista();
+export async function getCargos(opciones = {}) {
+  return ejecutarGetCargosLista(opciones);
 }
 
 /** Nombre visible del cargo (API suele usar nomb_cargo). */

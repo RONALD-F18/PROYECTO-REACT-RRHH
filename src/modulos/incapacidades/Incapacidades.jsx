@@ -19,6 +19,7 @@ import {
 import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
 import { getContratos, extraerFilasContratos } from '../../services/contratos';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 function diasEntre(fechaInicio, fechaFin) {
   if (!fechaInicio || !fechaFin) return 0;
@@ -190,43 +191,34 @@ function Incapacidades() {
 
   useEffect(() => {
     let activo = true;
-    (async () => {
-      setMensajeLista('');
-      setCargando(true);
-      try {
-        const [si, se, sr, st, sc] = await Promise.allSettled([
-          getIncapacidades(),
-          getEmpleados(),
-          getResumenIncapacidades(),
-          getTiposIncapacidad(),
-          getContratos(),
-        ]);
+    setMensajeLista('');
+    setCargando(true);
+    void ejecutarCargaEnFases({
+      principal: (op) => getIncapacidades(op),
+      secundarios: [
+        (op) => getEmpleados(op),
+        () => getResumenIncapacidades(),
+        () => getTiposIncapacidad(),
+        (op) => getContratos(op),
+      ],
+      onPrincipal: (json, err) => {
         if (!activo) return;
-        const partes = [];
-        if (si.status === 'fulfilled') setLista(extraerFilasIncapacidades(si.value));
-        else {
+        if (err) {
           setLista([]);
-          partes.push(mensajeErrorApi(si.reason));
+          setMensajeLista(mensajeErrorApi(err));
+        } else {
+          setLista(extraerFilasIncapacidades(json));
         }
-        if (se.status === 'fulfilled') setEmpleados(extraerFilasEmpleados(se.value));
-        else setEmpleados([]);
-        if (sr.status === 'fulfilled') setResumenApi(extraerResumenIncapacidades(sr.value));
-        else setResumenApi(null);
-        if (st.status === 'fulfilled') setTiposCatalogo(extraerFilasCatalogo(st.value));
-        else setTiposCatalogo([]);
-        if (sc.status === 'fulfilled') setContratos(extraerFilasContratos(sc.value));
-        else setContratos([]);
-        if (se.status === 'rejected') partes.push(mensajeErrorApi(se.reason));
-        if (sr.status === 'rejected') partes.push(mensajeErrorApi(sr.reason));
-        if (partes.length) setMensajeLista(partes.join(' · '));
-      } catch (e) {
+        setCargando(false);
+      },
+      onSecundario: (indice, json, err) => {
         if (!activo) return;
-        setLista([]);
-        setMensajeLista(mensajeErrorApi(e));
-      } finally {
-        if (activo) setCargando(false);
-      }
-    })();
+        if (indice === 0) setEmpleados(err ? [] : extraerFilasEmpleados(json));
+        if (indice === 1) setResumenApi(err ? null : extraerResumenIncapacidades(json));
+        if (indice === 2) setTiposCatalogo(err ? [] : extraerFilasCatalogo(json));
+        if (indice === 3) setContratos(err ? [] : extraerFilasContratos(json));
+      },
+    });
     return () => {
       activo = false;
     };

@@ -13,6 +13,7 @@ import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpl
 import { getUsuarios, extraerFilasUsuarios } from '../../services/usuario';
 import { esAdminSesionLocal } from '../../services/autenticacion';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import {
   TIPOS_COMUNICACION,
@@ -282,51 +283,37 @@ function ComunicacionesDisciplinarias() {
 
   useEffect(() => {
     let activo = true;
-    (async () => {
-      setMensajeLista('');
-      setCargando(true);
-      try {
-        const settled = esAdmin
-          ? await Promise.allSettled([getComunicacionesDisciplinarias(), getEmpleados(), getUsuarios()])
-          : await Promise.allSettled([getComunicacionesDisciplinarias(), getEmpleados()]);
+    setMensajeLista('');
+    setCargando(true);
+    const secundarios = esAdmin
+      ? [(op) => getEmpleados(op), (op) => getUsuarios(op)]
+      : [(op) => getEmpleados(op)];
+    void ejecutarCargaEnFases({
+      principal: (op) => getComunicacionesDisciplinarias(op),
+      secundarios,
+      onPrincipal: (json, err) => {
         if (!activo) return;
-        const partes = [];
-        const sc = settled[0];
-        const se = settled[1];
-        if (sc.status === 'fulfilled') {
-          setLista(extraerFilasComunicaciones(sc.value));
-        } else {
+        if (err) {
           setLista([]);
-          partes.push(mensajeErrorApi(sc.reason));
-        }
-        if (se.status === 'fulfilled') {
-          setEmpleados(extraerFilasEmpleados(se.value));
+          setMensajeLista(mensajeErrorApi(err));
         } else {
-          setEmpleados([]);
-          partes.push(mensajeErrorApi(se.reason));
+          setLista(extraerFilasComunicaciones(json));
         }
-        if (esAdmin) {
-          const su = settled[2];
-          if (su && su.status === 'fulfilled') {
-            setUsuarios(extraerFilasUsuarios(su.value));
-          } else {
-            setUsuarios([]);
-            if (su && su.status === 'rejected') partes.push(mensajeErrorApi(su.reason));
-          }
-        } else {
-          setUsuarios([]);
-        }
-        if (activo && partes.length) setMensajeLista(partes.join(' · '));
-      } catch (e) {
+        setCargando(false);
+      },
+      onSecundario: (indice, json, err) => {
         if (!activo) return;
-        setLista([]);
-        setEmpleados([]);
-        setUsuarios([]);
-        setMensajeLista(mensajeErrorApi(e));
-      } finally {
-        if (activo) setCargando(false);
-      }
-    })();
+        if (indice === 0) {
+          if (err) setEmpleados([]);
+          else setEmpleados(extraerFilasEmpleados(json));
+        }
+        if (esAdmin && indice === 1) {
+          if (err) setUsuarios([]);
+          else setUsuarios(extraerFilasUsuarios(json));
+        }
+        if (!esAdmin) setUsuarios([]);
+      },
+    });
     return () => {
       activo = false;
     };

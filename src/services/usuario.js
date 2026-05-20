@@ -1,10 +1,10 @@
 import api from './api';
-import { crearPeticionCompartida } from '../utils/peticionCompartida';
+import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
 
 const ejecutarGetUsuariosLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/usuarios');
   return data;
-});
+}, { ttlMs: TTL_CACHE_LISTAS_MS });
 
 /** Soporta array directo, `{ data: [] }` o paginación Laravel `{ data: { data: [] } }` */
 export function extraerFilasUsuarios(cuerpo) {
@@ -16,8 +16,8 @@ export function extraerFilasUsuarios(cuerpo) {
   return raw.filter((u) => u != null && typeof u === 'object' && !Array.isArray(u));
 }
 
-export async function getUsuarios() {
-  return ejecutarGetUsuariosLista();
+export async function getUsuarios(opciones = {}) {
+  return ejecutarGetUsuariosLista(opciones);
 }
 
 export async function getUsuarioById(codUsuario) {

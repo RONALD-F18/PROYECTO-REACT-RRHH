@@ -10,6 +10,7 @@ import {
   normalizarRegistroCertificacion,
 } from '../../services/certificaciones';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import { CertificationActions, CertificacionesFiltros, ModalCertificacion } from './componentes';
 import { extraerMensajeErroresBackend } from './utils/certificacionesPayload';
@@ -51,30 +52,30 @@ function Certificaciones() {
   const [mensajeExito, setMensajeExito] = useState('');
   const [cargandoCatalogos, setCargandoCatalogos] = useState(false);
 
-  const cargarInicial = useCallback(async () => {
+  const cargarInicial = useCallback(async (forzar = false) => {
     setError('');
     setErrorCatalogos('');
     setLoading(true);
     setCargandoCatalogos(true);
-    try {
-      const [rCert, rCat] = await Promise.allSettled([
-        getCertificaciones(),
-        obtenerCatalogosCertificacion({ ligero: true }),
-      ]);
-      if (rCert.status === 'fulfilled') setData(extraerFilasCertificaciones(rCert.value));
-      else {
-        setData([]);
-        setError(mensajeErrorApi(rCert.reason));
-      }
-      if (rCat.status === 'fulfilled') setCatalogos(rCat.value);
-      else setErrorCatalogos(mensajeErrorApi(rCat.reason));
-    } catch (e) {
-      setData([]);
-      setError(mensajeErrorApi(e));
-    } finally {
-      setLoading(false);
-      setCargandoCatalogos(false);
-    }
+    await ejecutarCargaEnFases({
+      opciones: { forzar },
+      principal: (op) => getCertificaciones(op),
+      secundarios: [() => obtenerCatalogosCertificacion({ ligero: true })],
+      onPrincipal: (json, err) => {
+        if (err) {
+          setData([]);
+          setError(mensajeErrorApi(err));
+        } else {
+          setData(extraerFilasCertificaciones(json));
+        }
+        setLoading(false);
+      },
+      onSecundario: (_i, json, err) => {
+        if (err) setErrorCatalogos(mensajeErrorApi(err));
+        else setCatalogos(json);
+        setCargandoCatalogos(false);
+      },
+    });
   }, []);
 
   useEffect(() => {
@@ -83,7 +84,7 @@ function Certificaciones() {
 
   const refetchLista = useCallback(async () => {
     try {
-      const certRaw = await getCertificaciones();
+      const certRaw = await getCertificaciones({ forzar: true });
       setData(extraerFilasCertificaciones(certRaw));
     } catch (e) {
       setError(mensajeErrorApi(e));

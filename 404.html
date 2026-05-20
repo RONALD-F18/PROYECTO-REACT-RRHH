@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Redirigiendo…</title>
+    <script>
+      (function () {
+        var base = '/PROYECTO-REACT-RRHH/';
+        var path = window.location.pathname.replace(/^\/PROYECTO-REACT-RRHH\/?/i, '');
+        var destino = base + '#/' + (path || '').replace(/^\//, '');
+        if (!path) destino = base + '#/';
+        window.location.replace(destino);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

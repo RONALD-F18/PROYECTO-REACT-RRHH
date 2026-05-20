@@ -5,6 +5,12 @@ import { listarInasistenciasApi, extraerInasistenciasApi } from './api/inasisten
 import { getAfiliaciones, extraerFilasAfiliaciones } from './afiliaciones';
 import { getCertificaciones, extraerFilasCertificaciones } from './certificaciones';
 import { listarCalendarioActividadesApi, extraerActividadesApi } from './api/calendarioActividadesApi';
+import {
+  CLAVES_LISTAS,
+  escribirCacheListaSesion,
+  leerCacheListaSesion,
+} from '../utils/cacheListaSesion';
+import { TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
 
 function empleadoActivo(e) {
   return String(e?.estado_emp ?? '').toUpperCase() === 'ACTIVO';
@@ -238,16 +244,14 @@ export async function obtenerDatosDashboard({ forzar = false, onProgreso } = {})
     }
   };
 
-  /** Lotes de 3: menos presión al API; la cola global limita a 4 HTTP simultáneos. */
-  const lotes = [
-    FUENTES_DASHBOARD.slice(0, 3),
-    FUENTES_DASHBOARD.slice(3, 5),
-    FUENTES_DASHBOARD.slice(5),
-  ];
+  await Promise.allSettled(FUENTES_DASHBOARD.map((fuente) => procesarFuente(fuente)));
 
-  for (const lote of lotes) {
-    await Promise.allSettled(lote.map((fuente) => procesarFuente(fuente)));
-  }
+  const resumen = armarResumenDashboard(filas);
+  escribirCacheListaSesion(CLAVES_LISTAS.DASHBOARD_RESUMEN, resumen);
+  return resumen;
+}
 
-  return armarResumenDashboard(filas);
+/** Muestra el panel al instante si ya hubo una visita en esta pestaña. */
+export function leerResumenDashboardDesdeSesion() {
+  return leerCacheListaSesion(CLAVES_LISTAS.DASHBOARD_RESUMEN, TTL_CACHE_LISTAS_MS);
 }

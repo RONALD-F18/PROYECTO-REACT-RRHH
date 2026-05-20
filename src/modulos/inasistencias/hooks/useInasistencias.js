@@ -11,6 +11,8 @@ import { getContratos, extraerFilasContratos } from '../../../services/contratos
 import { calcularKpisInasistencias, filtrarInasistencias } from '../utils/inasistencias.mapper';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../../utils/cargaEnFases';
+import { CLAVES_LISTAS } from '../../../utils/cacheListaSesion';
+import { hidratarListaSiHayCache } from '../../../utils/hidratarListaModulo';
 
 export function useInasistencias() {
   const [empleados, setEmpleados] = useState([]);
@@ -27,7 +29,12 @@ export function useInasistencias() {
 
   const cargarTodo = useCallback(async (forzar = false) => {
     setError('');
-    setCargando(true);
+    const teniaCache = !forzar && hidratarListaSiHayCache(
+      CLAVES_LISTAS.INASISTENCIAS,
+      extraerInasistenciasApi,
+      setInasistencias,
+    );
+    setCargando(!teniaCache);
     const opciones = { forzar };
     await ejecutarCargaEnFases({
       opciones,

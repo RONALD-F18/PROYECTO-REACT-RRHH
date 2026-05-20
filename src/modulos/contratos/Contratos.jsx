@@ -12,6 +12,8 @@ import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpl
 import { getCargos, extraerFilasCargos, nombreCargoDesde, codigoCargoDesde } from '../../services/cargos';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
+import { CLAVES_LISTAS } from '../../utils/cacheListaSesion';
+import { hidratarListaSiHayCache } from '../../utils/hidratarListaModulo';
 import { alertaErrorApi } from '../../utils/alertasSwal';
 import { etiquetaEstadoContrato } from './contratoEnums';
 
@@ -110,7 +112,12 @@ function Contratos() {
   useEffect(() => {
     let activo = true;
     setMensajeLista('');
-    setCargando(true);
+    const teniaCache = hidratarListaSiHayCache(
+      CLAVES_LISTAS.CONTRATOS,
+      extraerFilasContratos,
+      setLista,
+    );
+    setCargando(!teniaCache);
     void ejecutarCargaEnFases({
       principal: (op) => getContratos(op),
       secundarios: [(op) => getEmpleados(op), (op) => getCargos(op)],

@@ -1,10 +1,11 @@
 import api from './api';
+import { CLAVES_LISTAS } from '../utils/cacheListaSesion';
 import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
 
 const ejecutarGetEmpleadosLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/empleados');
   return data;
-}, { ttlMs: TTL_CACHE_LISTAS_MS });
+}, { ttlMs: TTL_CACHE_LISTAS_MS, claveSesion: CLAVES_LISTAS.EMPLEADOS });
 
 export function extraerFilasEmpleados(cuerpo) {
   if (!cuerpo) return [];

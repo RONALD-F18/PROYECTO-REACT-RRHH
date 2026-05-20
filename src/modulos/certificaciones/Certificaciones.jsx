@@ -11,6 +11,8 @@ import {
 } from '../../services/certificaciones';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
+import { CLAVES_LISTAS } from '../../utils/cacheListaSesion';
+import { hidratarListaSiHayCache } from '../../utils/hidratarListaModulo';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import { CertificationActions, CertificacionesFiltros, ModalCertificacion } from './componentes';
 import { extraerMensajeErroresBackend } from './utils/certificacionesPayload';
@@ -55,7 +57,10 @@ function Certificaciones() {
   const cargarInicial = useCallback(async (forzar = false) => {
     setError('');
     setErrorCatalogos('');
-    setLoading(true);
+    const teniaCache =
+      !forzar &&
+      hidratarListaSiHayCache(CLAVES_LISTAS.CERTIFICACIONES, extraerFilasCertificaciones, setData);
+    setLoading(!teniaCache);
     setCargandoCatalogos(true);
     await ejecutarCargaEnFases({
       opciones: { forzar },

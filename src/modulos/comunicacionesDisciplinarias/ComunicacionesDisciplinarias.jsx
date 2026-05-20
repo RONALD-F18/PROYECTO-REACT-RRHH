@@ -14,6 +14,8 @@ import { getUsuarios, extraerFilasUsuarios } from '../../services/usuario';
 import { esAdminSesionLocal } from '../../services/autenticacion';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
+import { CLAVES_LISTAS } from '../../utils/cacheListaSesion';
+import { hidratarListaSiHayCache } from '../../utils/hidratarListaModulo';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import {
   TIPOS_COMUNICACION,
@@ -284,7 +286,12 @@ function ComunicacionesDisciplinarias() {
   useEffect(() => {
     let activo = true;
     setMensajeLista('');
-    setCargando(true);
+    const teniaCache = hidratarListaSiHayCache(
+      CLAVES_LISTAS.COMUNICACIONES,
+      extraerFilasComunicaciones,
+      setLista,
+    );
+    setCargando(!teniaCache);
     const secundarios = esAdmin
       ? [(op) => getEmpleados(op), (op) => getUsuarios(op)]
       : [(op) => getEmpleados(op)];

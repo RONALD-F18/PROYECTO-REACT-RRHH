@@ -13,6 +13,8 @@ import {
 import { getBancos, extraerFilasBancos } from '../../services/bancos';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
+import { CLAVES_LISTAS } from '../../utils/cacheListaSesion';
+import { hidratarListaSiHayCache } from '../../utils/hidratarListaModulo';
 import { alertaErrorApi } from '../../utils/alertasSwal';
 
 function estadoEmpLista(valor) {
@@ -63,7 +65,12 @@ function Empleados() {
   useEffect(() => {
     let activo = true;
     setMensajeLista('');
-    setCargando(true);
+    const teniaCache = hidratarListaSiHayCache(
+      CLAVES_LISTAS.EMPLEADOS,
+      extraerFilasEmpleados,
+      setLista,
+    );
+    setCargando(!teniaCache);
     void ejecutarCargaEnFases({
       principal: (op) => getEmpleados(op),
       secundarios: [(op) => getBancos(op)],

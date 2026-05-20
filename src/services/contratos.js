@@ -1,10 +1,11 @@
 import api from './api';
+import { CLAVES_LISTAS } from '../utils/cacheListaSesion';
 import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
 
 const ejecutarGetContratosLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/contratos');
   return data;
-}, { ttlMs: TTL_CACHE_LISTAS_MS });
+}, { ttlMs: TTL_CACHE_LISTAS_MS, claveSesion: CLAVES_LISTAS.CONTRATOS });
 
 export function extraerFilasContratos(cuerpo) {
   if (!cuerpo) return [];

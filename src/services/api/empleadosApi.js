@@ -1,4 +1,4 @@
-import { getEmpleados } from '../empleados';
+import { getEmpleadosCatalogo } from '../empleados';
 
 export function extraerEmpleadosApi(json) {
   if (!json) return [];
@@ -7,7 +7,7 @@ export function extraerEmpleadosApi(json) {
   return [];
 }
 
-/** Misma lista que `getEmpleados` (comparte deduplicación en vuelo). */
+/** Catálogo de empleados (hasta 100) para selects en otros módulos. */
 export async function listarEmpleadosApi(opciones = {}) {
-  return getEmpleados(opciones);
+  return getEmpleadosCatalogo(opciones);
 }

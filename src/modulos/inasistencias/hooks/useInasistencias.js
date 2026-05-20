@@ -7,7 +7,7 @@ import {
   eliminarInasistenciaApi,
   extraerInasistenciasApi,
 } from '../../../services/api/inasistenciasApi';
-import { getContratos, extraerFilasContratos } from '../../../services/contratos';
+import { getContratosCatalogo, extraerFilasContratos } from '../../../services/contratos';
 import { calcularKpisInasistencias, filtrarInasistencias } from '../utils/inasistencias.mapper';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../../utils/cargaEnFases';
@@ -32,7 +32,7 @@ export function useInasistencias() {
     await ejecutarCargaEnFases({
       opciones,
       principal: (op) => listarInasistenciasApi(op),
-      secundarios: [(op) => listarEmpleadosApi(op), (op) => getContratos(op)],
+      secundarios: [(op) => listarEmpleadosApi(op), (op) => getContratosCatalogo(op)],
       onPrincipal: (json, err) => {
         if (err) {
           setInasistencias([]);

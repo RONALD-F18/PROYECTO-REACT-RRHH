@@ -9,7 +9,12 @@ import {
   codigoDisciplinarioDesde,
   normalizarRegistroComunicacion,
 } from '../../services/comunicacionesDisciplinarias';
-import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
+import {
+  getEmpleadosCatalogo,
+  extraerFilasEmpleados,
+  nombreCompletoEmpleado,
+  codigoEmpleadoDesde,
+} from '../../services/empleados';
 import { getUsuarios, extraerFilasUsuarios } from '../../services/usuario';
 import { esAdminSesionLocal } from '../../services/autenticacion';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
@@ -286,8 +291,8 @@ function ComunicacionesDisciplinarias() {
     setMensajeLista('');
     setCargando(true);
     const secundarios = esAdmin
-      ? [(op) => getEmpleados(op), (op) => getUsuarios(op)]
-      : [(op) => getEmpleados(op)];
+      ? [(op) => getEmpleadosCatalogo(op), (op) => getUsuarios(op)]
+      : [(op) => getEmpleadosCatalogo(op)];
     void ejecutarCargaEnFases({
       principal: (op) => getComunicacionesDisciplinarias(op),
       secundarios,

@@ -11,3 +11,4 @@ export { default as TarjetasResumen } from './TarjetasResumen';
 export { default as Tabs } from './Tabs';
 export { default as SinDatos } from './SinDatos';
 export { default as TarjetaInformacion } from './TarjetaInformacion';
+export { default as PaginacionTabla } from './PaginacionTabla';

@@ -1,18 +1,32 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ContenedorPrincipal, EncabezadoModulo, TablaDatos, FiltrosBusqueda } from '../../componentes';
+import {
+  ContenedorPrincipal,
+  EncabezadoModulo,
+  TablaDatos,
+  FiltrosBusqueda,
+  PaginacionTabla,
+} from '../../componentes';
 import { ModalContrato } from './componentes';
 import {
   getContratos,
   getContratoById,
   extraerFilasContratos,
+  extraerMetaPaginacion,
   codigoContratoDesde,
+  deleteContrato,
 } from '../../services/contratos';
-import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
+import { PER_PAGE_TABLA_DEFAULT } from '../../services/empleados';
+import {
+  getEmpleadosCatalogo,
+  extraerFilasEmpleados,
+  nombreCompletoEmpleado,
+  codigoEmpleadoDesde,
+} from '../../services/empleados';
 import { getCargos, extraerFilasCargos, nombreCargoDesde, codigoCargoDesde } from '../../services/cargos';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
-import { alertaErrorApi } from '../../utils/alertasSwal';
+import { alertaErrorApi, confirmarEliminacion, alertaErrorEliminacion } from '../../utils/alertasSwal';
 import { etiquetaEstadoContrato } from './contratoEnums';
 
 
@@ -48,6 +62,8 @@ function estadoContratoNormalizadoFiltro(valor) {
 function Contratos() {
   const navegar = useNavigate();
   const [lista, setLista] = useState([]);
+  const [meta, setMeta] = useState(null);
+  const [pagina, setPagina] = useState(1);
   const [empleados, setEmpleados] = useState([]);
   const [cargos, setCargos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -93,14 +109,21 @@ function Contratos() {
     });
   }, [lista, mapaEmpleados, mapaCargos]);
 
-  const recargarLista = useCallback(async () => {
+  const cargarPagina = useCallback(async (paginaPedida, forzar = false) => {
     setMensajeLista('');
     setCargando(true);
     try {
-      const json = await getContratos({ forzar: true });
+      const json = await getContratos({
+        forzar,
+        page: paginaPedida,
+        per_page: PER_PAGE_TABLA_DEFAULT,
+      });
       setLista(extraerFilasContratos(json));
+      setMeta(extraerMetaPaginacion(json));
+      setPagina(paginaPedida);
     } catch (e) {
       setLista([]);
+      setMeta(null);
       setMensajeLista(mensajeErrorApi(e));
     } finally {
       setCargando(false);
@@ -112,15 +135,19 @@ function Contratos() {
     setMensajeLista('');
     setCargando(true);
     void ejecutarCargaEnFases({
-      principal: (op) => getContratos(op),
-      secundarios: [(op) => getEmpleados(op), (op) => getCargos(op)],
+      principal: (op) =>
+        getContratos({ ...op, page: 1, per_page: PER_PAGE_TABLA_DEFAULT }),
+      secundarios: [(op) => getEmpleadosCatalogo(op), (op) => getCargos(op)],
       onPrincipal: (json, err) => {
         if (!activo) return;
         if (err) {
           setLista([]);
+          setMeta(null);
           setMensajeLista(mensajeErrorApi(err));
         } else {
           setLista(extraerFilasContratos(json));
+          setMeta(extraerMetaPaginacion(json));
+          setPagina(1);
         }
         setCargando(false);
       },
@@ -154,11 +181,11 @@ function Contratos() {
   }, [filasEnriquecidas, criteriosFiltro, mapaEmpleados]);
 
   const resumenContratos = useMemo(() => {
-    const total = filasFiltradas.length;
+    const totalSistema = meta?.total ?? filasFiltradas.length;
     const activos = filasFiltradas.filter((x) => estadoContratoActivo(x.estado_contrato)).length;
-    const finalizados = total - activos;
-    return { total, activos, finalizados };
-  }, [filasFiltradas]);
+    const finalizados = filasFiltradas.length - activos;
+    return { total: totalSistema, activos, finalizados, enPagina: filasFiltradas.length };
+  }, [filasFiltradas, meta]);
 
   const abrirNuevo = () => {
     setContratoEditar(null);
@@ -186,7 +213,7 @@ function Contratos() {
     if (!ok) return;
     try {
       await deleteContrato(cod);
-      await recargarLista();
+      await cargarPagina(pagina, true);
       setMensajeExito('Contrato eliminado correctamente.');
       window.setTimeout(() => setMensajeExito(''), 3000);
     } catch (e) {
@@ -195,7 +222,7 @@ function Contratos() {
   };
 
   const alExitoGuardado = async () => {
-    await recargarLista();
+    await cargarPagina(pagina, true);
     setMensajeExito('Cambios guardados correctamente.');
     window.setTimeout(() => setMensajeExito(''), 3000);
     setContratoEditar(null);
@@ -227,15 +254,15 @@ function Contratos() {
 
         <section className="contratos-kpis">
           <article className="contrato-kpi contrato-kpi--total">
-            <span>Total</span>
+            <span>Total en sistema</span>
             <strong>{resumenContratos.total}</strong>
           </article>
           <article className="contrato-kpi contrato-kpi--activos">
-            <span>Activos</span>
+            <span>Vigentes (esta página)</span>
             <strong>{resumenContratos.activos}</strong>
           </article>
           <article className="contrato-kpi contrato-kpi--finalizados">
-            <span>Finalizados</span>
+            <span>Otros (esta página)</span>
             <strong>{resumenContratos.finalizados}</strong>
           </article>
         </section>
@@ -261,6 +288,11 @@ function Contratos() {
             });
           }}
         />
+        {(criteriosFiltro.busqueda || criteriosFiltro.estado) && (
+          <p className="empleado-pagina-aviso-paginacion">
+            La búsqueda y el filtro aplican solo a los registros de esta página.
+          </p>
+        )}
 
         <div className="contrato-tabla-wrap">
           <TablaDatos
@@ -332,6 +364,11 @@ function Contratos() {
                 </button>
               </>
             )}
+          />
+          <PaginacionTabla
+            meta={meta}
+            cargando={cargando}
+            onCambiarPagina={(p) => void cargarPagina(p)}
           />
         </div>
       </div>

@@ -27,7 +27,11 @@ import {
   normalizarRegistroEmpleado,
   codigoEmpleadoDesde,
 } from '../../../services/empleados';
-import { getContratos, extraerFilasContratos, esContratoVigenteParaEmpleado } from '../../../services/contratos';
+import {
+  getContratosCatalogo,
+  extraerFilasContratos,
+  esContratoVigenteParaEmpleado,
+} from '../../../services/contratos';
 import { mergeCatalogoPorClave } from '../../../utils/mergeCatalogos';
 import { BANCOS_COLOMBIA_SUPLEMENTO } from '../../../data/catalogosColombiaSuplemento';
 import {
@@ -426,7 +430,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
           return;
         }
         if (parcial.estado_emp === 'RETIRADO') {
-          const jsonCtr = await getContratos();
+          const jsonCtr = await getContratosCatalogo();
           const filas = extraerFilasContratos(jsonCtr);
           const codEmp = Number(codEdicion);
           const tieneVigente = filas.some(

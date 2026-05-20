@@ -10,7 +10,12 @@ import {
   codigoAfiliacionDesde,
   obtenerCatalogosAfiliacion,
 } from '../../services/afiliaciones';
-import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
+import {
+  getEmpleadosCatalogo,
+  extraerFilasEmpleados,
+  nombreCompletoEmpleado,
+  codigoEmpleadoDesde,
+} from '../../services/empleados';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import {
@@ -92,7 +97,7 @@ function DetallesAfiliacion() {
     let a = true;
     (async () => {
       try {
-        const [se, sc] = await Promise.allSettled([getEmpleados(), obtenerCatalogosAfiliacion()]);
+        const [se, sc] = await Promise.allSettled([getEmpleadosCatalogo(), obtenerCatalogosAfiliacion()]);
         if (!a) return;
         if (se.status === 'fulfilled') setEmpleados(extraerFilasEmpleados(se.value));
         else setEmpleados([]);

@@ -10,7 +10,12 @@ import {
   codigoAfiliacionDesde,
   obtenerCatalogosAfiliacion,
 } from '../../services/afiliaciones';
-import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
+import {
+  getEmpleadosCatalogo,
+  extraerFilasEmpleados,
+  nombreCompletoEmpleado,
+  codigoEmpleadoDesde,
+} from '../../services/empleados';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
@@ -195,7 +200,7 @@ function Afiliaciones() {
     setCargando(true);
     void ejecutarCargaEnFases({
       principal: (op) => getAfiliaciones(op),
-      secundarios: [(op) => getEmpleados(op), () => obtenerCatalogosAfiliacion()],
+      secundarios: [(op) => getEmpleadosCatalogo(op), () => obtenerCatalogosAfiliacion()],
       onPrincipal: (json, err) => {
         if (!activo) return;
         if (err) {

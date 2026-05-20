@@ -1,64 +1,4 @@
-import { getEmpleados, extraerFilasEmpleados } from './empleados';
-import { getContratos, extraerFilasContratos } from './contratos';
-import { getIncapacidades, extraerFilasIncapacidades } from './incapacidades';
-import { listarInasistenciasApi, extraerInasistenciasApi } from './api/inasistenciasApi';
-import { getAfiliaciones, extraerFilasAfiliaciones } from './afiliaciones';
-import { getCertificaciones, extraerFilasCertificaciones } from './certificaciones';
-import { listarCalendarioActividadesApi, extraerActividadesApi } from './api/calendarioActividadesApi';
-function empleadoActivo(e) {
-  return String(e?.estado_emp ?? '').toUpperCase() === 'ACTIVO';
-}
-
-function contratoVigente(c) {
-  return String(c?.estado_contrato ?? '').toUpperCase() === 'ACTIVO';
-}
-
-function prefijoAnioMes(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-/** Laravel / front pueden usar distintos nombres de campo para la fecha. */
-function ymFechaInasistencia(registro) {
-  if (!registro || typeof registro !== 'object') return '';
-  const raw = registro.fecha_inasistencia ?? registro.fecha ?? registro.fechaInasistencia ?? '';
-  return String(raw).trim().slice(0, 7);
-}
-
-function contarInasistenciasEnMes(filas, prefijoYyyyMm) {
-  return filas.filter((r) => ymFechaInasistencia(r) === prefijoYyyyMm).length;
-}
-
-function serieInasistenciasUltimosMeses(filas, cantMeses) {
-  const out = [];
-  const ahora = new Date();
-  for (let i = cantMeses - 1; i >= 0; i -= 1) {
-    const d = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
-    const key = prefijoAnioMes(d);
-    const label = d.toLocaleDateString('es-CO', { month: 'short' });
-    const cap = label ? label.charAt(0).toUpperCase() + label.slice(1) : key;
-    const total = filas.filter((r) => ymFechaInasistencia(r) === key).length;
-    out.push({ clave: key, etiqueta: cap, total });
-  }
-  return out;
-}
-
-function enriquecerActividad(a) {
-  if (!a || typeof a !== 'object') return null;
-  const tipo = String(a.tipo_actividad || a.tipo || '').trim() || 'Actividad';
-  const estado = String(a.estado || '').toUpperCase();
-  const titulo = String(a.titulo || a.nombre || 'Sin título').trim();
-  const fi = String(a.fecha_inicio || '').slice(0, 10);
-  const fc = String(a.fecha_creacion || '').slice(0, 10);
-  return {
-    tipo,
-    estado,
-    titulo,
-    orden: fi || fc || '0000-00-00',
-    fechaInicio: fi,
-    fechaCreacion: fc,
-    prioridad: a.prioridad,
-  };
-}
+import api from './api';
 
 function etiquetaCortaTipoActividad(tipo) {
   const u = String(tipo || '').toUpperCase();
@@ -73,171 +13,122 @@ function claseEtiquetaPorEstadoActividad(estado) {
   return 'azul';
 }
 
-/**
- * Misma lógica de KPIs/gráficas que antes; acepta filas parciales mientras llegan los GET.
- */
-export function armarResumenDashboard({
-  empleados = [],
-  contratos = [],
-  incapacidades = [],
-  inasistencias = [],
-  afiliaciones = [],
-  certificaciones = [],
-  actividadesRaw = [],
-  errores = [],
-}) {
-  const empleadosActivos = empleados.filter(empleadoActivo).length;
-  const contratosActivos = contratos.filter(contratoVigente).length;
-  const contratosOtros = Math.max(0, contratos.length - contratosActivos);
-  const mesActual = prefijoAnioMes(new Date());
-  const inasistenciasMes = contarInasistenciasEnMes(inasistencias, mesActual);
+function mapearPieContratos(pie) {
+  if (!Array.isArray(pie) || pie.length === 0) return [];
+  const colores = ['#6366f1', '#cbd5e1'];
+  return pie.map((x, i) => ({
+    name: x.name ?? x.nombre ?? '—',
+    value: Number(x.value ?? x.valor) || 0,
+    fill: colores[i % colores.length],
+  }));
+}
 
-  const kpis = [
-    { id: 'emp', cantidad: empleadosActivos, etiqueta: 'Empleados activos', color: 'amarillo' },
-    { id: 'ctr', cantidad: contratosActivos, etiqueta: 'Contratos vigentes', color: 'rosa' },
-    { id: 'ina', cantidad: inasistenciasMes, etiqueta: 'Inasistencias del mes', color: 'naranja' },
-    { id: 'inc', cantidad: incapacidades.length, etiqueta: 'Incapacidades registradas', color: 'azul' },
-    { id: 'afi', cantidad: afiliaciones.length, etiqueta: 'Afiliaciones', color: 'verde' },
-    { id: 'cer', cantidad: certificaciones.length, etiqueta: 'Certificaciones', color: 'morado' },
-  ];
-
-  const barrasResumen = [
-    { nombre: 'Empleados', valor: empleadosActivos },
-    { nombre: 'Contratos', valor: contratosActivos },
-    { nombre: 'Incapac.', valor: incapacidades.length },
-    { nombre: 'Inasist.', valor: inasistenciasMes },
-    { nombre: 'Afiliac.', valor: afiliaciones.length },
-    { nombre: 'Certif.', valor: certificaciones.length },
-  ];
-
-  const inasistencias6Meses = serieInasistenciasUltimosMeses(inasistencias, 6);
-
-  const actividades = actividadesRaw
-    .map(enriquecerActividad)
-    .filter(Boolean)
-    .sort((a, b) => String(b.orden).localeCompare(String(a.orden)));
-
-  const actividadesRecientes = actividades.slice(0, 6).map((a) => {
-    const fecha = a.fechaInicio || a.fechaCreacion;
+function mapearActividadesRecientes(actividades) {
+  if (!Array.isArray(actividades)) return [];
+  return actividades.slice(0, 6).map((a) => {
+    const fecha = String(a.fecha_inicio || a.fecha_creacion || '').slice(0, 10);
     const tiempo = fecha
       ? new Date(`${fecha}T12:00:00`).toLocaleDateString('es-CO', {
           day: '2-digit',
           month: 'short',
         })
       : '—';
+    const tipo = String(a.tipo_actividad || a.tipo || '').trim() || 'Actividad';
+    const estado = String(a.estado || '').toUpperCase();
     return {
-      texto: a.titulo,
-      etiqueta: etiquetaCortaTipoActividad(a.tipo),
-      tipoEtiqueta: claseEtiquetaPorEstadoActividad(a.estado),
+      texto: String(a.titulo || a.nombre || 'Sin título').trim(),
+      etiqueta: etiquetaCortaTipoActividad(tipo),
+      tipoEtiqueta: claseEtiquetaPorEstadoActividad(estado),
       tiempo,
     };
   });
+}
 
-  const pieContratos =
-    contratos.length === 0
-      ? []
-      : [
-          { name: 'Vigentes', value: contratosActivos, fill: '#6366f1' },
-          { name: 'Finalizados u otros', value: contratosOtros, fill: '#cbd5e1' },
-        ];
+/**
+ * Convierte `data` del endpoint GET /dashboard/resumen al shape que usa Panel.jsx.
+ */
+export function armarResumenDashboardDesdeApi(data, errores = []) {
+  const d = data && typeof data === 'object' ? data : {};
+  const empleadosActivos = Number(d.empleados_activos) || 0;
+  const contratosActivos = Number(d.contratos_vigentes) || 0;
+  const inasistenciasMes = Number(d.inasistencias_mes_actual) || 0;
+  const incapacidadesTotal = Number(d.incapacidades_total) || 0;
+  const afiliacionesTotal = Number(d.afiliaciones_total) || 0;
+  const certificacionesTotal = Number(d.certificaciones_total) || 0;
+
+  const kpis = [
+    { id: 'emp', cantidad: empleadosActivos, etiqueta: 'Empleados activos', color: 'amarillo' },
+    { id: 'ctr', cantidad: contratosActivos, etiqueta: 'Contratos vigentes', color: 'rosa' },
+    { id: 'ina', cantidad: inasistenciasMes, etiqueta: 'Inasistencias del mes', color: 'naranja' },
+    { id: 'inc', cantidad: incapacidadesTotal, etiqueta: 'Incapacidades registradas', color: 'azul' },
+    { id: 'afi', cantidad: afiliacionesTotal, etiqueta: 'Afiliaciones', color: 'verde' },
+    { id: 'cer', cantidad: certificacionesTotal, etiqueta: 'Certificaciones', color: 'morado' },
+  ];
+
+  const barrasResumen = [
+    { nombre: 'Empleados', valor: empleadosActivos },
+    { nombre: 'Contratos', valor: contratosActivos },
+    { nombre: 'Incapac.', valor: incapacidadesTotal },
+    { nombre: 'Inasist.', valor: inasistenciasMes },
+    { nombre: 'Afiliac.', valor: afiliacionesTotal },
+    { nombre: 'Certif.', valor: certificacionesTotal },
+  ];
+
+  const inasistencias6Meses = Array.isArray(d.inasistencias_ultimos_6_meses)
+    ? d.inasistencias_ultimos_6_meses.map((m) => ({
+        clave: m.clave,
+        etiqueta: m.etiqueta,
+        total: Number(m.total) || 0,
+      }))
+    : [];
 
   return {
     kpis,
     barrasResumen,
     inasistencias6Meses,
-    pieContratos,
-    actividadesRecientes,
+    pieContratos: mapearPieContratos(d.contratos_pie),
+    actividadesRecientes: mapearActividadesRecientes(d.actividades_recientes),
     errores,
   };
 }
 
-const FUENTES_DASHBOARD = [
-  {
-    clave: 'empleados',
-    claveError: 'empleados',
-    cargar: (op) => getEmpleados(op),
-    extraer: (v) => extraerFilasEmpleados(v),
-  },
-  {
-    clave: 'contratos',
-    claveError: 'contratos',
-    cargar: (op) => getContratos(op),
-    extraer: (v) => extraerFilasContratos(v),
-  },
-  {
-    clave: 'incapacidades',
-    claveError: 'incapacidades',
-    cargar: (op) => getIncapacidades(op),
-    extraer: (v) => extraerFilasIncapacidades(v),
-  },
-  {
-    clave: 'inasistencias',
-    claveError: 'inasistencias',
-    cargar: (op) => listarInasistenciasApi(op),
-    extraer: (v) => extraerInasistenciasApi(v),
-  },
-  {
-    clave: 'afiliaciones',
-    claveError: 'afiliaciones',
-    cargar: (op) => getAfiliaciones(op),
-    extraer: (v) => extraerFilasAfiliaciones(v),
-  },
-  {
-    clave: 'certificaciones',
-    claveError: 'certificaciones',
-    cargar: (op) => getCertificaciones(op),
-    extraer: (v) => extraerFilasCertificaciones(v),
-  },
-  {
-    clave: 'actividadesRaw',
-    claveError: 'actividades',
-    cargar: (op) => listarCalendarioActividadesApi(op),
-    extraer: (v) => extraerActividadesApi(v),
-  },
-];
-
-function estadoFilasVacio() {
-  return {
-    empleados: [],
-    contratos: [],
-    incapacidades: [],
-    inasistencias: [],
-    afiliaciones: [],
-    certificaciones: [],
-    actividadesRaw: [],
-    errores: [],
-  };
+/** @deprecated Solo tests; el panel usa armarResumenDashboardDesdeApi. */
+export function armarResumenDashboard(props) {
+  return armarResumenDashboardDesdeApi(
+    {
+      empleados_activos: props.empleados?.filter?.((e) => String(e?.estado_emp).toUpperCase() === 'ACTIVO')
+        ?.length,
+      contratos_vigentes: props.contratos?.filter?.(
+        (c) => String(c?.estado_contrato).toUpperCase() === 'ACTIVO',
+      )?.length,
+      inasistencias_mes_actual: 0,
+      incapacidades_total: props.incapacidades?.length ?? 0,
+      afiliaciones_total: props.afiliaciones?.length ?? 0,
+      certificaciones_total: props.certificaciones?.length ?? 0,
+      inasistencias_ultimos_6_meses: [],
+      contratos_pie: [],
+      actividades_recientes: props.actividadesRaw ?? [],
+    },
+    props.errores ?? [],
+  );
 }
 
 /**
- * Carga en paralelo; llama onProgreso cada vez que termina un listado (UI progresiva).
- * @param {{ forzar?: boolean, onProgreso?: (resumen: ReturnType<armarResumenDashboard>, pendiente: boolean) => void }} [opciones]
+ * Una sola petición al resumen agregado del dashboard (reemplaza 7 GET de listados).
  */
-export async function obtenerDatosDashboard({ forzar = false, onProgreso } = {}) {
-  const filas = estadoFilasVacio();
-  const opciones = { forzar };
-  let pendientes = FUENTES_DASHBOARD.length;
+export async function obtenerDatosDashboard({ onProgreso } = {}) {
+  const vacio = armarResumenDashboardDesdeApi(null, ['sistema']);
+  onProgreso?.(vacio, true);
 
-  const notificar = () => {
-    onProgreso?.(armarResumenDashboard(filas), pendientes > 0);
-  };
-
-  notificar();
-
-  const procesarFuente = async (fuente) => {
-    try {
-      const valor = await fuente.cargar(opciones);
-      filas[fuente.clave] = fuente.extraer(valor);
-    } catch {
-      filas.errores.push(fuente.claveError);
-      filas[fuente.clave] = fuente.extraer(null);
-    } finally {
-      pendientes -= 1;
-      notificar();
-    }
-  };
-
-  await Promise.allSettled(FUENTES_DASHBOARD.map((fuente) => procesarFuente(fuente)));
-
-  return armarResumenDashboard(filas);
+  try {
+    const { data: cuerpo } = await api.get('/dashboard/resumen');
+    const payload = cuerpo?.data ?? cuerpo;
+    const resumen = armarResumenDashboardDesdeApi(payload, []);
+    onProgreso?.(resumen, false);
+    return resumen;
+  } catch {
+    const resumen = armarResumenDashboardDesdeApi(null, ['sistema']);
+    onProgreso?.(resumen, false);
+    return resumen;
+  }
 }

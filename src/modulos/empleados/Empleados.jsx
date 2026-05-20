@@ -1,11 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ContenedorPrincipal, EncabezadoModulo, TablaDatos, FiltrosBusqueda } from '../../componentes';
+import {
+  ContenedorPrincipal,
+  EncabezadoModulo,
+  TablaDatos,
+  FiltrosBusqueda,
+  PaginacionTabla,
+} from '../../componentes';
 import { ModalEmpleado } from './componentes';
 import {
   getEmpleados,
   getEmpleadoById,
   extraerFilasEmpleados,
+  extraerMetaPaginacion,
+  PER_PAGE_TABLA_DEFAULT,
   nombreCompletoEmpleado,
   normalizarRegistroEmpleado,
   codigoEmpleadoDesde,
@@ -35,6 +43,8 @@ function formatearFechaNacimientoLista(valor) {
 function Empleados() {
   const navegar = useNavigate();
   const [lista, setLista] = useState([]);
+  const [meta, setMeta] = useState(null);
+  const [pagina, setPagina] = useState(1);
   const [bancos, setBancos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [mensajeLista, setMensajeLista] = useState('');
@@ -46,14 +56,21 @@ function Empleados() {
     estado: '',
   });
 
-  const recargarLista = useCallback(async () => {
+  const cargarPagina = useCallback(async (paginaPedida, forzar = false) => {
     setMensajeLista('');
     setCargando(true);
     try {
-      const jsonEmp = await getEmpleados({ forzar: true });
+      const jsonEmp = await getEmpleados({
+        forzar,
+        page: paginaPedida,
+        per_page: PER_PAGE_TABLA_DEFAULT,
+      });
       setLista(extraerFilasEmpleados(jsonEmp));
+      setMeta(extraerMetaPaginacion(jsonEmp));
+      setPagina(paginaPedida);
     } catch (e) {
       setLista([]);
+      setMeta(null);
       setMensajeLista(mensajeErrorApi(e));
     } finally {
       setCargando(false);
@@ -65,15 +82,19 @@ function Empleados() {
     setMensajeLista('');
     setCargando(true);
     void ejecutarCargaEnFases({
-      principal: (op) => getEmpleados(op),
+      principal: (op) =>
+        getEmpleados({ ...op, page: 1, per_page: PER_PAGE_TABLA_DEFAULT }),
       secundarios: [(op) => getBancos(op)],
       onPrincipal: (json, err) => {
         if (!activo) return;
         if (err) {
           setLista([]);
+          setMeta(null);
           setMensajeLista(mensajeErrorApi(err));
         } else {
           setLista(extraerFilasEmpleados(json));
+          setMeta(extraerMetaPaginacion(json));
+          setPagina(1);
         }
         setCargando(false);
       },
@@ -125,7 +146,7 @@ function Empleados() {
   };
 
   const alExitoGuardado = async (tipo) => {
-    await recargarLista();
+    await cargarPagina(pagina, true);
     setMensajeExito(
       tipo === 'creado' ? 'Empleado registrado correctamente.' : 'Empleado actualizado correctamente.',
     );
@@ -178,6 +199,11 @@ function Empleados() {
             });
           }}
         />
+        {(criteriosFiltro.busqueda || criteriosFiltro.estado) && (
+          <p className="empleado-pagina-aviso-paginacion">
+            La búsqueda y el filtro de estado aplican solo a los registros de esta página.
+          </p>
+        )}
 
         <div style={{ marginTop: '20px' }}>
           <TablaDatos
@@ -232,6 +258,11 @@ function Empleados() {
                 </button>
               </>
             )}
+          />
+          <PaginacionTabla
+            meta={meta}
+            cargando={cargando}
+            onCambiarPagina={(p) => void cargarPagina(p)}
           />
         </div>
       </div>

@@ -9,7 +9,7 @@ import {
 } from '../../services/contratos';
 import {
   nombreCompletoEmpleado,
-  getEmpleados,
+  getEmpleadosCatalogo,
   extraerFilasEmpleados,
 } from '../../services/empleados';
 import { nombreCargoDesde } from '../../services/cargos';
@@ -72,7 +72,7 @@ function DetallesContrato() {
     let a = true;
     (async () => {
       try {
-        const [se, sc] = await Promise.allSettled([getEmpleados(), getCargos()]);
+        const [se, sc] = await Promise.allSettled([getEmpleadosCatalogo(), getCargos()]);
         if (!a) return;
         if (se.status === 'fulfilled') setEmpleadosLista(extraerFilasEmpleados(se.value));
         else setEmpleadosLista([]);

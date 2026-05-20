@@ -16,8 +16,13 @@ import {
   parseDetalleIncapacidad,
   codigoIncapacidadDesde,
 } from '../../services/incapacidades';
-import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
-import { getContratos, extraerFilasContratos } from '../../services/contratos';
+import {
+  getEmpleadosCatalogo,
+  extraerFilasEmpleados,
+  nombreCompletoEmpleado,
+  codigoEmpleadoDesde,
+} from '../../services/empleados';
+import { getContratosCatalogo, extraerFilasContratos } from '../../services/contratos';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
@@ -196,10 +201,10 @@ function Incapacidades() {
     void ejecutarCargaEnFases({
       principal: (op) => getIncapacidades(op),
       secundarios: [
-        (op) => getEmpleados(op),
+        (op) => getEmpleadosCatalogo(op),
         () => getResumenIncapacidades(),
         () => getTiposIncapacidad(),
-        (op) => getContratos(op),
+        (op) => getContratosCatalogo(op),
       ],
       onPrincipal: (json, err) => {
         if (!activo) return;

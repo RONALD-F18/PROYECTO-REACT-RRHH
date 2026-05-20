@@ -11,8 +11,13 @@ import {
   nombreTipoIncapacidadDesdeFila,
   codigoIncapacidadDesde,
 } from '../../services/incapacidades';
-import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpleadoDesde } from '../../services/empleados';
-import { getContratos, extraerFilasContratos } from '../../services/contratos';
+import {
+  getEmpleadosCatalogo,
+  extraerFilasEmpleados,
+  nombreCompletoEmpleado,
+  codigoEmpleadoDesde,
+} from '../../services/empleados';
+import { getContratosCatalogo, extraerFilasContratos } from '../../services/contratos';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import {
@@ -108,7 +113,7 @@ function DetallesIncapacidad() {
     let a = true;
     (async () => {
       try {
-        const [je, jc] = await Promise.allSettled([getEmpleados(), getContratos()]);
+        const [je, jc] = await Promise.allSettled([getEmpleadosCatalogo(), getContratosCatalogo()]);
         if (!a) return;
         if (je.status === 'fulfilled') setEmpleados(extraerFilasEmpleados(je.value));
         else setEmpleados([]);

@@ -1,16 +1,48 @@
 import api from './api';
 import { crearPeticionCompartida } from '../utils/peticionCompartida';
 
-const ejecutarGetEmpleadosLista = crearPeticionCompartida(async () => {
-  const { data } = await api.get('/empleados');
-  return data;
-});
+export const PER_PAGE_TABLA_DEFAULT = 25;
+export const PER_PAGE_CATALOGO_MAX = 100;
+
+const ejecutoresLista = new Map();
+
+function claveLista(page, per_page) {
+  return `${page}|${per_page}`;
+}
+
+function obtenerEjecutorLista(page, per_page) {
+  const key = claveLista(page, per_page);
+  if (!ejecutoresLista.has(key)) {
+    ejecutoresLista.set(
+      key,
+      crearPeticionCompartida(async () => {
+        const { data } = await api.get('/empleados', { params: { page, per_page } });
+        return data;
+      }),
+    );
+  }
+  return ejecutoresLista.get(key);
+}
 
 export function extraerFilasEmpleados(cuerpo) {
   if (!cuerpo) return [];
   if (Array.isArray(cuerpo)) return cuerpo.filter((e) => e != null && typeof e === 'object');
   if (Array.isArray(cuerpo.data)) return cuerpo.data.filter((e) => e != null && typeof e === 'object');
   return [];
+}
+
+export function extraerMetaPaginacion(cuerpo) {
+  if (!cuerpo || typeof cuerpo !== 'object') return null;
+  const meta = cuerpo.meta;
+  if (meta && typeof meta === 'object' && meta.current_page != null) {
+    return {
+      current_page: Number(meta.current_page) || 1,
+      per_page: Number(meta.per_page) || PER_PAGE_TABLA_DEFAULT,
+      total: Number(meta.total) || 0,
+      last_page: Number(meta.last_page) || 1,
+    };
+  }
+  return null;
 }
 
 /**
@@ -80,12 +112,33 @@ export function buscarEmpleadoPorDocumento(empleados, docIngresado) {
   );
 }
 
+function resolverPaginacion(opciones = {}) {
+  const page = Math.max(1, Number(opciones.page) || 1);
+  const per_page = Math.min(
+    100,
+    Math.max(
+      1,
+      Number(opciones.per_page) ||
+        (opciones.modoCatalogo ? PER_PAGE_CATALOGO_MAX : PER_PAGE_TABLA_DEFAULT),
+    ),
+  );
+  return { page, per_page };
+}
+
+/** Listado paginado (tablas y catálogos auxiliares con modoCatalogo). */
 export async function getEmpleados(opciones = {}) {
-  return ejecutarGetEmpleadosLista(opciones);
+  const { page, per_page } = resolverPaginacion(opciones);
+  const ejecutor = obtenerEjecutorLista(page, per_page);
+  return ejecutor(opciones);
+}
+
+/** Hasta 100 empleados para selects en otros módulos (sin paginación UI). */
+export async function getEmpleadosCatalogo(opciones = {}) {
+  return getEmpleados({ ...opciones, modoCatalogo: true, page: 1, per_page: PER_PAGE_CATALOGO_MAX });
 }
 
 export function invalidarCacheListaEmpleados() {
-  ejecutarGetEmpleadosLista.invalidar();
+  ejecutoresLista.forEach((ej) => ej.invalidar());
 }
 
 export async function getEmpleadoById(codEmpleado) {

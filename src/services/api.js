@@ -73,12 +73,13 @@ api.interceptors.response.use(
     const urlPedido = String(error.config?.url ?? '');
     const esRutaLogin = urlPedido.includes('/login');
 
-    if (status === 401 && !esRutaLogin) {
+    if ((status === 401 || status === 403) && !esRutaLogin) {
       limpiarAlmacenSesionCliente();
-      const hash = window.location.hash || '';
+      const hash = String(window.location.hash || '');
       const enLogin = hash === '#/login' || hash.endsWith('/login');
       if (!enLogin) {
-        window.location.hash = '#/login';
+        const base = import.meta.env.BASE_URL || '/';
+        window.location.replace(`${window.location.origin}${base}#/login`);
       }
     }
     return Promise.reject(error);

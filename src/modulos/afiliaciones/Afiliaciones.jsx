@@ -14,8 +14,6 @@ import { getEmpleados, extraerFilasEmpleados, nombreCompletoEmpleado, codigoEmpl
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
-import { CLAVES_LISTAS } from '../../utils/cacheListaSesion';
-import { hidratarListaSiHayCache } from '../../utils/hidratarListaModulo';
 import { etiquetaEstadoAfiliacion } from '../../utils/afiliacionEstado';
 import '../../estilos/modulos/afiliaciones.css';
 
@@ -194,12 +192,7 @@ function Afiliaciones() {
       compensaciones: [],
     };
     setMensajeLista('');
-    const teniaCache = hidratarListaSiHayCache(
-      CLAVES_LISTAS.AFILIACIONES,
-      extraerFilasAfiliaciones,
-      setLista,
-    );
-    setCargando(!teniaCache);
+    setCargando(true);
     void ejecutarCargaEnFases({
       principal: (op) => getAfiliaciones(op),
       secundarios: [(op) => getEmpleados(op), () => obtenerCatalogosAfiliacion()],

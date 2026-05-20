@@ -1,5 +1,4 @@
 import api, { API_REQUEST_TIMEOUT_MS } from './api';
-import { precalentarListasPrincipales } from './prefetchListasPrincipales';
 import {
   CLAVE_SESION_LOCAL,
   extraerTokenDeRespuestaLogin,
@@ -191,7 +190,6 @@ export async function iniciarSesion(credenciales) {
     throw err;
   }
   guardarSesionLocal(data);
-  precalentarListasPrincipales();
   return data;
 }
 

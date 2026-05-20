@@ -1,5 +1,3 @@
-import { limpiarTodasLasListasSesion } from '../utils/cacheListaSesion';
-
 /** Clave única: misma que usa autenticacion.js */
 export const CLAVE_SESION_LOCAL = 'rrhh_sesion_usuario';
 
@@ -72,7 +70,16 @@ export function limpiarAlmacenSesionCliente() {
   } catch {
     /* noop */
   }
-  limpiarTodasLasListasSesion();
+  try {
+    for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+      const k = sessionStorage.key(i);
+      if (k && k.startsWith('rrhh_lista:')) {
+        sessionStorage.removeItem(k);
+      }
+    }
+  } catch {
+    /* noop */
+  }
 }
 
 /**

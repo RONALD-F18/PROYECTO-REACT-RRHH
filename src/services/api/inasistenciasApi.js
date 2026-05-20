@@ -1,11 +1,10 @@
 import api from '../api';
-import { CLAVES_LISTAS } from '../../utils/cacheListaSesion';
-import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../../utils/peticionCompartida';
+import { crearPeticionCompartida } from '../../utils/peticionCompartida';
 
 const ejecutarListarInasistencias = crearPeticionCompartida(async () => {
   const { data } = await api.get('/inasistencias');
   return data;
-}, { ttlMs: TTL_CACHE_LISTAS_MS, claveSesion: CLAVES_LISTAS.INASISTENCIAS });
+});
 
 function extraerErrores422(error) {
   const status = error?.response?.status;

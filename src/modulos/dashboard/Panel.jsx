@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ContenedorPrincipal } from '../../componentes';
 import BotonMenu from '../../componentes/comunes/BotonMenu';
 import { esAdminSesionLocal } from '../../services/autenticacion';
-import { leerResumenDashboardDesdeSesion, obtenerDatosDashboard } from '../../services/dashboardResumen';
+import { obtenerDatosDashboard } from '../../services/dashboardResumen';
 import {
   GraficaBarrasDashboard,
   GraficaDonutContratos,
@@ -27,14 +27,7 @@ function Panel() {
   const [ultimaCarga, setUltimaCarga] = useState(null);
 
   const cargar = useCallback(async (forzar = false) => {
-    const cacheado = !forzar ? leerResumenDashboardDesdeSesion() : null;
-    if (cacheado) {
-      setDatos(cacheado);
-      setUltimaCarga(new Date());
-      setCargando(false);
-    } else {
-      setCargando(true);
-    }
+    setCargando(true);
     try {
       const res = await obtenerDatosDashboard({
         forzar,

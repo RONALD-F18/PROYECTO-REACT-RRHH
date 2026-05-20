@@ -1,12 +1,11 @@
 import api from './api';
 import { getAfiliaciones, extraerFilasAfiliaciones } from './afiliaciones';
-import { CLAVES_LISTAS } from '../utils/cacheListaSesion';
-import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
+import { crearPeticionCompartida } from '../utils/peticionCompartida';
 
 const ejecutarGetCertificacionesLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/certificaciones');
   return data;
-}, { ttlMs: TTL_CACHE_LISTAS_MS, claveSesion: CLAVES_LISTAS.CERTIFICACIONES });
+});
 
 function rowsFromResponse(body) {
   if (!body) return [];

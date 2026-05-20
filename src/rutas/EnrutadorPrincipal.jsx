@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import {
   Inicio,
   InicioSesion,
@@ -24,27 +24,25 @@ import {
 } from "../modulos";
 import { esAdminSesionLocal, haySesionLocalActiva } from "../services/autenticacion";
 
+function irALogin() {
+  return <Navigate to="/login" replace />;
+}
+
 /**
- * Bloquea rutas privadas sin sesión en localStorage (lectura síncrona: no hay flash del módulo
- * ni espera a un 401 del API).
+ * Bloquea rutas privadas sin sesión (sin flash del módulo ni 404 de GitHub Pages).
  */
 function RutaPrivada({ children }) {
   "use no memo";
   if (!haySesionLocalActiva()) {
-    return <Navigate to="/login" replace />;
+    return irALogin();
   }
   return children;
 }
 
-/**
- * La comprobación debe ocurrir al renderizar la ruta (no al armar el árbol de <Route>),
- * para que siempre lea la sesión actual y no quede memoizada una rama Navigate → /dashboard
- * (p. ej. con React Compiler + localStorage).
- */
 function RutaUsuariosProtegida() {
   "use no memo";
   if (!haySesionLocalActiva()) {
-    return <Navigate to="/login" replace />;
+    return irALogin();
   }
   if (!esAdminSesionLocal()) {
     return <Navigate to="/dashboard" replace />;
@@ -52,14 +50,33 @@ function RutaUsuariosProtegida() {
   return <Usuarios />;
 }
 
-// Rutas públicas
+/** Rutas públicas: si ya hay sesión, no quedarse en login/registro. */
+function RutaPublica({ children }) {
+  "use no memo";
+  const { pathname } = useLocation();
+  if (haySesionLocalActiva() && (pathname === "/login" || pathname === "/")) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
+
+/**
+ * Cualquier ruta desconocida: sin sesión → login; con sesión → dashboard (evita pantalla en blanco / 404).
+ */
+function RutaComodin() {
+  "use no memo";
+  if (!haySesionLocalActiva()) {
+    return irALogin();
+  }
+  return <Navigate to="/dashboard" replace />;
+}
+
 export const rutasPublicas = [
   { ruta: "/", componente: Inicio },
   { ruta: "/login", componente: InicioSesion },
   { ruta: "/recuperar-contrasena", componente: RecuperarContrasena },
 ];
 
-// Rutas privadas (empleados y el resto salvo /usuarios: accesibles con sesión; /usuarios solo admin abajo)
 export const rutasPrivadas = [
   { ruta: "/dashboard", componente: Panel },
   { ruta: "/empleados", componente: Empleados },
@@ -85,7 +102,15 @@ function EnrutadorPrincipal() {
   return (
     <Routes>
       {rutasPublicas.map(({ ruta, componente: Componente }) => (
-        <Route key={ruta} path={ruta} element={<Componente />} />
+        <Route
+          key={ruta}
+          path={ruta}
+          element={
+            <RutaPublica>
+              <Componente />
+            </RutaPublica>
+          }
+        />
       ))}
       {rutasPrivadas.map(({ ruta, componente: Componente }) =>
         ruta === "/usuarios" ? (
@@ -110,6 +135,7 @@ function EnrutadorPrincipal() {
           </RutaPrivada>
         }
       />
+      <Route path="*" element={<RutaComodin />} />
     </Routes>
   );
 }

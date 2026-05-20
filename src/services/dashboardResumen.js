@@ -5,13 +5,6 @@ import { listarInasistenciasApi, extraerInasistenciasApi } from './api/inasisten
 import { getAfiliaciones, extraerFilasAfiliaciones } from './afiliaciones';
 import { getCertificaciones, extraerFilasCertificaciones } from './certificaciones';
 import { listarCalendarioActividadesApi, extraerActividadesApi } from './api/calendarioActividadesApi';
-import {
-  CLAVES_LISTAS,
-  escribirCacheListaSesion,
-  leerCacheListaSesion,
-} from '../utils/cacheListaSesion';
-import { TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
-
 function empleadoActivo(e) {
   return String(e?.estado_emp ?? '').toUpperCase() === 'ACTIVO';
 }
@@ -246,12 +239,5 @@ export async function obtenerDatosDashboard({ forzar = false, onProgreso } = {})
 
   await Promise.allSettled(FUENTES_DASHBOARD.map((fuente) => procesarFuente(fuente)));
 
-  const resumen = armarResumenDashboard(filas);
-  escribirCacheListaSesion(CLAVES_LISTAS.DASHBOARD_RESUMEN, resumen);
-  return resumen;
-}
-
-/** Muestra el panel al instante si ya hubo una visita en esta pestaña. */
-export function leerResumenDashboardDesdeSesion() {
-  return leerCacheListaSesion(CLAVES_LISTAS.DASHBOARD_RESUMEN, TTL_CACHE_LISTAS_MS);
+  return armarResumenDashboard(filas);
 }

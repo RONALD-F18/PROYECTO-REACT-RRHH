@@ -5,8 +5,6 @@ import { getUsuarios, getUsuarioById, deleteUsuario, extraerFilasUsuarios } from
 import { getRolesActivos } from '../../services/rol';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
-import { CLAVES_LISTAS } from '../../utils/cacheListaSesion';
-import { hidratarListaSiHayCache } from '../../utils/hidratarListaModulo';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 
 function esRegistroUsuario(u) {
@@ -120,10 +118,7 @@ function Usuarios() {
 
   const cargarPagina = useCallback(async (forzar = false) => {
     setMensajeLista('');
-    const teniaCache =
-      !forzar &&
-      hidratarListaSiHayCache(CLAVES_LISTAS.USUARIOS, extraerFilasUsuarios, setListaUsuarios);
-    setCargando(!teniaCache);
+    setCargando(true);
     setRolesPendientes(true);
     await ejecutarCargaEnFases({
       opciones: { forzar },

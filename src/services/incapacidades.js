@@ -1,11 +1,10 @@
 import api from './api';
-import { CLAVES_LISTAS } from '../utils/cacheListaSesion';
-import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
+import { crearPeticionCompartida } from '../utils/peticionCompartida';
 
 const ejecutarGetIncapacidadesLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/incapacidades');
   return data;
-}, { ttlMs: TTL_CACHE_LISTAS_MS, claveSesion: CLAVES_LISTAS.INCAPACIDADES });
+});
 
 const ejecutarGetTiposIncapacidad = crearPeticionCompartida(async () => {
   const { data } = await api.get('/tipos-incapacidad');

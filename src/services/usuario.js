@@ -1,11 +1,10 @@
 import api from './api';
-import { CLAVES_LISTAS } from '../utils/cacheListaSesion';
-import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
+import { crearPeticionCompartida } from '../utils/peticionCompartida';
 
 const ejecutarGetUsuariosLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/usuarios');
   return data;
-}, { ttlMs: TTL_CACHE_LISTAS_MS, claveSesion: CLAVES_LISTAS.USUARIOS });
+});
 
 /** Soporta array directo, `{ data: [] }` o paginación Laravel `{ data: { data: [] } }` */
 export function extraerFilasUsuarios(cuerpo) {

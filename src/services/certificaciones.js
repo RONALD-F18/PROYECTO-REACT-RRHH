@@ -1,11 +1,11 @@
 import api from './api';
 import { getAfiliaciones, extraerFilasAfiliaciones } from './afiliaciones';
-import { crearPeticionCompartida } from '../utils/peticionCompartida';
+import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
 
 const ejecutarGetCertificacionesLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/certificaciones');
   return data;
-});
+}, { ttlMs: TTL_CACHE_LISTAS_MS });
 
 function rowsFromResponse(body) {
   if (!body) return [];
@@ -117,8 +117,12 @@ async function simpleGet(path) {
   return data;
 }
 
-export async function getCertificaciones() {
-  return ejecutarGetCertificacionesLista();
+export async function getCertificaciones(opciones = {}) {
+  return ejecutarGetCertificacionesLista(opciones);
+}
+
+export function invalidarCacheListaCertificaciones() {
+  ejecutarGetCertificacionesLista.invalidar();
 }
 
 export async function getCertificacionById(id) {
@@ -127,21 +131,25 @@ export async function getCertificacionById(id) {
 
 export async function createCertificacion(payload) {
   const { data } = await api.post('/certificaciones', payload);
+  invalidarCacheListaCertificaciones();
   return data;
 }
 
 export async function updateCertificacion(id, payload) {
   const { data } = await api.put(`/certificaciones/${id}`, payload);
+  invalidarCacheListaCertificaciones();
   return data;
 }
 
 export async function patchCertificacion(id, payload) {
   const { data } = await api.patch(`/certificaciones/${id}`, payload);
+  invalidarCacheListaCertificaciones();
   return data;
 }
 
 export async function deleteCertificacion(id) {
   const { data } = await api.delete(`/certificaciones/${id}`);
+  invalidarCacheListaCertificaciones();
   return data;
 }
 

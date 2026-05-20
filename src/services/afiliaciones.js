@@ -1,10 +1,10 @@
 import api, { API_REQUEST_TIMEOUT_MS } from './api';
-import { crearPeticionCompartida } from '../utils/peticionCompartida';
+import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
 
 const ejecutarGetAfiliacionesLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/afiliaciones');
   return data;
-});
+}, { ttlMs: TTL_CACHE_LISTAS_MS });
 
 export function extraerFilasAfiliaciones(cuerpo) {
   if (!cuerpo) return [];
@@ -78,8 +78,12 @@ export async function obtenerCatalogosAfiliacion({ forzar = false } = {}) {
   return inflightCatalogos;
 }
 
-export async function getAfiliaciones() {
-  return ejecutarGetAfiliacionesLista();
+export async function getAfiliaciones(opciones = {}) {
+  return ejecutarGetAfiliacionesLista(opciones);
+}
+
+export function invalidarCacheListaAfiliaciones() {
+  ejecutarGetAfiliacionesLista.invalidar();
 }
 
 export async function getAfiliacionById(cod) {
@@ -89,20 +93,24 @@ export async function getAfiliacionById(cod) {
 
 export async function createAfiliacion(cuerpo) {
   const { data } = await api.post('/afiliaciones', cuerpo);
+  invalidarCacheListaAfiliaciones();
   return data;
 }
 
 export async function updateAfiliacion(cod, cuerpo) {
   const { data } = await api.put(`/afiliaciones/${cod}`, cuerpo);
+  invalidarCacheListaAfiliaciones();
   return data;
 }
 
 export async function patchAfiliacion(cod, cuerpo) {
   const { data } = await api.patch(`/afiliaciones/${cod}`, cuerpo);
+  invalidarCacheListaAfiliaciones();
   return data;
 }
 
 export async function deleteAfiliacion(cod) {
   const { data } = await api.delete(`/afiliaciones/${cod}`);
+  invalidarCacheListaAfiliaciones();
   return data;
 }

@@ -1,4 +1,10 @@
 import api from '../api';
+import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../../utils/peticionCompartida';
+
+const ejecutarListarCalendarioActividades = crearPeticionCompartida(async () => {
+  const { data } = await api.get('/calendario-actividades');
+  return data;
+}, { ttlMs: TTL_CACHE_LISTAS_MS });
 
 function adjuntarValidacion422(error) {
   const status = error?.response?.status;
@@ -24,9 +30,12 @@ export function extraerActividadApi(json) {
   return null;
 }
 
-export async function listarCalendarioActividadesApi() {
-  const { data } = await api.get('/calendario-actividades');
-  return data;
+export async function listarCalendarioActividadesApi(opciones = {}) {
+  return ejecutarListarCalendarioActividades(opciones);
+}
+
+export function invalidarCacheListaCalendarioActividades() {
+  ejecutarListarCalendarioActividades.invalidar();
 }
 
 export async function obtenerCalendarioActividadApi(codActividad) {
@@ -37,6 +46,7 @@ export async function obtenerCalendarioActividadApi(codActividad) {
 export async function crearCalendarioActividadApi(payload) {
   try {
     const { data } = await api.post('/calendario-actividades', payload);
+    invalidarCacheListaCalendarioActividades();
     return data;
   } catch (error) {
     adjuntarValidacion422(error);
@@ -47,6 +57,7 @@ export async function crearCalendarioActividadApi(payload) {
 export async function actualizarCalendarioActividadApi(codActividad, payload) {
   try {
     const { data } = await api.put(`/calendario-actividades/${codActividad}`, payload);
+    invalidarCacheListaCalendarioActividades();
     return data;
   } catch (error) {
     adjuntarValidacion422(error);
@@ -56,5 +67,6 @@ export async function actualizarCalendarioActividadApi(codActividad, payload) {
 
 export async function eliminarCalendarioActividadApi(codActividad) {
   const { data } = await api.delete(`/calendario-actividades/${codActividad}`);
+  invalidarCacheListaCalendarioActividades();
   return data;
 }

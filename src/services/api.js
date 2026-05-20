@@ -4,6 +4,20 @@ import { obtenerTokenBearerDesdeSesion, limpiarAlmacenSesionCliente } from './se
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 const baseNormalizada = baseURL.replace(/\/$/, '');
 
+/**
+ * Cookies Sanctum solo en desarrollo si front y API comparten origen.
+ * En build de producción (GitHub Pages) siempre false: sesión por Bearer en localStorage.
+ */
+function usarCredencialesCors() {
+  if (import.meta.env.PROD) return false;
+  if (typeof window === 'undefined') return true;
+  try {
+    return new URL(baseNormalizada).origin === window.location.origin;
+  } catch {
+    return true;
+  }
+}
+
 const cabecerasJson = {
   'Content-Type': 'application/json',
   Accept: 'application/json',
@@ -35,12 +49,15 @@ export const API_REQUEST_TIMEOUT_MS = leerTimeoutApiMs();
  */
 const api = axios.create({
   baseURL: baseNormalizada,
-  withCredentials: true,
+  withCredentials: usarCredencialesCors(),
   headers: cabecerasJson,
   timeout: API_REQUEST_TIMEOUT_MS,
 });
 
 api.interceptors.request.use((config) => {
+  if (import.meta.env.PROD) {
+    config.withCredentials = false;
+  }
   const token = obtenerTokenBearerDesdeSesion();
   if (token) {
     config.headers = config.headers ?? {};
@@ -58,10 +75,10 @@ api.interceptors.response.use(
 
     if (status === 401 && !esRutaLogin) {
       limpiarAlmacenSesionCliente();
-      const path = window.location.pathname || '';
-      const enLogin = path === '/login' || path.endsWith('/login');
+      const hash = window.location.hash || '';
+      const enLogin = hash === '#/login' || hash.endsWith('/login');
       if (!enLogin) {
-        window.location.assign(`${window.location.origin}/login`);
+        window.location.hash = '#/login';
       }
     }
     return Promise.reject(error);

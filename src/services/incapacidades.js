@@ -1,10 +1,10 @@
 import api from './api';
-import { crearPeticionCompartida } from '../utils/peticionCompartida';
+import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
 
 const ejecutarGetIncapacidadesLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/incapacidades');
   return data;
-});
+}, { ttlMs: TTL_CACHE_LISTAS_MS });
 
 const ejecutarGetTiposIncapacidad = crearPeticionCompartida(async () => {
   const { data } = await api.get('/tipos-incapacidad');
@@ -92,9 +92,12 @@ export function codigoIncapacidadDesde(registro) {
   return null;
 }
 
-export async function getIncapacidades() {
-  const { data } = await api.get('/incapacidades');
-  return data;
+export async function getIncapacidades(opciones = {}) {
+  return ejecutarGetIncapacidadesLista(opciones);
+}
+
+export function invalidarCacheListaIncapacidades() {
+  ejecutarGetIncapacidadesLista.invalidar();
 }
 
 export async function getResumenIncapacidades() {
@@ -117,20 +120,24 @@ export async function getIncapacidadById(cod) {
 
 export async function createIncapacidad(cuerpo) {
   const { data } = await api.post('/incapacidades', cuerpo);
+  invalidarCacheListaIncapacidades();
   return data;
 }
 
 export async function updateIncapacidad(cod, cuerpo) {
   const { data } = await api.put(`/incapacidades/${cod}`, cuerpo);
+  invalidarCacheListaIncapacidades();
   return data;
 }
 
 export async function patchIncapacidad(cod, cuerpo) {
   const { data } = await api.patch(`/incapacidades/${cod}`, cuerpo);
+  invalidarCacheListaIncapacidades();
   return data;
 }
 
 export async function deleteIncapacidad(cod) {
   const { data } = await api.delete(`/incapacidades/${cod}`);
+  invalidarCacheListaIncapacidades();
   return data;
 }

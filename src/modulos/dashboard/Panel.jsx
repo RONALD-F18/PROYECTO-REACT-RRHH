@@ -26,10 +26,15 @@ function Panel() {
   const [datos, setDatos] = useState(null);
   const [ultimaCarga, setUltimaCarga] = useState(null);
 
-  const cargar = useCallback(async () => {
+  const cargar = useCallback(async (forzar = false) => {
     setCargando(true);
     try {
-      const res = await obtenerDatosDashboard();
+      const res = await obtenerDatosDashboard({
+        forzar,
+        onProgreso: (parcial) => {
+          setDatos(parcial);
+        },
+      });
       setDatos(res);
       setUltimaCarga(new Date());
     } catch {
@@ -135,14 +140,16 @@ function Panel() {
             className="dashboard-hero-chip"
             title="Suma de los seis indicadores inferiores (referencia rápida, no es un total único de registros en base de datos)"
           >
-            <span className="dashboard-hero-chip-val">{cargando ? '—' : sumaKpi}</span>
+            <span className="dashboard-hero-chip-val">
+              {cargando && kpis.length === 0 ? '—' : sumaKpi}
+            </span>
             <span className="dashboard-hero-chip-lbl">Suma de indicadores</span>
           </div>
           <div className="dashboard-hero-acciones">
             <button
               type="button"
               className="dashboard-hero-refresh"
-              onClick={() => void cargar()}
+              onClick={() => void cargar(true)}
               disabled={cargando}
             >
               {cargando ? 'Actualizando…' : 'Actualizar datos'}
@@ -151,7 +158,7 @@ function Panel() {
         </section>
 
         <section className="dashboard-kpi-grid" aria-label="Indicadores clave">
-          {cargando &&
+          {cargando && kpis.length === 0 &&
             Array.from({ length: 6 }).map((_, i) => (
               <div className="tarjeta-dato dashboard-kpi-cargando" key={`sk-${i}`}>
                 <div className="tarjeta-dato-icono amarillo dashboard-kpi-skeleton" />
@@ -161,7 +168,7 @@ function Panel() {
                 </div>
               </div>
             ))}
-          {!cargando &&
+          {kpis.length > 0 &&
             kpis.map((tarjeta) => (
               <div className="tarjeta-dato dashboard-kpi-card" key={tarjeta.id}>
                 <div className={`tarjeta-dato-icono ${tarjeta.color}`}>
@@ -242,7 +249,7 @@ function Panel() {
               Actividades recientes
             </h4>
             <div className="dashboard-lista-actividades">
-              {!cargando && actividadesRecientes.length === 0 && (
+              {actividadesRecientes.length === 0 && !cargando && (
                 <p className="dashboard-lista-vacio">No hay actividades recientes.</p>
               )}
               {actividadesRecientes.map((actividad, indice) => (

@@ -1,6 +1,7 @@
 import api, { API_REQUEST_TIMEOUT_MS } from './api';
 import {
   CLAVE_SESION_LOCAL,
+  extraerTokenDeRespuestaLogin,
   leerPayloadSesion,
   limpiarAlmacenSesionCliente,
   obtenerTokenBearerDesdeSesion,
@@ -19,8 +20,15 @@ function guardarSesionLocal(data) {
   }
 }
 
+/**
+ * Sesión usable para el API: debe existir payload y token Bearer (cookies no aplican en GitHub Pages).
+ */
 export function haySesionLocalActiva() {
-  return leerPayloadSesion() != null;
+  const almacenado = leerPayloadSesion();
+  if (!almacenado) return false;
+  if (obtenerTokenBearerDesdeSesion()) return true;
+  if (import.meta.env.PROD) return false;
+  return true;
 }
 
 /**
@@ -174,6 +182,13 @@ export async function iniciarSesion(credenciales) {
     email_usuario: credenciales.email_usuario,
     contrasena_usuario: credenciales.contrasena_usuario,
   });
+  if (import.meta.env.PROD && !extraerTokenDeRespuestaLogin(data)) {
+    const err = new Error(
+      'El servidor no devolvió un token de acceso. El API debe incluir access_token (o token) en la respuesta JSON del login para usar la app desde GitHub Pages.',
+    );
+    err.code = 'LOGIN_SIN_TOKEN';
+    throw err;
+  }
   guardarSesionLocal(data);
   return data;
 }

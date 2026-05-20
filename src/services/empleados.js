@@ -1,10 +1,10 @@
 import api from './api';
-import { crearPeticionCompartida } from '../utils/peticionCompartida';
+import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../utils/peticionCompartida';
 
 const ejecutarGetEmpleadosLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/empleados');
   return data;
-});
+}, { ttlMs: TTL_CACHE_LISTAS_MS });
 
 export function extraerFilasEmpleados(cuerpo) {
   if (!cuerpo) return [];
@@ -80,8 +80,12 @@ export function buscarEmpleadoPorDocumento(empleados, docIngresado) {
   );
 }
 
-export async function getEmpleados() {
-  return ejecutarGetEmpleadosLista();
+export async function getEmpleados(opciones = {}) {
+  return ejecutarGetEmpleadosLista(opciones);
+}
+
+export function invalidarCacheListaEmpleados() {
+  ejecutarGetEmpleadosLista.invalidar();
 }
 
 export async function getEmpleadoById(codEmpleado) {
@@ -91,20 +95,24 @@ export async function getEmpleadoById(codEmpleado) {
 
 export async function createEmpleado(cuerpo) {
   const { data } = await api.post('/empleados', cuerpo);
+  invalidarCacheListaEmpleados();
   return data;
 }
 
 export async function updateEmpleado(codEmpleado, cuerpo) {
   const { data } = await api.put(`/empleados/${codEmpleado}`, cuerpo);
+  invalidarCacheListaEmpleados();
   return data;
 }
 
 export async function patchEmpleado(codEmpleado, cuerpo) {
   const { data } = await api.patch(`/empleados/${codEmpleado}`, cuerpo);
+  invalidarCacheListaEmpleados();
   return data;
 }
 
 export async function deleteEmpleado(codEmpleado) {
   const { data } = await api.delete(`/empleados/${codEmpleado}`);
+  invalidarCacheListaEmpleados();
   return data;
 }

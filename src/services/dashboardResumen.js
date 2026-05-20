@@ -75,44 +75,18 @@ function claseEtiquetaPorEstadoActividad(estado) {
 }
 
 /**
- * Carga en paralelo listados usados en el dashboard; tolera fallos parciales (cada API por separado).
+ * Misma lógica de KPIs/gráficas que antes; acepta filas parciales mientras llegan los GET.
  */
-export async function obtenerDatosDashboard() {
-  const claves = [
-    'empleados',
-    'contratos',
-    'incapacidades',
-    'inasistencias',
-    'afiliaciones',
-    'certificaciones',
-    'actividades',
-  ];
-  const settled = await Promise.allSettled([
-    getEmpleados(),
-    getContratos(),
-    getIncapacidades(),
-    listarInasistenciasApi(),
-    getAfiliaciones(),
-    getCertificaciones(),
-    listarCalendarioActividadesApi(),
-  ]);
-
-  const errores = [];
-  const extraer = (i, fn) => {
-    const r = settled[i];
-    if (r.status === 'fulfilled') return fn(r.value);
-    errores.push(claves[i]);
-    return fn(null);
-  };
-
-  const empleados = extraer(0, (v) => extraerFilasEmpleados(v));
-  const contratos = extraer(1, (v) => extraerFilasContratos(v));
-  const incapacidades = extraer(2, (v) => extraerFilasIncapacidades(v));
-  const inasistencias = extraer(3, (v) => extraerInasistenciasApi(v));
-  const afiliaciones = extraer(4, (v) => extraerFilasAfiliaciones(v));
-  const certificaciones = extraer(5, (v) => extraerFilasCertificaciones(v));
-  const actividadesRaw = extraer(6, (v) => extraerActividadesApi(v));
-
+export function armarResumenDashboard({
+  empleados = [],
+  contratos = [],
+  incapacidades = [],
+  inasistencias = [],
+  afiliaciones = [],
+  certificaciones = [],
+  actividadesRaw = [],
+  errores = [],
+}) {
   const empleadosActivos = empleados.filter(empleadoActivo).length;
   const contratosActivos = contratos.filter(contratoVigente).length;
   const contratosOtros = Math.max(0, contratos.length - contratosActivos);
@@ -176,4 +150,95 @@ export async function obtenerDatosDashboard() {
     actividadesRecientes,
     errores,
   };
+}
+
+const FUENTES_DASHBOARD = [
+  {
+    clave: 'empleados',
+    claveError: 'empleados',
+    cargar: (op) => getEmpleados(op),
+    extraer: (v) => extraerFilasEmpleados(v),
+  },
+  {
+    clave: 'contratos',
+    claveError: 'contratos',
+    cargar: (op) => getContratos(op),
+    extraer: (v) => extraerFilasContratos(v),
+  },
+  {
+    clave: 'incapacidades',
+    claveError: 'incapacidades',
+    cargar: (op) => getIncapacidades(op),
+    extraer: (v) => extraerFilasIncapacidades(v),
+  },
+  {
+    clave: 'inasistencias',
+    claveError: 'inasistencias',
+    cargar: (op) => listarInasistenciasApi(op),
+    extraer: (v) => extraerInasistenciasApi(v),
+  },
+  {
+    clave: 'afiliaciones',
+    claveError: 'afiliaciones',
+    cargar: (op) => getAfiliaciones(op),
+    extraer: (v) => extraerFilasAfiliaciones(v),
+  },
+  {
+    clave: 'certificaciones',
+    claveError: 'certificaciones',
+    cargar: (op) => getCertificaciones(op),
+    extraer: (v) => extraerFilasCertificaciones(v),
+  },
+  {
+    clave: 'actividadesRaw',
+    claveError: 'actividades',
+    cargar: (op) => listarCalendarioActividadesApi(op),
+    extraer: (v) => extraerActividadesApi(v),
+  },
+];
+
+function estadoFilasVacio() {
+  return {
+    empleados: [],
+    contratos: [],
+    incapacidades: [],
+    inasistencias: [],
+    afiliaciones: [],
+    certificaciones: [],
+    actividadesRaw: [],
+    errores: [],
+  };
+}
+
+/**
+ * Carga en paralelo; llama onProgreso cada vez que termina un listado (UI progresiva).
+ * @param {{ forzar?: boolean, onProgreso?: (resumen: ReturnType<armarResumenDashboard>, pendiente: boolean) => void }} [opciones]
+ */
+export async function obtenerDatosDashboard({ forzar = false, onProgreso } = {}) {
+  const filas = estadoFilasVacio();
+  const opciones = { forzar };
+  let pendientes = FUENTES_DASHBOARD.length;
+
+  const notificar = () => {
+    onProgreso?.(armarResumenDashboard(filas), pendientes > 0);
+  };
+
+  notificar();
+
+  await Promise.allSettled(
+    FUENTES_DASHBOARD.map(async (fuente) => {
+      try {
+        const valor = await fuente.cargar(opciones);
+        filas[fuente.clave] = fuente.extraer(valor);
+      } catch {
+        filas.errores.push(fuente.claveError);
+        filas[fuente.clave] = fuente.extraer(null);
+      } finally {
+        pendientes -= 1;
+        notificar();
+      }
+    }),
+  );
+
+  return armarResumenDashboard(filas);
 }

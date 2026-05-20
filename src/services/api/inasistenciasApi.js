@@ -1,4 +1,10 @@
 import api from '../api';
+import { crearPeticionCompartida, TTL_CACHE_LISTAS_MS } from '../../utils/peticionCompartida';
+
+const ejecutarListarInasistencias = crearPeticionCompartida(async () => {
+  const { data } = await api.get('/inasistencias');
+  return data;
+}, { ttlMs: TTL_CACHE_LISTAS_MS });
 
 function extraerErrores422(error) {
   const status = error?.response?.status;
@@ -18,9 +24,12 @@ export function extraerInasistenciasApi(json) {
   return [];
 }
 
-export async function listarInasistenciasApi() {
-  const { data } = await api.get('/inasistencias');
-  return data;
+export async function listarInasistenciasApi(opciones = {}) {
+  return ejecutarListarInasistencias(opciones);
+}
+
+export function invalidarCacheListaInasistencias() {
+  ejecutarListarInasistencias.invalidar();
 }
 
 export async function obtenerInasistenciaApi(id) {
@@ -31,6 +40,7 @@ export async function obtenerInasistenciaApi(id) {
 export async function crearInasistenciaApi(payload) {
   try {
     const { data } = await api.post('/inasistencias', payload);
+    invalidarCacheListaInasistencias();
     return data;
   } catch (error) {
     const err422 = extraerErrores422(error);
@@ -46,6 +56,7 @@ export async function crearInasistenciaApi(payload) {
 export async function actualizarInasistenciaApi(id, payload) {
   try {
     const { data } = await api.put(`/inasistencias/${id}`, payload);
+    invalidarCacheListaInasistencias();
     return data;
   } catch (error) {
     const err422 = extraerErrores422(error);
@@ -60,5 +71,6 @@ export async function actualizarInasistenciaApi(id, payload) {
 
 export async function eliminarInasistenciaApi(id) {
   const { data } = await api.delete(`/inasistencias/${id}`);
+  invalidarCacheListaInasistencias();
   return data;
 }

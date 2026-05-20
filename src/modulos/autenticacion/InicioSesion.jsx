@@ -91,7 +91,11 @@ function InicioSesion() {
       });
       navegar('/dashboard', { replace: true });
     } catch (e) {
-      setErrorServidor(mensajeErrorApi(e));
+      if (e?.code === 'LOGIN_SIN_TOKEN') {
+        setErrorServidor(e.message);
+      } else {
+        setErrorServidor(mensajeErrorApi(e));
+      }
     } finally {
       setEnviando(false);
     }

@@ -175,8 +175,10 @@ function CambiarContrasena() {
           ) : null}
 
           {enlaceValido && !exito ? (
-            <form onSubmit={manejarEnvio} aria-busy={enviando}>
+            <form onSubmit={manejarEnvio} aria-busy={enviando} noValidate>
               <p
+                className="recuperar-contrasena-estado"
+                aria-live="polite"
                 style={{
                   margin: '0 0 16px',
                   fontSize: 'var(--texto-sm)',
@@ -184,8 +186,13 @@ function CambiarContrasena() {
                   lineHeight: 1.5,
                 }}
               >
-                Define una nueva contraseña para <strong>{email}</strong>. Mínimo 8 caracteres, con
-                al menos una mayúscula y un número.
+                {enviando ? (
+                  <strong style={{ color: 'var(--color-primario)' }}>Guardando nueva contraseña…</strong>
+                ) : (
+                  <>
+                    Cuenta: <strong>{email}</strong>. Mínimo 8 caracteres, una mayúscula y un número.
+                  </>
+                )}
               </p>
 
               {errorServidor ? (
@@ -206,36 +213,18 @@ function CambiarContrasena() {
 
               <div className="login-campo">
                 <label htmlFor="nueva-contrasena">Nueva contraseña</label>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-                  <input
-                    id="nueva-contrasena"
-                    type={mostrarClave ? 'text' : 'password'}
-                    name="contrasena"
-                    value={contrasena}
-                    disabled={enviando}
-                    onChange={manejarCambio}
-                    onBlur={manejarBlur}
-                    placeholder="••••••••••••••••••••"
-                    className={claseCampo('contrasena')}
-                    autoComplete="new-password"
-                    style={{ flex: 1 }}
-                  />
-                  <button
-                    type="button"
-                    className="login-btn"
-                    style={{
-                      flex: '0 0 auto',
-                      padding: '8px 12px',
-                      fontSize: 'var(--texto-xs)',
-                      background: 'var(--gris-200)',
-                      color: 'var(--color-texto-oscuro)',
-                    }}
-                    onClick={() => setMostrarClave((v) => !v)}
-                    aria-pressed={mostrarClave}
-                  >
-                    {mostrarClave ? 'Ocultar' : 'Ver'}
-                  </button>
-                </div>
+                <input
+                  id="nueva-contrasena"
+                  type={mostrarClave ? 'text' : 'password'}
+                  name="contrasena"
+                  value={contrasena}
+                  disabled={enviando}
+                  onChange={manejarCambio}
+                  onBlur={manejarBlur}
+                  placeholder="Mín. 8 caracteres, mayúscula y número"
+                  className={claseCampo('contrasena')}
+                  autoComplete="new-password"
+                />
                 {tocados.contrasena && errores.contrasena ? (
                   <span className="mensaje-error">{errores.contrasena}</span>
                 ) : null}
@@ -251,7 +240,7 @@ function CambiarContrasena() {
                   disabled={enviando}
                   onChange={manejarCambio}
                   onBlur={manejarBlur}
-                  placeholder="••••••••••••••••••••"
+                  placeholder="Repita la contraseña"
                   className={claseCampo('confirmar')}
                   autoComplete="new-password"
                 />
@@ -259,6 +248,16 @@ function CambiarContrasena() {
                   <span className="mensaje-error">{errores.confirmar}</span>
                 ) : null}
               </div>
+
+              <label className="login-check-mostrar-clave">
+                <input
+                  type="checkbox"
+                  checked={mostrarClave}
+                  disabled={enviando}
+                  onChange={(e) => setMostrarClave(e.target.checked)}
+                />
+                Mostrar contraseñas
+              </label>
 
               <button type="submit" className="login-btn" disabled={enviando}>
                 {enviando ? 'Guardando…' : 'Restablecer contraseña'}

@@ -156,6 +156,64 @@
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
+/* Fila contraseña + botón ver (no usar .login-btn: tiene width 100%) */
+.login-campo-contrasena-fila {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.login-campo-contrasena-fila input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  margin: 0;
+}
+
+.login-btn-ver-clave {
+  flex-shrink: 0;
+  align-self: stretch;
+  padding: 0 18px;
+  min-width: 4.5rem;
+  border: 1px solid var(--color-borde);
+  border-radius: 20px;
+  background: var(--gris-50, #f8fafc);
+  color: var(--gris-600);
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transicion-rapida), border-color var(--transicion-rapida);
+}
+
+.login-btn-ver-clave:hover:not(:disabled) {
+  background: var(--gris-100, #f1f5f9);
+  border-color: #667eea;
+  color: var(--color-texto);
+}
+
+.login-btn-ver-clave:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-check-mostrar-clave {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -8px 0 20px;
+  font-size: var(--texto-sm);
+  color: var(--gris-600);
+  cursor: pointer;
+  user-select: none;
+}
+
+.login-check-mostrar-clave input {
+  width: 16px;
+  height: 16px;
+  accent-color: #667eea;
+  cursor: pointer;
+}
+
 .login-opciones {
   display: flex;
   justify-content: space-between;

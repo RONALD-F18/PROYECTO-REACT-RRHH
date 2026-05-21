@@ -26,20 +26,25 @@ export async function solicitarEnlaceRecuperacion(correoElectronico) {
 }
 
 /**
- * Restablece la contraseña con token del correo (ruta pública API v1).
- * Útil si más adelante expones el formulario en React; el flujo por Blade no lo requiere.
+ * Restablece la contraseña con token del correo (POST /reset-password, API v1).
  */
 export async function restablecerContrasenaConToken({
   email,
+  email_usuario,
   token,
-  password,
-  password_confirmation,
+  contrasena_usuario,
+  contrasena_usuario_confirmation,
 }) {
-  const { data } = await apiPublica.post('/reset-password', {
-    email: String(email || '').trim(),
+  const correo = String(email_usuario ?? email ?? '').trim();
+  const { data, status } = await apiPublica.post('/reset-password', {
+    email_usuario: correo,
     token: String(token || '').trim(),
-    password,
-    password_confirmation,
+    contrasena_usuario,
+    contrasena_usuario_confirmation,
   });
-  return data;
+  return {
+    data,
+    status,
+    mensajeServidor: mensajeDesdeCuerpo(data),
+  };
 }

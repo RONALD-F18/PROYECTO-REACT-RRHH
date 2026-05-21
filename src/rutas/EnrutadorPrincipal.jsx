@@ -3,6 +3,7 @@ import {
   Inicio,
   InicioSesion,
   RecuperarContrasena,
+  CambiarContrasena,
   Panel,
   Empleados,
   DetallesEmpleado,
@@ -75,6 +76,7 @@ export const rutasPublicas = [
   { ruta: "/", componente: Inicio },
   { ruta: "/login", componente: InicioSesion },
   { ruta: "/recuperar-contrasena", componente: RecuperarContrasena },
+  { ruta: "/cambiar-contrasena", componente: CambiarContrasena },
 ];
 
 export const rutasPrivadas = [

@@ -1,4 +1,5 @@
 import api from './api';
+import { haySesionLocalActiva } from './autenticacion';
 
 function etiquetaCortaTipoActividad(tipo) {
   const u = String(tipo || '').toUpperCase();
@@ -117,6 +118,12 @@ export function armarResumenDashboard(props) {
  * Una sola petición al resumen agregado del dashboard (reemplaza 7 GET de listados).
  */
 export async function obtenerDatosDashboard({ onProgreso } = {}) {
+  if (!haySesionLocalActiva()) {
+    const sinSesion = armarResumenDashboardDesdeApi(null, ['sesion']);
+    onProgreso?.(sinSesion, false);
+    return sinSesion;
+  }
+
   const vacio = armarResumenDashboardDesdeApi(null, ['sistema']);
   onProgreso?.(vacio, true);
 

@@ -91,7 +91,7 @@ function InicioSesion() {
       });
       navegar('/dashboard', { replace: true });
     } catch (e) {
-      if (e?.code === 'LOGIN_SIN_TOKEN') {
+      if (e?.code === 'LOGIN_SIN_TOKEN' || e?.code === 'LOGIN_STORAGE') {
         setErrorServidor(e.message);
       } else {
         setErrorServidor(mensajeErrorApi(e));

@@ -1,5 +1,8 @@
 import api from '../api';
-import { crearPeticionCompartida } from '../../utils/peticionCompartida';
+import {
+  crearPeticionCompartida,
+  invalidarEjecutorCompartido,
+} from '../../utils/peticionCompartida';
 
 const ejecutarListarCalendarioActividades = crearPeticionCompartida(async () => {
   const { data } = await api.get('/calendario-actividades');
@@ -35,7 +38,7 @@ export async function listarCalendarioActividadesApi(opciones = {}) {
 }
 
 export function invalidarCacheListaCalendarioActividades() {
-  ejecutarListarCalendarioActividades.invalidar();
+  invalidarEjecutorCompartido(ejecutarListarCalendarioActividades);
 }
 
 export async function obtenerCalendarioActividadApi(codActividad) {

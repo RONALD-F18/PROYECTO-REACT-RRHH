@@ -1,5 +1,8 @@
 import api from './api';
-import { crearPeticionCompartida } from '../utils/peticionCompartida';
+import {
+  crearPeticionCompartida,
+  invalidarMapaEjecutoresCompartidos,
+} from '../utils/peticionCompartida';
 import { PER_PAGE_CATALOGO_MAX, PER_PAGE_TABLA_DEFAULT } from './empleados';
 
 export { PER_PAGE_TABLA_DEFAULT };
@@ -96,7 +99,7 @@ export async function getContratosCatalogo(opciones = {}) {
 }
 
 export function invalidarCacheListaContratos() {
-  ejecutoresLista.forEach((ej) => ej.invalidar());
+  invalidarMapaEjecutoresCompartidos(ejecutoresLista);
 }
 
 export async function getContratoById(codContrato) {

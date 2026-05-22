@@ -1,5 +1,8 @@
-/** Clave única: misma que usa autenticacion.js */
+/** Payload completo del login (usuario + respuesta cruda del API). */
 export const CLAVE_SESION_LOCAL = 'rrhh_sesion_usuario';
+
+/** Token Bearer en clave dedicada (visible en DevTools y lectura directa en interceptores). */
+export const CLAVE_ACCESS_TOKEN = 'access_token';
 
 export function leerPayloadSesion() {
   try {
@@ -18,9 +21,13 @@ export function extraerTokenDeRespuestaLogin(data) {
 
   const candidatos = [
     data.access_token,
+    data.accessToken,
     data.token,
+    data.bearer_token,
+    data.auth_token,
     data.plainTextToken,
     data.data?.access_token,
+    data.data?.accessToken,
     data.data?.token,
     data.data?.plainTextToken,
     data.user?.access_token,
@@ -36,7 +43,12 @@ export function extraerTokenDeRespuestaLogin(data) {
     if (!obj || typeof obj !== 'object' || profundidad > 4) return null;
     for (const [clave, valor] of Object.entries(obj)) {
       if (
-        (clave === 'access_token' || clave === 'token' || clave === 'plainTextToken') &&
+        (clave === 'access_token' ||
+          clave === 'accessToken' ||
+          clave === 'token' ||
+          clave === 'bearer_token' ||
+          clave === 'auth_token' ||
+          clave === 'plainTextToken') &&
         typeof valor === 'string' &&
         valor.trim().length > 0
       ) {
@@ -59,14 +71,68 @@ export function extraerTokenDeRespuestaLogin(data) {
  * Token Bearer guardado tras el login (obligatorio en GitHub Pages + API en otro dominio).
  */
 export function obtenerTokenBearerDesdeSesion() {
+  try {
+    const directo = localStorage.getItem(CLAVE_ACCESS_TOKEN);
+    if (typeof directo === 'string' && directo.trim().length > 0) {
+      return directo.trim();
+    }
+  } catch {
+    /* noop */
+  }
+
   const almacenado = leerPayloadSesion();
   if (!almacenado) return null;
+  if (typeof almacenado.access_token === 'string' && almacenado.access_token.trim()) {
+    return almacenado.access_token.trim();
+  }
   return extraerTokenDeRespuestaLogin(almacenado.raw ?? almacenado);
+}
+
+/**
+ * Persiste sesión tras login exitoso. Escribe `access_token` y `rrhh_sesion_usuario`.
+ * @throws Error con code LOGIN_STORAGE si el navegador bloquea localStorage
+ */
+export function persistirSesionTrasLogin(data) {
+  const token = extraerTokenDeRespuestaLogin(data);
+  const user =
+    (data?.user && typeof data.user === 'object' ? data.user : null) ??
+    (data?.data?.user && typeof data.data.user === 'object' ? data.data.user : null) ??
+    null;
+
+  const payload = {
+    user,
+    raw: data ?? null,
+    access_token: token ?? null,
+    timestamp: Date.now(),
+  };
+
+  try {
+    localStorage.setItem(CLAVE_SESION_LOCAL, JSON.stringify(payload));
+    if (token) {
+      localStorage.setItem(CLAVE_ACCESS_TOKEN, token);
+    } else {
+      localStorage.removeItem(CLAVE_ACCESS_TOKEN);
+    }
+  } catch {
+    const err = new Error(
+      'No se pudo guardar la sesión en el navegador. Desactiva modo privado o libera espacio e intenta de nuevo.',
+    );
+    err.code = 'LOGIN_STORAGE';
+    throw err;
+  }
+
+  const verificado = obtenerTokenBearerDesdeSesion();
+  if (token && verificado !== token) {
+    const err = new Error('La sesión no se guardó correctamente en el navegador. Intenta iniciar sesión otra vez.');
+    err.code = 'LOGIN_STORAGE';
+    throw err;
+  }
 }
 
 export function limpiarAlmacenSesionCliente() {
   try {
     localStorage.removeItem(CLAVE_SESION_LOCAL);
+    localStorage.removeItem(CLAVE_ACCESS_TOKEN);
   } catch {
     /* noop */
   }

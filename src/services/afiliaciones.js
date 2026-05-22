@@ -1,5 +1,5 @@
 import api, { API_REQUEST_TIMEOUT_MS } from './api';
-import { crearPeticionCompartida } from '../utils/peticionCompartida';
+import { crearPeticionCompartida, invalidarEjecutorCompartido } from '../utils/peticionCompartida';
 
 const ejecutarGetAfiliacionesLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/afiliaciones');
@@ -83,7 +83,7 @@ export async function getAfiliaciones(opciones = {}) {
 }
 
 export function invalidarCacheListaAfiliaciones() {
-  ejecutarGetAfiliacionesLista.invalidar();
+  invalidarEjecutorCompartido(ejecutarGetAfiliacionesLista);
 }
 
 export async function getAfiliacionById(cod) {

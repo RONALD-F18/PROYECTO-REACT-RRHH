@@ -4,7 +4,8 @@
  */
 export function crearPeticionCompartida(fetcher) {
   let enVuelo = null;
-  return function ejecutarPeticionCompartida({ forzar = false } = {}) {
+
+  function ejecutarPeticionCompartida({ forzar = false } = {}) {
     if (!forzar && enVuelo) {
       return enVuelo;
     }
@@ -12,11 +13,25 @@ export function crearPeticionCompartida(fetcher) {
       enVuelo = null;
     });
     return enVuelo;
-  };
+  }
 
   ejecutarPeticionCompartida.invalidar = () => {
     enVuelo = null;
   };
 
   return ejecutarPeticionCompartida;
+}
+
+/** Invalida un ejecutor sin romper si el bundle viejo no tenía `.invalidar`. */
+export function invalidarEjecutorCompartido(ejecutor) {
+  if (ejecutor && typeof ejecutor.invalidar === 'function') {
+    ejecutor.invalidar();
+  }
+}
+
+/** Invalida todos los ejecutores de un Map y lo vacía (listas paginadas). */
+export function invalidarMapaEjecutoresCompartidos(mapa) {
+  if (!mapa || typeof mapa.forEach !== 'function') return;
+  mapa.forEach((ej) => invalidarEjecutorCompartido(ej));
+  mapa.clear();
 }

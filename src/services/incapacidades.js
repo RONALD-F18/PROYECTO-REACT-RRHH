@@ -1,5 +1,5 @@
 import api from './api';
-import { crearPeticionCompartida } from '../utils/peticionCompartida';
+import { crearPeticionCompartida, invalidarEjecutorCompartido } from '../utils/peticionCompartida';
 
 const ejecutarGetIncapacidadesLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/incapacidades');
@@ -97,7 +97,7 @@ export async function getIncapacidades(opciones = {}) {
 }
 
 export function invalidarCacheListaIncapacidades() {
-  ejecutarGetIncapacidadesLista.invalidar();
+  invalidarEjecutorCompartido(ejecutarGetIncapacidadesLista);
 }
 
 export async function getResumenIncapacidades() {

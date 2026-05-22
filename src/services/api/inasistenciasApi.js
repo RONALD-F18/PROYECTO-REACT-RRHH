@@ -1,5 +1,8 @@
 import api from '../api';
-import { crearPeticionCompartida } from '../../utils/peticionCompartida';
+import {
+  crearPeticionCompartida,
+  invalidarEjecutorCompartido,
+} from '../../utils/peticionCompartida';
 
 const ejecutarListarInasistencias = crearPeticionCompartida(async () => {
   const { data } = await api.get('/inasistencias');
@@ -29,7 +32,7 @@ export async function listarInasistenciasApi(opciones = {}) {
 }
 
 export function invalidarCacheListaInasistencias() {
-  ejecutarListarInasistencias.invalidar();
+  invalidarEjecutorCompartido(ejecutarListarInasistencias);
 }
 
 export async function obtenerInasistenciaApi(id) {

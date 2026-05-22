@@ -1,24 +1,11 @@
 import api, { API_REQUEST_TIMEOUT_MS } from './api';
 import {
-  CLAVE_SESION_LOCAL,
   extraerTokenDeRespuestaLogin,
   leerPayloadSesion,
   limpiarAlmacenSesionCliente,
   obtenerTokenBearerDesdeSesion,
+  persistirSesionTrasLogin,
 } from './sesionLocal';
-
-function guardarSesionLocal(data) {
-  try {
-    const payload = {
-      user: data?.user ?? null,
-      raw: data ?? null,
-      timestamp: Date.now(),
-    };
-    localStorage.setItem(CLAVE_SESION_LOCAL, JSON.stringify(payload));
-  } catch {
-    /* sin bloqueo si localStorage no está disponible */
-  }
-}
 
 /**
  * Sesión usable para el API: debe existir payload y token Bearer (cookies no aplican en GitHub Pages).
@@ -189,7 +176,7 @@ export async function iniciarSesion(credenciales) {
     err.code = 'LOGIN_SIN_TOKEN';
     throw err;
   }
-  guardarSesionLocal(data);
+  persistirSesionTrasLogin(data);
   return data;
 }
 

@@ -21,6 +21,15 @@ function formatearHora() {
   return new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
 }
 
+const ETIQUETAS_ERROR_DASHBOARD = {
+  sesion: 'sesión no válida (inicia sesión de nuevo)',
+  sistema: 'error del servidor o conexión',
+};
+
+function textoErroresDashboard(codigos) {
+  return codigos.map((c) => ETIQUETAS_ERROR_DASHBOARD[c] ?? c).join('; ');
+}
+
 function Panel() {
   const [cargando, setCargando] = useState(true);
   const [datos, setDatos] = useState(null);
@@ -185,8 +194,8 @@ function Panel() {
         <div className="dashboard-actividades">
           {errores.length > 0 && (
             <div className="dashboard-alerta-parcial" role="status">
-              Algunos datos no se pudieron cargar ({errores.join(', ')}). El resto se muestra con lo
-              disponible.
+              Algunos datos no se pudieron cargar ({textoErroresDashboard(errores)}). El resto se
+              muestra con lo disponible.
             </div>
           )}
 

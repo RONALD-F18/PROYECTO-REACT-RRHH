@@ -1,6 +1,6 @@
 import api from './api';
 import { getAfiliaciones, extraerFilasAfiliaciones } from './afiliaciones';
-import { crearPeticionCompartida } from '../utils/peticionCompartida';
+import { crearPeticionCompartida, invalidarEjecutorCompartido } from '../utils/peticionCompartida';
 
 const ejecutarGetCertificacionesLista = crearPeticionCompartida(async () => {
   const { data } = await api.get('/certificaciones');
@@ -122,7 +122,7 @@ export async function getCertificaciones(opciones = {}) {
 }
 
 export function invalidarCacheListaCertificaciones() {
-  ejecutarGetCertificacionesLista.invalidar();
+  invalidarEjecutorCompartido(ejecutarGetCertificacionesLista);
 }
 
 export async function getCertificacionById(id) {

@@ -1,7 +1,7 @@
 /**
  * URL absoluta del formulario de recuperación en Laravel (Blade).
- * Si está definida, el login enlaza ahí (navegación completa al backend).
- * Si está vacía, se usa la ruta React `/recuperar-contrasena` (POST a la API).
+ * En producción apunta a reset-password.html en el mismo dominio (no a rutas React).
+ * Si está vacía, el login usa la ruta React `/recuperar-contrasena` (POST a la API).
  */
 
 // Obtiene la URL de recuperación de contraseña

@@ -30,7 +30,7 @@ function irALogin() {
 }
 
 /**
- * Bloquea rutas privadas sin sesión (sin flash del módulo ni 404 de GitHub Pages).
+ * Bloquea rutas privadas sin sesión (evita flash del módulo antes de redirigir al login).
  */
 function RutaPrivada({ children }) {
   "use no memo";

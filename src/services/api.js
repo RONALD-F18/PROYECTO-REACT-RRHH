@@ -1,12 +1,14 @@
 import axios from 'axios';
 import { obtenerTokenBearerDesdeSesion, limpiarAlmacenSesionCliente } from './sesionLocal';
 
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const baseURL =
+  import.meta.env.VITE_API_URL ??
+  (import.meta.env.DEV ? 'http://localhost:8000/api/v1' : '');
 const baseNormalizada = baseURL.replace(/\/$/, '');
 
 /**
  * Cookies Sanctum solo en desarrollo si front y API comparten origen.
- * En build de producción (GitHub Pages) siempre false: sesión por Bearer en localStorage.
+ * En producción la sesión va por Bearer en localStorage (mismo dominio o no).
  */
 function usarCredencialesCors() {
   if (import.meta.env.PROD) return false;

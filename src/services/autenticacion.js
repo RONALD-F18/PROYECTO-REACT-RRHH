@@ -8,7 +8,7 @@ import {
 } from './sesionLocal';
 
 /**
- * Sesión usable para el API: debe existir payload y token Bearer (cookies no aplican en GitHub Pages).
+ * Sesión usable para el API: payload en localStorage + token Bearer.
  */
 export function haySesionLocalActiva() {
   const almacenado = leerPayloadSesion();
@@ -171,7 +171,7 @@ export async function iniciarSesion(credenciales) {
   });
   if (import.meta.env.PROD && !extraerTokenDeRespuestaLogin(data)) {
     const err = new Error(
-      'El servidor no devolvió un token de acceso. El API debe incluir access_token (o token) en la respuesta JSON del login para usar la app desde GitHub Pages.',
+      'El servidor no devolvió un token de acceso. El API debe incluir access_token (o token) en la respuesta JSON del login.',
     );
     err.code = 'LOGIN_SIN_TOKEN';
     throw err;

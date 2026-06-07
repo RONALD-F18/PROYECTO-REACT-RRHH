@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
   const proxyTarget = env.VITE_PROXY_TARGET || 'http://127.0.0.1:8000';
 
   return {
-    base: '/PROYECTO-REACT-RRHH/',
+    base: '/',
     server: {
       host: true,
       port: 5173,

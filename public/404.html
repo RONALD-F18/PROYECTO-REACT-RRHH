@@ -5,10 +5,9 @@
     <title>Redirigiendo…</title>
     <script>
       (function () {
-        var base = '/PROYECTO-REACT-RRHH/';
-        var path = window.location.pathname.replace(/^\/PROYECTO-REACT-RRHH\/?/i, '');
-        var destino = base + '#/' + (path || '').replace(/^\//, '');
-        if (!path) destino = base + '#/';
+        var path = window.location.pathname.replace(/^\//, '');
+        var destino = '/#/' + path;
+        if (!path) destino = '/#/';
         window.location.replace(destino);
       })();
     </script>

@@ -68,7 +68,7 @@ export function extraerTokenDeRespuestaLogin(data) {
 }
 
 /**
- * Token Bearer guardado tras el login (obligatorio en GitHub Pages + API en otro dominio).
+ * Token Bearer guardado tras el login (Sanctum).
  */
 export function obtenerTokenBearerDesdeSesion() {
   try {

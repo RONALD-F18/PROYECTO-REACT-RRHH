@@ -461,47 +461,6 @@
   box-shadow: var(--sombra-md);
 }
 
-.inicio-formulario--contacto {
-  border: 1px solid rgba(102, 126, 234, 0.12);
-  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.12);
-  overflow: hidden;
-  padding: 0;
-}
-
-.inicio-formulario-encabezado {
-  padding: 24px 32px 8px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.06));
-  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
-}
-
-.inicio-formulario-encabezado h3 {
-  margin: 0 0 6px;
-  font-size: var(--texto-lg);
-  color: var(--color-texto-oscuro);
-}
-
-.inicio-formulario-encabezado p {
-  margin: 0;
-  font-size: var(--texto-sm);
-  color: var(--color-texto-claro);
-}
-
-.inicio-formulario--contacto .inicio-formulario-campo,
-.inicio-formulario--contacto .inicio-formulario-btn {
-  margin-left: 32px;
-  margin-right: 32px;
-}
-
-.inicio-formulario--contacto .inicio-formulario-campo:first-of-type {
-  margin-top: 24px;
-}
-
-.inicio-formulario--contacto .inicio-formulario-btn {
-  margin-bottom: 32px;
-  margin-top: 8px;
-  width: calc(100% - 64px);
-}
-
 .inicio-formulario-campo {
   margin-bottom: 20px;
 }
@@ -521,22 +480,13 @@
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-lg);
   font-size: var(--texto-sm);
-  transition: border-color var(--transicion-rapida), box-shadow var(--transicion-rapida);
-  background: #fff;
+  transition: border-color var(--transicion-rapida);
   box-sizing: border-box;
-}
-
-.inicio-formulario-campo input:disabled,
-.inicio-formulario-campo textarea:disabled {
-  opacity: 0.7;
-  cursor: wait;
 }
 
 .inicio-formulario-campo input:focus,
 .inicio-formulario-campo textarea:focus {
   border-color: var(--color-primario);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
-  outline: none;
 }
 
 .inicio-formulario-campo .campo-seccion-error {
@@ -549,40 +499,24 @@
 .inicio-formulario-btn {
   width: 100%;
   padding: 14px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border: none;
+  background: var(--color-fondo-tarjeta);
+  border: 2px solid var(--color-primario);
   border-radius: var(--radio-xl);
-  color: #fff;
+  color: var(--color-primario);
   font-size: var(--texto-base);
   font-weight: 600;
   cursor: pointer;
-  transition: transform var(--transicion-rapida), box-shadow var(--transicion-rapida), opacity var(--transicion-rapida);
+  transition: all var(--transicion-rapida);
 }
 
 .inicio-formulario-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.35);
+  background: var(--color-primario);
+  color: #fff;
 }
 
 .inicio-formulario-btn:disabled {
   opacity: 0.65;
   cursor: wait;
-}
-
-.inicio-info--contacto {
-  background: linear-gradient(160deg, #16213e 0%, #1e3a5f 100%);
-  color: #fff;
-  padding: 32px;
-  border-radius: var(--radio-xl);
-  box-shadow: var(--sombra-md);
-}
-
-.inicio-info--contacto .inicio-info-titulo {
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.inicio-info--contacto .inicio-info-valor {
-  color: rgba(255, 255, 255, 0.75);
 }
 
 .inicio-info {

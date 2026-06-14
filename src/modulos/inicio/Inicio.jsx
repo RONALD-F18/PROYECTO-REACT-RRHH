@@ -393,11 +393,7 @@ function Inicio() {
         <h2>Contáctanos</h2>
         <p className="inicio-subtitulo">Estamos aquí para ayudarte</p>
         <div className="inicio-contacto-contenido">
-          <form className="inicio-formulario inicio-formulario--contacto" onSubmit={manejarContacto} noValidate>
-            <div className="inicio-formulario-encabezado">
-              <h3>Envíanos un mensaje</h3>
-              <p>Responderemos a la brevedad a tu correo.</p>
-            </div>
+          <form className="inicio-formulario" onSubmit={manejarContacto} noValidate>
             <div className="inicio-formulario-campo">
               <label htmlFor="contacto-nombre">Nombre completo</label>
               <input
@@ -451,10 +447,10 @@ function Inicio() {
               className="inicio-formulario-btn"
               disabled={enviandoContacto}
             >
-              {enviandoContacto ? "Enviando…" : "Enviar mensaje"}
+              {enviandoContacto ? "Enviando…" : "Enviar Mensaje"}
             </button>
           </form>
-          <div className="inicio-info inicio-info--contacto">
+          <div className="inicio-info">
             <div className="inicio-info-bloque">
               <span className="inicio-info-titulo">Email</span>
               <span className="inicio-info-valor">info@talentsphere.com</span>

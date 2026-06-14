@@ -115,7 +115,9 @@ function descripcionParaApi(v) {
   return 'Sin observaciones';
 }
 
-function construirPayloadAfiliacion(form, estadoBd = 'ACTIVA') {
+function construirPayloadAfiliacion(form) {
+  const estadoUi = String(form.estadoAfiliacionUi ?? '').trim();
+  const estadoBd = estadoUi ? estadoAfiliacionDesdeEtiquetaUi(estadoUi) : 'ACTIVA';
   return {
     fecha_afiliacion_eps: form.fechaAfiliacionEPS,
     fecha_afiliacion_arl: form.fechaAfiliacionARL,
@@ -144,7 +146,6 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
   const [camposTocados, setCamposTocados] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [errorGeneral, setErrorGeneral] = useState('');
-  const [estadoBdEdicion, setEstadoBdEdicion] = useState('ACTIVA');
   const [pasoActual, setPasoActual] = useState(0);
 
   const opcionesEPS = useMemo(
@@ -202,12 +203,9 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
     if (datosAfiliacion && codigoAfiliacionDesde(datosAfiliacion) != null) {
       const r = normalizarRegistroAfiliacion(datosAfiliacion) ?? datosAfiliacion;
       setFormulario(afiliacionApiAFormulario(r, empleados));
-      const ui = etiquetaEstadoAfiliacion(r.estado_afiliacion);
-      setEstadoBdEdicion(estadoAfiliacionDesdeEtiquetaUi(ui));
     } else {
       const codigoAuto = `AF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`;
       setFormulario(estadoVacio(codigoAuto));
-      setEstadoBdEdicion('ACTIVA');
     }
     setErrores({});
     setCamposTocados({});
@@ -285,10 +283,6 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
     const { name, value } = e.target;
     const esFechaAfiliacion = CAMPOS_FECHA_AFILIACION.includes(name);
     const esDocumento = name === 'documento';
-
-    if (name === 'estadoAfiliacionUi') {
-      setEstadoBdEdicion(estadoAfiliacionDesdeEtiquetaUi(value));
-    }
 
     let empDocumentoAct = null;
     if (esDocumento && !esEdicion) {
@@ -398,7 +392,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
       return;
     }
 
-    const payload = construirPayloadAfiliacion(formulario, esEdicion ? estadoBdEdicion : 'ACTIVA');
+    const payload = construirPayloadAfiliacion(formulario);
     setEnviando(true);
     try {
       if (esEdicion && codEdicion != null) {

@@ -101,7 +101,7 @@ function incapacidadApiAFormulario(raw, empleados) {
   };
 }
 
-function construirPayloadIncapacidad(formulario, codEmpleado, incluirEstadoEdicion) {
+function construirPayloadIncapacidad(formulario, codEmpleado) {
   const cod = Number(codEmpleado);
   const tipoN = Number(formulario.tipoIncapacidad);
   const comb = combinarDescripcionParaApi(formulario.diagnostico, formulario.descripcion);
@@ -124,8 +124,9 @@ function construirPayloadIncapacidad(formulario, codEmpleado, incluirEstadoEdici
     if (Number.isFinite(n)) payload.cod_clasificacion_enfermedad = n;
   }
 
-  if (incluirEstadoEdicion) {
-    payload.estado_incapacidad = estadoIncapacidadApiDesdeEtiquetaEdicion(formulario.estadoIncapacidadUi);
+  const estadoUi = String(formulario.estadoIncapacidadUi ?? '').trim();
+  if (estadoUi) {
+    payload.estado_incapacidad = estadoIncapacidadApiDesdeEtiquetaEdicion(estadoUi);
   }
 
   return payload;

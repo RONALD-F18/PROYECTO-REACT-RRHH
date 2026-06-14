@@ -178,6 +178,8 @@ function DetallesAfiliacion() {
   const manejarCambioEstado = async (etiquetaUi) => {
     const cod = registro ? codigoAfiliacionDesde(registro) : null;
     if (cod == null) return;
+    const estadoActual = etiquetaEstadoAfiliacion(registro?.estado_afiliacion);
+    if (etiquetaUi === estadoActual) return;
     const estadoBd = estadoAfiliacionDesdeEtiquetaUi(etiquetaUi);
     setActualizandoEstado(true);
     try {

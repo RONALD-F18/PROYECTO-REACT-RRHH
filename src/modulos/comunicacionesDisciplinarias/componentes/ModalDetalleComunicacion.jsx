@@ -98,6 +98,7 @@ function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizad
 
   const manejarCambiarEstado = async (nuevoApi) => {
     if (!r || cod == null) return;
+    if (nuevoApi === estadoApi) return;
     setActualizandoEstado(true);
     try {
       await patchComunicacionDisciplinaria(cod, { estado_comunicacion: nuevoApi });

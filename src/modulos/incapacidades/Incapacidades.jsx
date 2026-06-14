@@ -26,6 +26,7 @@ import { getContratosCatalogo, extraerFilasContratos } from '../../services/cont
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
+import { normalizarEstadoIncapacidadApi } from '../../utils/incapacidadEstado';
 function diasEntre(fechaInicio, fechaFin) {
   if (!fechaInicio || !fechaFin) return 0;
   const a = new Date(`${String(fechaInicio).slice(0, 10)}T12:00:00`);
@@ -108,7 +109,7 @@ function Incapacidades() {
         _periodo: formatearPeriodo(fi, ff),
         _dias: dias,
         _entidad: row.entidad_responsable ?? row.entidad_pagadora ?? entidadPagadoraPorTipo(nombreTipo),
-        _estado: String(row.estado_incapacidad || '').trim() || '—',
+        _estado: normalizarEstadoIncapacidadApi(row.estado_incapacidad),
         _codigoMostrar: codigoIncapacidadDesde(row) ?? '—',
       };
     });

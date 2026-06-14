@@ -187,6 +187,8 @@ function DetallesIncapacidad() {
   const manejarCambioEstado = async (nuevoEstado) => {
     const cod = registro ? codigoIncapacidadDesde(registro) : null;
     if (cod == null || !nuevoEstado) return;
+    const estadoActual = estadoIncapacidadEdicionDesdeApi(registro?.estado_incapacidad);
+    if (nuevoEstado === estadoActual) return;
     const apiEstado = estadoIncapacidadApiDesdeEtiquetaEdicion(nuevoEstado);
     setActualizandoEstado(true);
     try {

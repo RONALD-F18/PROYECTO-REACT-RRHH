@@ -24,6 +24,7 @@ import {
 } from '../contratoEnums';
 import { mergeCatalogoPorClave } from '../../../utils/mergeCatalogos';
 import { CARGOS_REFERENCIA_SUPLEMENTO } from '../../../data/catalogosColombiaSuplemento';
+import { obtenerCatalogos, opcionesCatalogo, requiereFechaFinContrato } from '../../../services/catalogos';
 
 import '../../../estilos/componentes/formulario-secciones.css';
 
@@ -31,14 +32,14 @@ function estadoInicialVacio() {
   return {
     doc_iden: '',
     cod_empleado: '',
-    tipo_contrato: 'Término fijo',
-    forma_de_pago: 'Consignación',
+    tipo_contrato: 'Termino fijo',
+    forma_de_pago: 'Mensual',
     fecha_ingreso: '',
     fecha_fin: '',
     salario_base: '',
     cod_cargo: '',
     modalidad_trabajo: 'Presencial',
-    horario_trabajo: HORARIO_TRABAJO_OPCIONES[0].valor,
+    horario_trabajo: 'Tiempo completo',
     auxilio_transporte: false,
     descripcion: '',
     estado_contrato: 'ACTIVO',
@@ -127,7 +128,7 @@ function construirPayloadApi(formulario) {
   };
 }
 
-function validar(formulario, esEdicion, empleadoRelacionado = null) {
+function validar(formulario, esEdicion, empleadoRelacionado = null, catalogos = null) {
   const e = {};
   if (!esEdicion) {
     const doc = String(formulario.doc_iden ?? '').trim();
@@ -158,6 +159,9 @@ function validar(formulario, esEdicion, empleadoRelacionado = null) {
   if (!formulario.horario_trabajo.trim()) e.horario_trabajo = 'Indique el horario de trabajo.';
   const sal = formulario.salario_base === '' ? NaN : Number(formulario.salario_base);
   if (Number.isNaN(sal) || sal < 0) e.salario_base = 'Ingrese un salario válido (entero, sin decimales).';
+  if (requiereFechaFinContrato(formulario.tipo_contrato, catalogos) && !String(formulario.fecha_fin ?? '').trim()) {
+    e.fecha_fin = 'La fecha de fin es obligatoria para este tipo de contrato.';
+  }
   if (formulario.fecha_fin && formulario.fecha_ingreso) {
     if (formulario.fecha_fin < formulario.fecha_ingreso) {
       e.fecha_fin = 'Debe ser igual o posterior a la fecha de ingreso.';
@@ -226,6 +230,23 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
   const [errorGeneral, setErrorGeneral] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [pasoActual, setPasoActual] = useState(0);
+  const [catalogos, setCatalogos] = useState(null);
+
+  useEffect(() => {
+    if (!mostrar) return;
+    let activo = true;
+    (async () => {
+      try {
+        const cat = await obtenerCatalogos();
+        if (activo) setCatalogos(cat);
+      } catch {
+        if (activo) setCatalogos(null);
+      }
+    })();
+    return () => {
+      activo = false;
+    };
+  }, [mostrar]);
 
   const cargosConReferencia = useMemo(
     () => mergeCatalogoPorClave(Array.isArray(cargos) ? cargos : [], CARGOS_REFERENCIA_SUPLEMENTO, 'cod_cargo'),
@@ -279,24 +300,37 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
 
   const opcionesTipoContrato = useMemo(() => {
     const v = formulario.tipo_contrato;
-    const o = [...TIPO_CONTRATO_OPCIONES];
+    const o = opcionesCatalogo(catalogos, 'tipos_contrato');
+    if (o.length === 0) return [...TIPO_CONTRATO_OPCIONES];
     if (v && !o.some((x) => x.valor === v)) o.unshift({ valor: v, etiqueta: v });
     return o;
-  }, [formulario.tipo_contrato]);
+  }, [formulario.tipo_contrato, catalogos]);
 
   const opcionesFormaPago = useMemo(() => {
     const v = formulario.forma_de_pago;
-    const o = [...FORMA_DE_PAGO_OPCIONES];
+    const o = opcionesCatalogo(catalogos, 'formas_pago');
+    if (o.length === 0) return [...FORMA_DE_PAGO_OPCIONES];
     if (v && !o.some((x) => x.valor === v)) o.unshift({ valor: v, etiqueta: v });
     return o;
-  }, [formulario.forma_de_pago]);
+  }, [formulario.forma_de_pago, catalogos]);
 
   const opcionesModalidad = useMemo(() => {
     const v = formulario.modalidad_trabajo;
-    const o = [...MODALIDAD_TRABAJO_OPCIONES];
+    const o = opcionesCatalogo(catalogos, 'modalidades_trabajo');
+    if (o.length === 0) return [...MODALIDAD_TRABAJO_OPCIONES];
     if (v && !o.some((x) => x.valor === v)) o.unshift({ valor: v, etiqueta: v });
     return o;
-  }, [formulario.modalidad_trabajo]);
+  }, [formulario.modalidad_trabajo, catalogos]);
+
+  const opcionesHorario = useMemo(() => {
+    const v = formulario.horario_trabajo;
+    const o = opcionesCatalogo(catalogos, 'horarios_trabajo');
+    if (o.length === 0) return [...HORARIO_TRABAJO_OPCIONES];
+    if (v && !o.some((x) => x.valor === v)) o.unshift({ valor: v, etiqueta: v });
+    return o;
+  }, [formulario.horario_trabajo, catalogos]);
+
+  const fechaFinObligatoria = requiereFechaFinContrato(formulario.tipo_contrato, catalogos);
 
   const empleadoRelacionado = esEdicion
     ? empleadoDesdeContratoEdicion(datosContrato)
@@ -317,8 +351,8 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
       };
 
       // Validación inmediata de fechas (incluye reglas legales de edad mínima).
-      if (name === 'fecha_ingreso' || name === 'fecha_fin') {
-        const v = validar(next, esEdicion, empleadoRelacionado);
+      if (name === 'fecha_ingreso' || name === 'fecha_fin' || name === 'tipo_contrato') {
+        const v = validar(next, esEdicion, empleadoRelacionado, catalogos);
         setErrores((prevErr) => {
           const nextErr = { ...prevErr };
           if (v.fecha_ingreso) nextErr.fecha_ingreso = v.fecha_ingreso;
@@ -356,7 +390,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
     ];
 
     const campos = camposPorPaso[idx] ?? [];
-    const v = validar(formulario, esEdicion, empleadoRelacionado);
+    const v = validar(formulario, esEdicion, empleadoRelacionado, catalogos);
 
     const subset = {};
     for (const c of campos) {
@@ -370,7 +404,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
     ev.preventDefault();
     setErrorGeneral('');
     setErroresApi({});
-    const v = validar(formulario, esEdicion, empleadoRelacionado);
+    const v = validar(formulario, esEdicion, empleadoRelacionado, catalogos);
     setErrores(v);
     if (Object.keys(v).length > 0) {
       setPasoActual(primerPasoConErroresContrato(v, {}));
@@ -539,7 +573,9 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
               </div>
 
               <div className="campo-formulario">
-                <label htmlFor="ctr-fecha_fin">Fecha de fin</label>
+                <label htmlFor="ctr-fecha_fin">
+                  Fecha de fin{fechaFinObligatoria ? ' *' : ''}
+                </label>
                 <input
                   id="ctr-fecha_fin"
                   type="date"
@@ -548,7 +584,9 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
                   onChange={manejarCambio}
                   className={mensajeCampo('fecha_fin') ? 'campo-error' : ''}
                 />
-                <span className="campo-ayuda">Opcional si no hay terminación.</span>
+                <span className="campo-ayuda">
+                  {fechaFinObligatoria ? 'Obligatoria para este tipo de contrato.' : 'Opcional si no hay terminación.'}
+                </span>
                 {mensajeCampo('fecha_fin') ? <span className="mensaje-error">{mensajeCampo('fecha_fin')}</span> : null}
               </div>
             </div>
@@ -642,7 +680,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
                 id="ctr-horario_trabajo"
                 name="horario_trabajo"
                 value={
-                  HORARIO_TRABAJO_OPCIONES.some((o) => o.valor === formulario.horario_trabajo)
+                  opcionesHorario.some((o) => o.valor === formulario.horario_trabajo)
                     ? formulario.horario_trabajo
                     : '__otro__'
                 }
@@ -656,7 +694,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
                 }}
                 className={mensajeCampo('horario_trabajo') ? 'campo-error' : ''}
               >
-                {HORARIO_TRABAJO_OPCIONES.map((o) => (
+                {opcionesHorario.map((o) => (
                   <option key={o.valor} value={o.valor}>
                     {o.etiqueta}
                   </option>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Talent Sphere">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7eb8e8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#g)"/>
+  <ellipse cx="32" cy="34" rx="18" ry="16" fill="#f0f7fc" opacity="0.95"/>
+  <circle cx="26" cy="30" r="4" fill="#334155"/>
+  <circle cx="38" cy="30" r="4" fill="#334155"/>
+  <path d="M28 40 Q32 44 36 40" fill="none" stroke="#3d6fa8" stroke-width="2" stroke-linecap="round"/>
+</svg>

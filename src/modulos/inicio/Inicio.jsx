@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { enviarContactoLanding } from "../../services/api/contactoApi";
+import { alertaErrorApi, alertaMensaje } from "../../utils/alertasSwal";
 
 function Inicio() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [esMobile, setEsMobile] = useState(false);
   const [revelado, setRevelado] = useState(() => new Set());
   const paginaRef = useRef(null);
+  const [contacto, setContacto] = useState({ nombre: "", email: "", asunto: "", mensaje: "" });
+  const [enviandoContacto, setEnviandoContacto] = useState(false);
+  const [erroresContacto, setErroresContacto] = useState({});
 
   useEffect(() => {
     const verificarTamaño = () => {
@@ -54,6 +59,49 @@ function Inicio() {
 
   const cerrarMenu = () => {
     setMenuAbierto(false);
+  };
+
+  const validarContacto = () => {
+    const next = {};
+    if (String(contacto.nombre).trim().length < 2) next.nombre = "Mínimo 2 caracteres.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(contacto.email).trim())) next.email = "Correo inválido.";
+    if (String(contacto.asunto).trim().length < 3) next.asunto = "Mínimo 3 caracteres.";
+    if (String(contacto.mensaje).trim().length < 10) next.mensaje = "Mínimo 10 caracteres.";
+    setErroresContacto(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const manejarContacto = async (e) => {
+    e.preventDefault();
+    if (!validarContacto()) return;
+    setEnviandoContacto(true);
+    try {
+      const res = await enviarContactoLanding(contacto);
+      await alertaMensaje({
+        titulo: "Mensaje enviado",
+        texto: res?.message || "Gracias por contactarnos. Te responderemos pronto.",
+        icon: "success",
+      });
+      setContacto({ nombre: "", email: "", asunto: "", mensaje: "" });
+      setErroresContacto({});
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 422) {
+        const errs = err?.response?.data?.errors;
+        if (errs && typeof errs === "object") {
+          const mapped = {};
+          for (const [k, v] of Object.entries(errs)) {
+            mapped[k] = Array.isArray(v) ? String(v[0]) : String(v);
+          }
+          setErroresContacto(mapped);
+        }
+        void alertaErrorApi("Datos no válidos", err);
+      } else {
+        void alertaErrorApi("No se pudo enviar el mensaje", err);
+      }
+    } finally {
+      setEnviandoContacto(false);
+    }
   };
 
   const claseRev = (id) =>
@@ -345,25 +393,57 @@ function Inicio() {
         <h2>Contáctanos</h2>
         <p className="inicio-subtitulo">Estamos aquí para ayudarte</p>
         <div className="inicio-contacto-contenido">
-          <form className="inicio-formulario">
+          <form className="inicio-formulario" onSubmit={manejarContacto} noValidate>
             <div className="inicio-formulario-campo">
-              <label>Nombre completo</label>
-              <input type="text" placeholder="Tu nombre" />
+              <label htmlFor="contacto-nombre">Nombre completo</label>
+              <input
+                id="contacto-nombre"
+                type="text"
+                placeholder="Tu nombre"
+                value={contacto.nombre}
+                onChange={(e) => setContacto((p) => ({ ...p, nombre: e.target.value }))}
+                disabled={enviandoContacto}
+              />
+              {erroresContacto.nombre ? <small className="campo-seccion-error">{erroresContacto.nombre}</small> : null}
             </div>
             <div className="inicio-formulario-campo">
-              <label>Email</label>
-              <input type="email" placeholder="correo@ejemplo.com" />
+              <label htmlFor="contacto-email">Email</label>
+              <input
+                id="contacto-email"
+                type="email"
+                placeholder="correo@ejemplo.com"
+                value={contacto.email}
+                onChange={(e) => setContacto((p) => ({ ...p, email: e.target.value }))}
+                disabled={enviandoContacto}
+              />
+              {erroresContacto.email ? <small className="campo-seccion-error">{erroresContacto.email}</small> : null}
             </div>
             <div className="inicio-formulario-campo">
-              <label>Empresa</label>
-              <input type="text" placeholder="Nombre de tu empresa" />
+              <label htmlFor="contacto-asunto">Asunto</label>
+              <input
+                id="contacto-asunto"
+                type="text"
+                placeholder="¿Sobre qué nos escribes?"
+                value={contacto.asunto}
+                onChange={(e) => setContacto((p) => ({ ...p, asunto: e.target.value }))}
+                disabled={enviandoContacto}
+              />
+              {erroresContacto.asunto ? <small className="campo-seccion-error">{erroresContacto.asunto}</small> : null}
             </div>
             <div className="inicio-formulario-campo">
-              <label>Mensaje</label>
-              <textarea rows="4" placeholder="¿En qué podemos ayudarte?" />
+              <label htmlFor="contacto-mensaje">Mensaje</label>
+              <textarea
+                id="contacto-mensaje"
+                rows="4"
+                placeholder="¿En qué podemos ayudarte?"
+                value={contacto.mensaje}
+                onChange={(e) => setContacto((p) => ({ ...p, mensaje: e.target.value }))}
+                disabled={enviandoContacto}
+              />
+              {erroresContacto.mensaje ? <small className="campo-seccion-error">{erroresContacto.mensaje}</small> : null}
             </div>
-            <button type="submit" className="inicio-formulario-btn">
-              Enviar Mensaje
+            <button type="submit" className="inicio-formulario-btn" disabled={enviandoContacto}>
+              {enviandoContacto ? "Enviando…" : "Enviar Mensaje"}
             </button>
           </form>
           <div className="inicio-info">

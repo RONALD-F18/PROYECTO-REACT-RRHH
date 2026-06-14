@@ -21,6 +21,7 @@ function PrestacionesSociales() {
   const [vista, setVista] = useState('contratos');
 
   const [totalesPendientes, setTotalesPendientes] = useState({});
+  const [totalesPagados, setTotalesPagados] = useState({});
   const [contratosRaw, setContratosRaw] = useState([]);
   const [cargandoResumen, setCargandoResumen] = useState(true);
   const [errorResumen, setErrorResumen] = useState('');
@@ -42,11 +43,13 @@ function PrestacionesSociales() {
     setCargandoResumen(true);
     try {
       const rResumen = await getResumenPrestacionesSociales();
-      const { totales_pendientes, contratos_vigentes } = rResumen;
+      const { totales_pendientes, totales_pagados, contratos_vigentes } = rResumen;
       setTotalesPendientes(totales_pendientes ?? {});
+      setTotalesPagados(totales_pagados ?? {});
       setContratosRaw(contratos_vigentes ?? []);
     } catch (e) {
       setTotalesPendientes({});
+      setTotalesPagados({});
       setContratosRaw([]);
       setErrorResumen(mensajeErrorApi(e));
     } finally {
@@ -172,7 +175,20 @@ function PrestacionesSociales() {
         color: 'total',
       },
     ];
-  }, [montosPorEstado, errorListadoPeriodos, totalesPendientes]);
+  }, [montosPorEstado, errorListadoPeriodos, totalesPendientes, totalesPagados]);
+
+  const resumenPeriodosApi = useMemo(() => {
+    const pend = Number(totalesPendientes.cantidad_periodos_pendientes) || 0;
+    const pag = Number(totalesPendientes.cantidad_periodos_pagados) || 0;
+    const totalPend = Number(totalesPendientes.total_general_pendiente) || 0;
+    const tp = totalesPagados && typeof totalesPagados === 'object' ? totalesPagados : {};
+    const totalPag =
+      (Number(tp.total_cesantias) || 0) +
+      (Number(tp.total_intereses) || 0) +
+      (Number(tp.total_prima) || 0) +
+      (Number(tp.total_vacaciones) || 0);
+    return { pend, pag, totalPend, totalPag, tp };
+  }, [totalesPendientes, totalesPagados]);
 
   /** Contratos incluidos en el resumen de la pestaña «Contratos a liquidar». */
   const codigosContratoLiquidacion = useMemo(() => {
@@ -300,6 +316,27 @@ function PrestacionesSociales() {
                 ))}
           </div>
         </div>
+
+        {!cargandoResumen ? (
+          <div className="tarjetas-resumen" style={{ marginBottom: 20 }}>
+            <div className="tarjeta-resumen">
+              <span className="tarjeta-resumen-etiqueta">Períodos pendientes</span>
+              <span className="tarjeta-resumen-valor naranja">{resumenPeriodosApi.pend}</span>
+            </div>
+            <div className="tarjeta-resumen">
+              <span className="tarjeta-resumen-etiqueta">Períodos pagados</span>
+              <span className="tarjeta-resumen-valor verde">{resumenPeriodosApi.pag}</span>
+            </div>
+            <div className="tarjeta-resumen">
+              <span className="tarjeta-resumen-etiqueta">Total general pendiente</span>
+              <span className="tarjeta-resumen-valor azul">{formatearMonedaCop(resumenPeriodosApi.totalPend)}</span>
+            </div>
+            <div className="tarjeta-resumen">
+              <span className="tarjeta-resumen-etiqueta">Total pagado (cesantías+int.+prima+vac.)</span>
+              <span className="tarjeta-resumen-valor verde">{formatearMonedaCop(resumenPeriodosApi.totalPag)}</span>
+            </div>
+          </div>
+        ) : null}
 
         {vista === 'contratos' ? (
           <>

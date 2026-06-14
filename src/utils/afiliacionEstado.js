@@ -1,36 +1,43 @@
 /** Etiquetas permitidas en UI (listados, detalle, modal). */
-export const ETIQUETAS_ESTADO_AFILIACION = ['Aprobada', 'Pendiente', 'Retirada'];
+export const ETIQUETAS_ESTADO_AFILIACION = ['Activa', 'Inactiva', 'Suspendida'];
+
+export const ETIQUETAS_TIPO_REGIMEN = ['Contributivo', 'Subsidiado'];
 
 /**
- * Etiqueta visible: solo tres estados. Valores heredados (p. ej. EN_PROCESO) se agrupan.
+ * Etiqueta visible alineada al catálogo del backend.
  */
 export function etiquetaEstadoAfiliacion(estadoBd) {
-  const u = String(estadoBd || '').toUpperCase().replace(/\s+/g, '_');
-  if (u === 'ACTIVA' || u === 'APROBADA') return 'Aprobada';
-  if (u === 'RETIRADA' || u === 'RETIRADO' || u === 'RECHAZADA') return 'Retirada';
-  if (u === 'PENDIENTE' || u === 'EN_PROCESO') return 'Pendiente';
-  return 'Pendiente';
+  const u = String(estadoBd || '').trim();
+  if (/^activa$/i.test(u)) return 'Activa';
+  if (/^inactiva$/i.test(u)) return 'Inactiva';
+  if (/^suspendida$/i.test(u)) return 'Suspendida';
+  // Valores heredados
+  if (/^aprobada$/i.test(u)) return 'Activa';
+  if (/^retirada$/i.test(u) || /^rechazada$/i.test(u)) return 'Inactiva';
+  if (/^pendiente$/i.test(u) || /^en_proceso$/i.test(u)) return 'Suspendida';
+  return 'Activa';
 }
 
 export function estadoAfiliacionDesdeEtiquetaUi(etiqueta) {
   const map = {
-    Aprobada: 'ACTIVA',
-    Activa: 'ACTIVA',
-    Pendiente: 'PENDIENTE',
-    Retirada: 'RETIRADA',
-    Retirado: 'RETIRADA',
+    Activa: 'Activa',
+    Inactiva: 'Inactiva',
+    Suspendida: 'Suspendida',
+    Aprobada: 'Activa',
+    Retirada: 'Inactiva',
+    Pendiente: 'Suspendida',
   };
-  return map[etiqueta] ?? 'PENDIENTE';
+  return map[String(etiqueta || '').trim()] ?? 'Activa';
 }
 
 export function tipoRegimenApi(valorForm) {
-  const s = String(valorForm || '').trim().toUpperCase();
-  if (s.includes('SUBSIDI')) return 'SUBSIDIADO';
-  return 'CONTRIBUTIVO';
+  const s = String(valorForm || '').trim();
+  if (/^subsidiado$/i.test(s)) return 'Subsidiado';
+  return 'Contributivo';
 }
 
 export function tipoRegimenFormDesdeApi(v) {
-  const u = String(v || '').toUpperCase();
-  if (u === 'SUBSIDIADO') return 'Subsidiado';
+  const u = String(v || '').trim();
+  if (/^subsidiado$/i.test(u)) return 'Subsidiado';
   return 'Contributivo';
 }

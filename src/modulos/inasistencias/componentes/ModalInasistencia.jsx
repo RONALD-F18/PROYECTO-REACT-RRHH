@@ -7,7 +7,7 @@ import {
   limpiarMotivoPersistido,
   ESTADO_UI,
 } from '../utils/inasistencias.mapper';
-import { alertaError } from '../../../utils/alertasSwal';
+import { alertaError, alertaErrorApi } from '../../../utils/alertasSwal';
 
 function estadoInicial(registro, fechaPreseleccionada, codEmpleadoPreseleccionado) {
   if (!registro) {
@@ -44,6 +44,7 @@ function ModalInasistencia({
     estadoInicial(null, fechaPreseleccionada, codEmpleadoPreseleccionado),
   );
   const [errores, setErrores] = useState({});
+  const [docEmpleado, setDocEmpleado] = useState('');
   const [guardando, setGuardando] = useState(false);
   const bloquearEmpleado = !registroEditar && !!codEmpleadoPreseleccionado;
 
@@ -51,7 +52,14 @@ function ModalInasistencia({
     if (!mostrar) return;
     setFormulario(estadoInicial(registroEditar, fechaPreseleccionada, codEmpleadoPreseleccionado));
     setErrores({});
-  }, [mostrar, registroEditar, fechaPreseleccionada, codEmpleadoPreseleccionado]);
+    const cod = registroEditar?.cod_empleado ?? codEmpleadoPreseleccionado ?? '';
+    if (cod) {
+      const emp = empleados.find((e) => String(e.cod_empleado) === String(cod));
+      setDocEmpleado(emp?.doc_iden != null ? String(emp.doc_iden) : '');
+    } else {
+      setDocEmpleado('');
+    }
+  }, [mostrar, registroEditar, fechaPreseleccionada, codEmpleadoPreseleccionado, empleados]);
 
   const codigoUi = useMemo(() => {
     const n = registroEditar?.cod_inasistencias ?? null;
@@ -143,17 +151,33 @@ function ModalInasistencia({
                     {String(formulario.cod_empleado)} {nombreEmpleadoBloqueado}
                   </div>
                 ) : (
-                  <select
-                    value={formulario.cod_empleado}
-                    onChange={(e) => setFormulario((p) => ({ ...p, cod_empleado: e.target.value }))}
-                  >
-                    <option value="">Seleccione...</option>
-                    {empleados.map((e) => (
-                      <option key={String(e.cod_empleado)} value={String(e.cod_empleado)}>
-                        {e.cod_empleado} - {[e.nombre_empleado, e.apellidos_empleado].filter(Boolean).join(' ')}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Documento de identidad"
+                      value={docEmpleado}
+                      onChange={(e) => {
+                        const doc = e.target.value.replace(/\D/g, '');
+                        setDocEmpleado(doc);
+                        const emp = empleados.find((x) => String(x.doc_iden ?? '').trim() === doc);
+                        setFormulario((p) => ({
+                          ...p,
+                          cod_empleado: emp ? String(emp.cod_empleado) : '',
+                        }));
+                      }}
+                    />
+                    {formulario.cod_empleado ? (
+                      <small className="inasistencia-hint-asistencia">
+                        {[empleados.find((e) => String(e.cod_empleado) === String(formulario.cod_empleado))?.nombre_empleado,
+                          empleados.find((e) => String(e.cod_empleado) === String(formulario.cod_empleado))?.apellidos_empleado]
+                          .filter(Boolean)
+                          .join(' ')}
+                      </small>
+                    ) : docEmpleado.trim().length >= 5 ? (
+                      <small className="campo-seccion-error">No hay empleado con ese documento.</small>
+                    ) : null}
+                  </>
                 )}
                 {errores.cod_empleado ? <small className="campo-seccion-error">{errores.cod_empleado}</small> : null}
               </label>

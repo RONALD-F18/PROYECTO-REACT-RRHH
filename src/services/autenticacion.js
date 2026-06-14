@@ -1,4 +1,5 @@
 import api, { API_REQUEST_TIMEOUT_MS } from './api';
+import { obtenerCatalogos } from './catalogos';
 import {
   extraerTokenDeRespuestaLogin,
   leerPayloadSesion,
@@ -177,6 +178,7 @@ export async function iniciarSesion(credenciales) {
     throw err;
   }
   persistirSesionTrasLogin(data);
+  void obtenerCatalogos({ forzar: true }).catch(() => {});
   return data;
 }
 

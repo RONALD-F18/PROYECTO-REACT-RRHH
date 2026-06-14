@@ -75,7 +75,7 @@ api.interceptors.response.use(
     const urlPedido = String(error.config?.url ?? '');
     const esRutaLogin = urlPedido.includes('/login');
 
-    if ((status === 401 || status === 403) && !esRutaLogin) {
+    if (status === 401 && !esRutaLogin) {
       limpiarAlmacenSesionCliente();
       const hash = String(window.location.hash || '');
       const enLogin = hash === '#/login' || hash.endsWith('/login');

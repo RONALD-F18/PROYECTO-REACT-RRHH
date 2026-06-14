@@ -47,6 +47,7 @@ export function useChatSession(modalAbierto) {
 
   const wasModalAbierto = useRef(false);
   const lastPathname = useRef(pathname);
+  const refrescarAyudaAlAbrir = useRef(false);
 
   const ayudaV2 = useMemo(() => normalizarPayloadAyuda(payloadAyudaRaw), [payloadAyudaRaw]);
   const temasUi = useMemo(
@@ -89,6 +90,7 @@ export function useChatSession(modalAbierto) {
     if (justOpened || pathChanged) {
       setQueryModuloAyuda(moduloDesdeRuta);
       setMostrarPanelAyuda(true);
+      if (justOpened) refrescarAyudaAlAbrir.current = true;
     }
   }, [modalAbierto, pathname, moduloDesdeRuta]);
 
@@ -99,7 +101,9 @@ export function useChatSession(modalAbierto) {
     setCargandoAyuda(true);
     (async () => {
       try {
-        const raw = await getAyudaChat(queryModuloAyuda);
+        const refrescar = refrescarAyudaAlAbrir.current;
+        refrescarAyudaAlAbrir.current = false;
+        const raw = await getAyudaChat(queryModuloAyuda, { refrescar });
         if (activo) setPayloadAyudaRaw(raw);
       } catch {
         if (activo) setPayloadAyudaRaw(null);

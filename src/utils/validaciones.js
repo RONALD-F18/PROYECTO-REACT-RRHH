@@ -14,7 +14,9 @@ export const REGEX_CONTRASENA_USUARIO_API = {
   longitudMin: 8,
   longitudMax: 64,
   tieneMayuscula: /[A-ZÁÉÍÓÚÑ]/,
+  tieneMinuscula: /[a-záéíóúñ]/,
   tieneDigito: /\d/,
+  tieneEspecial: /[^A-Za-z0-9áéíóúÁÉÍÓÚñÑ]/,
 };
 
 /**
@@ -35,10 +37,16 @@ export function validarContrasenaUsuarioApi(valor, { permitirVacio = false } = {
     return `Máximo ${REGEX_CONTRASENA_USUARIO_API.longitudMax} caracteres`;
   }
   if (!REGEX_CONTRASENA_USUARIO_API.tieneMayuscula.test(v)) {
-    return 'Debe incluir al menos una letra mayúscula (A-Z, Ñ, vocales con tilde mayúscula)';
+    return 'Debe incluir al menos una letra mayúscula';
+  }
+  if (!REGEX_CONTRASENA_USUARIO_API.tieneMinuscula.test(v)) {
+    return 'Debe incluir al menos una letra minúscula';
   }
   if (!REGEX_CONTRASENA_USUARIO_API.tieneDigito.test(v)) {
     return 'Debe incluir al menos un número';
+  }
+  if (!REGEX_CONTRASENA_USUARIO_API.tieneEspecial.test(v)) {
+    return 'Debe incluir al menos un carácter especial';
   }
   return null;
 }

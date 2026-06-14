@@ -20,6 +20,7 @@ import { esAdminSesionLocal } from '../../services/autenticacion';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
+import { obtenerCatalogos } from '../../services/catalogos';
 import {
   TIPOS_COMUNICACION,
   ESTADOS_COMUNICACION,
@@ -30,6 +31,8 @@ import {
   radicadoDesdeCod,
   claseBadgeTipo,
   claseBadgeEstado,
+  listaEstadosComunicacion,
+  listaTiposComunicacion,
 } from './disciplinariasConstants';
 
 function IcoEditarDoc() {
@@ -141,6 +144,7 @@ function ComunicacionesDisciplinarias() {
   const [lista, setLista] = useState([]);
   const [empleados, setEmpleados] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
+  const [catalogos, setCatalogos] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [mensajeLista, setMensajeLista] = useState('');
   const [mensajeExito, setMensajeExito] = useState('');
@@ -293,6 +297,11 @@ function ComunicacionesDisciplinarias() {
     const secundarios = esAdmin
       ? [(op) => getEmpleadosCatalogo(op), (op) => getUsuarios(op)]
       : [(op) => getEmpleadosCatalogo(op)];
+    void obtenerCatalogos().then((c) => {
+      if (activo) setCatalogos(c);
+    }).catch(() => {
+      if (activo) setCatalogos(null);
+    });
     void ejecutarCargaEnFases({
       principal: (op) => getComunicacionesDisciplinarias(op),
       secundarios,
@@ -462,13 +471,13 @@ function ComunicacionesDisciplinarias() {
                 nombre: 'tipo',
                 etiqueta: 'Tipo',
                 placeholder: 'Todos los tipos',
-                opciones: TIPOS_COMUNICACION.map((t) => ({ valor: t.api, texto: t.etiqueta })),
+                opciones: listaTiposComunicacion(catalogos).map((t) => ({ valor: t, texto: t })),
               },
               {
                 nombre: 'estado',
                 etiqueta: 'Estado',
                 placeholder: 'Todos los estados',
-                opciones: ESTADOS_COMUNICACION.map((s) => ({ valor: s.api, texto: s.etiqueta })),
+                opciones: listaEstadosComunicacion(catalogos).map((s) => ({ valor: s, texto: s })),
               },
             ]}
             onFiltrar={(f) => {
@@ -630,6 +639,7 @@ function ComunicacionesDisciplinarias() {
         }}
         registroEditar={registroEditar}
         empleados={empleados}
+        catalogos={catalogos}
         alExito={alExitoFormulario}
       />
 

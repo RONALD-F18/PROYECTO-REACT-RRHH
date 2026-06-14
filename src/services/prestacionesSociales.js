@@ -48,8 +48,9 @@ export async function getResumenPrestacionesSociales() {
   const { data: cuerpo } = await api.get('/prestaciones-sociales');
   const data = extraerData(cuerpo) ?? {};
   const totales = data.totales_pendientes ?? {};
+  const totalesPagados = data.totales_pagados ?? totales.totales_pagados ?? {};
   const contratos = Array.isArray(data.contratos_vigentes) ? data.contratos_vigentes : [];
-  return { totales_pendientes: totales, contratos_vigentes: contratos };
+  return { totales_pendientes: totales, totales_pagados: totalesPagados, contratos_vigentes: contratos };
 }
 
 /** Liquidado en API: Pagado o Trasladado (cuenta como no pendiente). */

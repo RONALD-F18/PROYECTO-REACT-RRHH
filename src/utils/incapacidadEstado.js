@@ -1,19 +1,24 @@
 /** Estados que se pueden asignar al editar (modal o detalle). */
-export const ETIQUETAS_ESTADO_EDICION_INCAPACIDAD = ['Activa', 'Finalizada'];
+export const ETIQUETAS_ESTADO_EDICION_INCAPACIDAD = ['Activa', 'Finalizada', 'Cancelada'];
 
 /**
- * Valor inicial del control de edición (solo Activa / Finalizada).
- * Cancelada u otros valores se muestran como Finalizada para poder corregir desde la UI.
+ * Normaliza valor del API (ACTIVA → Activa, etc.).
  */
-export function estadoIncapacidadEdicionDesdeApi(raw) {
+export function normalizarEstadoIncapacidadApi(raw) {
   const u = String(raw || '').trim();
-  if (u === 'Activa') return 'Activa';
-  if (u === 'Finalizada' || u === 'Cancelada') return 'Finalizada';
+  if (/^activa$/i.test(u)) return 'Activa';
+  if (/^finalizada$/i.test(u)) return 'Finalizada';
+  if (/^cancelada$/i.test(u)) return 'Cancelada';
   return 'Activa';
+}
+
+export function estadoIncapacidadEdicionDesdeApi(raw) {
+  return normalizarEstadoIncapacidadApi(raw);
 }
 
 export function estadoIncapacidadApiDesdeEtiquetaEdicion(etiqueta) {
   const t = String(etiqueta || '').trim();
   if (t === 'Finalizada') return 'Finalizada';
+  if (t === 'Cancelada') return 'Cancelada';
   return 'Activa';
 }

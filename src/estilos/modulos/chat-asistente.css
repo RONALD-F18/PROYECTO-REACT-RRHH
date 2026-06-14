@@ -4,8 +4,8 @@
   position: fixed;
   right: 24px;
   bottom: 24px;
-  /* Por encima de tablas/overlays de layout; por debajo del panel del chat */
-  z-index: 10040;
+  /* Por debajo de modales (z-index 1000) */
+  z-index: 900;
   width: 64px;
   height: 64px;
   border: none;
@@ -935,4 +935,19 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+@media (max-width: 900px) {
+  .chat-asistente-fab {
+    right: 12px;
+    bottom: 12px;
+    width: 52px;
+    height: 52px;
+    z-index: 900;
+  }
+
+  .chat-asistente-buho--fab {
+    width: 36px;
+    height: 36px;
+  }
 }

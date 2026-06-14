@@ -1,51 +1,76 @@
-/** Valores enviados al API (string ≤50). */
-export const TIPOS_COMUNICACION = [
-  { api: 'MEMORANDO', etiqueta: 'Memorando', icono: 'memo' },
-  { api: 'LLAMADO_VERBAL', etiqueta: 'Llamado verbal', icono: 'chat' },
-  { api: 'SUSPENSION', etiqueta: 'Suspensión', icono: 'stop' },
-  { api: 'FELICITACION', etiqueta: 'Felicitación', icono: 'star' },
-];
+import { CATALOGOS_FALLBACK } from '../../services/catalogos';
 
-/** Estados expuestos en UI y filtros (alineado a registro directo vía API, sin borrador). */
-export const ESTADOS_COMUNICACION = [
-  { api: 'EMITIDO', etiqueta: 'Emitido' },
-  { api: 'NOTIFICADO', etiqueta: 'Notificado' },
-];
+/** Valores enviados al API (strings del catálogo Laravel). */
+export const TIPOS_COMUNICACION_DEFAULT = CATALOGOS_FALLBACK.tipos_comunicacion;
 
-/** Valor que envía el front al crear un documento (queda registrado de una vez). */
-export const ESTADO_INICIAL_AL_CREAR = 'EMITIDO';
+export const ESTADOS_COMUNICACION_DEFAULT = CATALOGOS_FALLBACK.estados_comunicacion;
 
-export const MAX_MOTIVO_CHARS = 20;
+export const MOTIVOS_COMUNICACION_DEFAULT = CATALOGOS_FALLBACK.motivos_comunicacion;
+
+/** Estado al crear un documento. */
+export const ESTADO_INICIAL_AL_CREAR = 'Emitida';
+
+export const MAX_MOTIVO_CHARS = 50;
 export const MAX_DESCRIPCION_CHARS = 500;
 
-export function canonicalTipoApi(valor) {
-  const s = String(valor || '').toUpperCase().replace(/\s+/g, '_');
-  if (s.includes('MEMORAND')) return 'MEMORANDO';
-  if (s.includes('LLAMADO')) return 'LLAMADO_VERBAL';
-  if (s.includes('SUSPENS')) return 'SUSPENSION';
-  if (s.includes('FELICIT')) return 'FELICITACION';
-  const ok = ['MEMORANDO', 'LLAMADO_VERBAL', 'SUSPENSION', 'FELICITACION'];
-  if (ok.includes(s)) return s;
-  return s.slice(0, 50) || 'MEMORANDO';
+export function listaTiposComunicacion(catalogos) {
+  const arr = catalogos?.tipos_comunicacion;
+  return Array.isArray(arr) && arr.length ? arr : TIPOS_COMUNICACION_DEFAULT;
 }
 
+export function listaEstadosComunicacion(catalogos) {
+  const arr = catalogos?.estados_comunicacion;
+  return Array.isArray(arr) && arr.length ? arr : ESTADOS_COMUNICACION_DEFAULT;
+}
+
+export function listaMotivosComunicacion(catalogos) {
+  const arr = catalogos?.motivos_comunicacion;
+  return Array.isArray(arr) && arr.length ? arr : MOTIVOS_COMUNICACION_DEFAULT;
+}
+
+export function normalizarTipoComunicacion(valor) {
+  const s = String(valor || '').trim();
+  if (!s) return TIPOS_COMUNICACION_DEFAULT[0];
+  const exact = TIPOS_COMUNICACION_DEFAULT.find((t) => t.toLowerCase() === s.toLowerCase());
+  if (exact) return exact;
+  if (/memorand/i.test(s)) return 'Memorando';
+  if (/apercib/i.test(s)) return 'Apercibimiento formal';
+  if (/suspens/i.test(s)) return 'Suspension disciplinaria';
+  if (/compromiso/i.test(s)) return 'Compromiso de mejora';
+  return s.slice(0, 50);
+}
+
+export function normalizarEstadoComunicacion(valor) {
+  const s = String(valor || '').trim();
+  if (!s) return ESTADO_INICIAL_AL_CREAR;
+  const exact = ESTADOS_COMUNICACION_DEFAULT.find((e) => e.toLowerCase() === s.toLowerCase());
+  if (exact) return exact;
+  if (/seguimiento/i.test(s)) return 'En seguimiento';
+  if (/cerrad/i.test(s)) return 'Cerrada';
+  if (/emit/i.test(s)) return 'Emitida';
+  return s.slice(0, 50);
+}
+
+/** @deprecated usar normalizarTipoComunicacion */
+export function canonicalTipoApi(valor) {
+  return normalizarTipoComunicacion(valor);
+}
+
+/** @deprecated usar normalizarEstadoComunicacion */
 export function canonicalEstadoApi(valor) {
-  const s = String(valor || '').toUpperCase();
-  if (s.includes('NOTIFIC')) return 'NOTIFICADO';
-  if (s.includes('EMIT')) return 'EMITIDO';
-  if (s.includes('BORRAD')) return 'BORRADOR';
-  return s.slice(0, 20) || 'EMITIDO';
+  return normalizarEstadoComunicacion(valor);
 }
 
 export function etiquetaTipo(valor) {
-  const c = canonicalTipoApi(valor);
-  return TIPOS_COMUNICACION.find((t) => t.api === c)?.etiqueta ?? String(valor || '—');
+  return normalizarTipoComunicacion(valor);
 }
 
 export function etiquetaEstado(valor) {
-  const c = canonicalEstadoApi(valor);
-  if (c === 'BORRADOR') return 'Emitido';
-  return ESTADOS_COMUNICACION.find((e) => e.api === c)?.etiqueta ?? String(valor || '—');
+  return normalizarEstadoComunicacion(valor);
+}
+
+export function esSuspensionDisciplinaria(tipo) {
+  return normalizarTipoComunicacion(tipo) === 'Suspension disciplinaria';
 }
 
 export function radicadoDesdeCod(cod) {
@@ -53,18 +78,31 @@ export function radicadoDesdeCod(cod) {
   return `GD-${String(cod).padStart(4, '0')}`;
 }
 
-export function claseBadgeTipo(tipoApi) {
-  const c = canonicalTipoApi(tipoApi);
-  if (c === 'MEMORANDO') return 'disc-badge--memo';
-  if (c === 'LLAMADO_VERBAL') return 'disc-badge--llamado';
-  if (c === 'SUSPENSION') return 'disc-badge--susp';
-  if (c === 'FELICITACION') return 'disc-badge--feli';
+export function claseBadgeTipo(tipo) {
+  const c = normalizarTipoComunicacion(tipo);
+  if (c === 'Memorando') return 'disc-badge--memo';
+  if (c === 'Apercibimiento formal') return 'disc-badge--llamado';
+  if (c === 'Suspension disciplinaria') return 'disc-badge--susp';
+  if (c === 'Compromiso de mejora') return 'disc-badge--feli';
   return 'disc-badge--neutral';
 }
 
-export function claseBadgeEstado(estadoApi) {
-  const c = canonicalEstadoApi(estadoApi);
-  if (c === 'NOTIFICADO') return 'disc-badge-est--ok';
-  if (c === 'EMITIDO' || c === 'BORRADOR') return 'disc-badge-est--emit';
+export function claseBadgeEstado(estado) {
+  const c = normalizarEstadoComunicacion(estado);
+  if (c === 'Cerrada') return 'disc-badge-est--ok';
+  if (c === 'En seguimiento') return 'disc-badge-est--emit';
+  if (c === 'Emitida') return 'disc-badge-est--emit';
   return 'disc-badge-est--emit';
 }
+
+/** Compatibilidad con imports antiguos */
+export const TIPOS_COMUNICACION = TIPOS_COMUNICACION_DEFAULT.map((etiqueta) => ({
+  api: etiqueta,
+  etiqueta,
+  icono: etiqueta === 'Memorando' ? 'memo' : etiqueta === 'Suspension disciplinaria' ? 'stop' : 'memo',
+}));
+
+export const ESTADOS_COMUNICACION = ESTADOS_COMUNICACION_DEFAULT.map((etiqueta) => ({
+  api: etiqueta,
+  etiqueta,
+}));

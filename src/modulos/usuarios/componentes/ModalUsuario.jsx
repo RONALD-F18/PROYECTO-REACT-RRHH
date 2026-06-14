@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
 import { createUsuario, updateUsuario } from '../../../services/usuario';
+import { usuarioSesionLocal } from '../../../services/autenticacion';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
+import { alertaErrorApi } from '../../../utils/alertasSwal';
 import {
   validarContrasenaUsuarioApi,
   REGEX_CONTRASENA_USUARIO_API,
@@ -77,6 +79,12 @@ function ModalUsuario({
   rolesFallo = false,
 }) {
   const esEdicion = !!(datosUsuario && datosUsuario.cod_usuario != null);
+  const sesionActual = useMemo(() => usuarioSesionLocal(), [mostrar]);
+  const esUsuarioPropio =
+    esEdicion &&
+    sesionActual?.cod_usuario != null &&
+    datosUsuario?.cod_usuario != null &&
+    String(sesionActual.cod_usuario) === String(datosUsuario.cod_usuario);
   const [formulario, setFormulario] = useState(formularioVacio);
   const rolesLista = useMemo(
     () =>
@@ -232,7 +240,12 @@ function ModalUsuario({
       }
       cerrar();
     } catch (err) {
-      setErrorApi(mensajeErrorApi(err));
+      const status = err?.response?.status;
+      if (status === 403 || status === 422) {
+        void alertaErrorApi('No se pudo guardar el usuario', err);
+      } else {
+        setErrorApi(mensajeErrorApi(err));
+      }
     } finally {
       setGuardando(false);
     }
@@ -320,13 +333,13 @@ function ModalUsuario({
                 <p className="usuario-modal-reglas-contrasena">
                   <strong>Deja en blanco:</strong> para conservar la contraseña actual del usuario.
                   <br />
-                  <strong>Nueva clave:</strong> entonces sí aplica {REGEX_CONTRASENA_USUARIO_API.longitudMin}–
-                  {REGEX_CONTRASENA_USUARIO_API.longitudMax} caracteres, una mayúscula y un número.
+                  <strong>Nueva clave:</strong> mínimo {REGEX_CONTRASENA_USUARIO_API.longitudMin} caracteres, mayúscula,
+                  minúscula, número y carácter especial.
                 </p>
               ) : (
                 <p className="usuario-modal-reglas-contrasena">
-                  Obligatoria al crear: {REGEX_CONTRASENA_USUARIO_API.longitudMin}–
-                  {REGEX_CONTRASENA_USUARIO_API.longitudMax} caracteres, una mayúscula y un número.
+                  Obligatoria al crear: mínimo {REGEX_CONTRASENA_USUARIO_API.longitudMin} caracteres, mayúscula,
+                  minúscula, número y carácter especial.
                 </p>
               )}
               <input
@@ -399,6 +412,9 @@ function ModalUsuario({
           </h3>
           <p className="usuario-modal-seccion-subtitulo">
             Elige uno <span className="usuario-modal-requerido">*</span>
+            {esUsuarioPropio ? (
+              <span className="usuario-modal-reglas-contrasena"> — No puedes cambiar tu propio rol.</span>
+            ) : null}
           </p>
           <div className="roles-opciones usuario-modal-roles">
             {rolesLista.map((r) => {
@@ -409,7 +425,7 @@ function ModalUsuario({
               return (
                 <label
                   key={valor}
-                  className={`rol-opcion usuario-modal-rol-tarjeta${seleccionado ? ' activo' : ''}`}
+                  className={`rol-opcion usuario-modal-rol-tarjeta${seleccionado ? ' activo' : ''}${esUsuarioPropio ? ' usuario-modal-rol-tarjeta--bloqueado' : ''}`}
                 >
                   <input
                     type="radio"
@@ -417,6 +433,7 @@ function ModalUsuario({
                     value={valor}
                     checked={seleccionado}
                     onChange={manejarCambio}
+                    disabled={esUsuarioPropio}
                   />
                   <div className="rol-contenido">
                     <span className="rol-titulo">{tituloRol}</span>

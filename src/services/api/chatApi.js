@@ -24,9 +24,10 @@ export function normalizarModuloAyudaQuery(modulo) {
  * POST mensajes puede incluir `modulo_ayuda` (misma clave que ?modulo=) si el backend lo reconoce.
  * Respuesta típica: `mensaje_usuario`, `mensaje_asistente`, opcional `presentacion_chat` (registro_estilo, sugerencias_relacionadas + chips).
  */
-export async function getAyudaChat(modulo) {
+export async function getAyudaChat(modulo, { refrescar = false } = {}) {
   const mod = normalizarModuloAyudaQuery(modulo);
   const params = mod ? { modulo: mod } : {};
+  if (refrescar) params._ = Date.now();
   const { data } = await api.get('/chat/ayuda', { params });
   return data;
 }

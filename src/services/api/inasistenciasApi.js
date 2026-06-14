@@ -31,6 +31,36 @@ export async function listarInasistenciasApi(opciones = {}) {
   return ejecutarListarInasistencias(opciones);
 }
 
+/**
+ * GET /inasistencias?cod_empleado=&mes=&anio=
+ */
+export async function listarInasistenciasFiltradasApi(params = {}) {
+  const search = new URLSearchParams();
+  if (params.cod_empleado != null && params.cod_empleado !== '') {
+    search.set('cod_empleado', String(params.cod_empleado));
+  }
+  if (params.mes != null && params.mes !== '') search.set('mes', String(params.mes));
+  if (params.anio != null && params.anio !== '') search.set('anio', String(params.anio));
+  const q = search.toString();
+  const url = q ? `/inasistencias?${q}` : '/inasistencias';
+  const { data } = await api.get(url);
+  return data;
+}
+
+/**
+ * Historial completo de un empleado: GET /empleados/{cod}/inasistencias
+ */
+export async function listarInasistenciasEmpleadoApi(codEmpleado, params = {}) {
+  const search = new URLSearchParams();
+  if (params.mes != null && params.mes !== '') search.set('mes', String(params.mes));
+  if (params.anio != null && params.anio !== '') search.set('anio', String(params.anio));
+  const q = search.toString();
+  const base = `/empleados/${encodeURIComponent(String(codEmpleado))}/inasistencias`;
+  const url = q ? `${base}?${q}` : base;
+  const { data } = await api.get(url);
+  return data;
+}
+
 export function invalidarCacheListaInasistencias() {
   invalidarEjecutorCompartido(ejecutarListarInasistencias);
 }
@@ -74,6 +104,15 @@ export async function actualizarInasistenciaApi(id, payload) {
 
 export async function eliminarInasistenciaApi(id) {
   const { data } = await api.delete(`/inasistencias/${id}`);
+  invalidarCacheListaInasistencias();
+  return data;
+}
+
+/** DELETE /empleados/{cod}/inasistencias — elimina todas las de un empleado. */
+export async function eliminarTodasInasistenciasEmpleadoApi(codEmpleado) {
+  const { data } = await api.delete(
+    `/empleados/${encodeURIComponent(String(codEmpleado))}/inasistencias`,
+  );
   invalidarCacheListaInasistencias();
   return data;
 }

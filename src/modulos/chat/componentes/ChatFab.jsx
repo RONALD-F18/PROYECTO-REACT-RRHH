@@ -2,8 +2,7 @@ import { createPortal } from 'react-dom';
 import IconoBuho from '../../../componentes/comunes/IconoBuho';
 
 /**
- * Portal a document.body para que ningún padre (overflow/transform) lo oculte.
- * Esquina inferior izquierda: no tapa Acciones (Editar/Eliminar) alineadas a la derecha.
+ * Portal a document.body. Esquina inferior derecha, compacto para no tapar Acciones.
  */
 function ChatFab({ onClick }) {
   return createPortal(

@@ -46,16 +46,29 @@
   gap: 36px;
 }
 
-.inicio-nav a {
+.inicio-nav a,
+.inicio-nav-link {
   color: rgba(255, 255, 255, 0.9);
   font-size: var(--texto-base);
   font-weight: 500;
   transition: color var(--transicion-rapida);
   text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
 }
 
-.inicio-nav a:hover {
+.inicio-nav a:hover,
+.inicio-nav-link:hover {
   color: #fff;
+}
+
+.inicio-marca-icono {
+  display: block;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 
 /* Menú Hamburguesa */
@@ -448,6 +461,47 @@
   box-shadow: var(--sombra-md);
 }
 
+.inicio-formulario--contacto {
+  border: 1px solid rgba(102, 126, 234, 0.12);
+  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.12);
+  overflow: hidden;
+  padding: 0;
+}
+
+.inicio-formulario-encabezado {
+  padding: 24px 32px 8px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.06));
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.inicio-formulario-encabezado h3 {
+  margin: 0 0 6px;
+  font-size: var(--texto-lg);
+  color: var(--color-texto-oscuro);
+}
+
+.inicio-formulario-encabezado p {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-texto-claro);
+}
+
+.inicio-formulario--contacto .inicio-formulario-campo,
+.inicio-formulario--contacto .inicio-formulario-btn {
+  margin-left: 32px;
+  margin-right: 32px;
+}
+
+.inicio-formulario--contacto .inicio-formulario-campo:first-of-type {
+  margin-top: 24px;
+}
+
+.inicio-formulario--contacto .inicio-formulario-btn {
+  margin-bottom: 32px;
+  margin-top: 8px;
+  width: calc(100% - 64px);
+}
+
 .inicio-formulario-campo {
   margin-bottom: 20px;
 }
@@ -467,30 +521,68 @@
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-lg);
   font-size: var(--texto-sm);
-  transition: border-color var(--transicion-rapida);
+  transition: border-color var(--transicion-rapida), box-shadow var(--transicion-rapida);
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.inicio-formulario-campo input:disabled,
+.inicio-formulario-campo textarea:disabled {
+  opacity: 0.7;
+  cursor: wait;
 }
 
 .inicio-formulario-campo input:focus,
 .inicio-formulario-campo textarea:focus {
   border-color: var(--color-primario);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  outline: none;
+}
+
+.inicio-formulario-campo .campo-seccion-error {
+  display: block;
+  margin-top: 6px;
+  font-size: var(--texto-xs);
+  color: #dc2626;
 }
 
 .inicio-formulario-btn {
   width: 100%;
   padding: 14px;
-  background: var(--color-fondo-tarjeta);
-  border: 2px solid var(--color-primario);
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border: none;
   border-radius: var(--radio-xl);
-  color: var(--color-primario);
+  color: #fff;
   font-size: var(--texto-base);
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transicion-rapida);
+  transition: transform var(--transicion-rapida), box-shadow var(--transicion-rapida), opacity var(--transicion-rapida);
 }
 
-.inicio-formulario-btn:hover {
-  background: var(--color-primario);
+.inicio-formulario-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.35);
+}
+
+.inicio-formulario-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.inicio-info--contacto {
+  background: linear-gradient(160deg, #16213e 0%, #1e3a5f 100%);
   color: #fff;
+  padding: 32px;
+  border-radius: var(--radio-xl);
+  box-shadow: var(--sombra-md);
+}
+
+.inicio-info--contacto .inicio-info-titulo {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.inicio-info--contacto .inicio-info-valor {
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .inicio-info {
@@ -570,15 +662,25 @@
   font-weight: 600;
 }
 
-.inicio-footer-columna a {
+.inicio-footer-columna a,
+.inicio-footer-link {
   display: block;
   color: rgba(255, 255, 255, 0.7);
   font-size: var(--texto-sm);
   margin-bottom: 12px;
   transition: color var(--transicion-rapida);
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  width: 100%;
 }
 
-.inicio-footer-columna a:hover {
+.inicio-footer-columna a:hover,
+.inicio-footer-link:hover {
   color: #fff;
 }
 

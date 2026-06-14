@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { expresionesRegulares, validarContrasena } from '../../utils/validaciones';
 import { haySesionLocalActiva, iniciarSesion } from '../../services/autenticacion';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
@@ -7,6 +7,7 @@ import { getUrlRecuperacionContrasenaWeb } from '../../config/authWeb';
 
 function InicioSesion() {
   const navegar = useNavigate();
+  const ubicacion = useLocation();
   const urlRecuperarWeb = getUrlRecuperacionContrasenaWeb();
   const [usuarioCorreo, setUsuarioCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
@@ -89,7 +90,10 @@ function InicioSesion() {
         email_usuario: usuarioCorreo.trim(),
         contrasena_usuario: contrasena,
       });
-      navegar('/dashboard', { replace: true });
+      const desde = ubicacion.state?.desde;
+      const rutasPublicas = ['/', '/login', '/recuperar-contrasena', '/cambiar-contrasena'];
+      const destino = typeof desde === 'string' && !rutasPublicas.includes(desde) ? desde : '/dashboard';
+      navegar(destino, { replace: true });
     } catch (e) {
       if (e?.code === 'LOGIN_SIN_TOKEN' || e?.code === 'LOGIN_STORAGE') {
         setErrorServidor(e.message);

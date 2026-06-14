@@ -1,13 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Talent Sphere">
   <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="ts-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#667eea"/>
+      <stop offset="100%" stop-color="#764ba2"/>
+    </linearGradient>
+    <linearGradient id="ts-owl" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#7eb8e8"/>
-      <stop offset="100%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4e8fc9"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="14" fill="url(#g)"/>
-  <ellipse cx="32" cy="34" rx="18" ry="16" fill="#f0f7fc" opacity="0.95"/>
-  <circle cx="26" cy="30" r="4" fill="#334155"/>
-  <circle cx="38" cy="30" r="4" fill="#334155"/>
-  <path d="M28 40 Q32 44 36 40" fill="none" stroke="#3d6fa8" stroke-width="2" stroke-linecap="round"/>
+  <rect width="64" height="64" rx="14" fill="url(#ts-bg)"/>
+  <ellipse cx="32" cy="36" rx="17" ry="15" fill="url(#ts-owl)"/>
+  <ellipse cx="32" cy="38" rx="11" ry="9" fill="#f0f7fc" opacity="0.95"/>
+  <ellipse cx="25" cy="33" rx="4.5" ry="5" fill="#fff"/>
+  <ellipse cx="39" cy="33" rx="4.5" ry="5" fill="#fff"/>
+  <circle cx="25" cy="34" r="2.2" fill="#334155"/>
+  <circle cx="39" cy="34" r="2.2" fill="#334155"/>
+  <path d="M28 42 Q32 45 36 42" fill="none" stroke="#3d6fa8" stroke-width="1.8" stroke-linecap="round"/>
 </svg>

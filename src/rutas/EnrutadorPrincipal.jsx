@@ -25,25 +25,23 @@ import {
 } from "../modulos";
 import { esAdminSesionLocal, haySesionLocalActiva } from "../services/autenticacion";
 
-function irALogin() {
-  return <Navigate to="/login" replace />;
-}
-
 /**
  * Bloquea rutas privadas sin sesión (evita flash del módulo antes de redirigir al login).
  */
 function RutaPrivada({ children }) {
   "use no memo";
+  const ubicacion = useLocation();
   if (!haySesionLocalActiva()) {
-    return irALogin();
+    return <Navigate to="/login" replace state={{ desde: ubicacion.pathname }} />;
   }
   return children;
 }
 
 function RutaUsuariosProtegida() {
   "use no memo";
+  const ubicacion = useLocation();
   if (!haySesionLocalActiva()) {
-    return irALogin();
+    return <Navigate to="/login" replace state={{ desde: ubicacion.pathname }} />;
   }
   if (!esAdminSesionLocal()) {
     return <Navigate to="/dashboard" replace />;
@@ -66,8 +64,9 @@ function RutaPublica({ children }) {
  */
 function RutaComodin() {
   "use no memo";
+  const ubicacion = useLocation();
   if (!haySesionLocalActiva()) {
-    return irALogin();
+    return <Navigate to="/login" replace state={{ desde: ubicacion.pathname }} />;
   }
   return <Navigate to="/dashboard" replace />;
 }

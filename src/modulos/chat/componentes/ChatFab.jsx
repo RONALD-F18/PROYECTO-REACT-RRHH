@@ -3,7 +3,7 @@ import IconoBuho from '../../../componentes/comunes/IconoBuho';
 
 /**
  * Portal a document.body para que ningún padre (overflow/transform) lo oculte.
- * z-index por debajo del modal del chat (9999).
+ * Esquina inferior izquierda: no tapa Acciones (Editar/Eliminar) alineadas a la derecha.
  */
 function ChatFab({ onClick }) {
   return createPortal(

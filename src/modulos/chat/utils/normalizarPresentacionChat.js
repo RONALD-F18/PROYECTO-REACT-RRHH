@@ -3,7 +3,7 @@
  * @see normalizarChipsDesdePresentacion
  */
 
-import { esChipAyudaRuidoso } from './filtrarRuidoAyuda';
+import { esChipAyudaRuidoso } from './filtrarRuidoAyuda.js';
 
 function claveChip(c, i) {
   const env = String(c?.enviar ?? '').trim();
@@ -32,27 +32,37 @@ export function normalizarChipsLista(raw) {
  */
 export function normalizarPresentacionChatPost(data) {
   const pc = data?.presentacion_chat;
-  if (!pc || typeof pc !== 'object') {
-    return { registroEstilo: 'mensajeria', sugerenciasMeta: null, chips: [] };
-  }
-
-  const registroEstilo = String(pc.registro_estilo || 'mensajeria').toLowerCase();
-  const sr = pc.sugerencias_relacionadas;
+  const registroEstilo =
+    pc && typeof pc === 'object'
+      ? String(pc.registro_estilo || 'mensajeria').toLowerCase()
+      : 'mensajeria';
 
   let chips = [];
   let sugerenciasMeta = null;
 
-  if (Array.isArray(sr)) {
+  if (Array.isArray(data?.sugerencias_relacionadas) && data.sugerencias_relacionadas.length) {
+    chips = normalizarChipsLista(data.sugerencias_relacionadas);
+  }
+
+  if (!pc || typeof pc !== 'object') {
+    return { registroEstilo, sugerenciasMeta, chips };
+  }
+
+  const sr = pc.sugerencias_relacionadas;
+
+  if (!chips.length && Array.isArray(sr)) {
     chips = normalizarChipsLista(sr);
-  } else if (sr && typeof sr === 'object') {
+  } else if (sr && typeof sr === 'object' && !Array.isArray(sr)) {
     sugerenciasMeta = {
       ubicacion: sr.ubicacion,
       alineacion: sr.alineacion,
       columna: sr.columna,
       nota: sr.nota,
     };
-    const rawLista = sr.items ?? sr.opciones ?? sr.chips ?? sr.sugerencias ?? sr.data ?? [];
-    chips = normalizarChipsLista(Array.isArray(rawLista) ? rawLista : []);
+    if (!chips.length) {
+      const rawLista = sr.items ?? sr.opciones ?? sr.chips ?? sr.sugerencias ?? sr.data ?? [];
+      chips = normalizarChipsLista(Array.isArray(rawLista) ? rawLista : []);
+    }
   }
 
   return { registroEstilo, sugerenciasMeta, chips };

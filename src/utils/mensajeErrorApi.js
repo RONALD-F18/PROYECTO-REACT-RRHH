@@ -163,7 +163,7 @@ function textoPorCodigoHttp(status) {
     case 422:
       return 'Algunos datos no son válidos. Revíselos e intente de nuevo.';
     case 429:
-      return 'Demasiados intentos. Espere un momento e intente de nuevo.';
+      return 'Demasiadas solicitudes. Espere unos segundos e intente de nuevo.';
     case 500:
     case 502:
     case 503:

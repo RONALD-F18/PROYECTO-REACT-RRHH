@@ -1,4 +1,5 @@
 import BotonMenu from './BotonMenu';
+import IconoBuho from './IconoBuho';
 
 /**
  * Componente de encabezado para módulos
@@ -19,6 +20,7 @@ function EncabezadoModulo({
     <header className={`encabezado-modulo ${className}`.trim()}>
       <div className="encabezado-modulo-izquierda">
         <div className="encabezado-modulo-logo">
+          <IconoBuho className="encabezado-modulo-logo-icono" title="Talent Sphere" />
           <span className="encabezado-modulo-logo-texto">Talent Sphere</span>
         </div>
         <div className="encabezado-modulo-info">

@@ -623,7 +623,7 @@ function Inasistencias() {
                   </div>
                 </div>
 
-                <div className="detalle-lista">
+                <div className="detalle-lista inasistencias-table-wrapper">
                   {registrosEmpleadoListado.length === 0 ? <SinDatos mensaje="No hay registros para este filtro." /> : registrosEmpleadoListado.map((item) => {
                     const estado = estadoUiDesdeMotivo(item.motivo_inasistencia);
                     return (

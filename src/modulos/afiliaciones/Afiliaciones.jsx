@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ContenedorPrincipal, EncabezadoModulo, FiltrosBusqueda, TarjetasResumen, SinDatos } from '../../componentes';
+import { useCatalogos } from '../../contextos/CatalogosContext';
+import { catalogoAfiliacionDesdeGlobal } from '../../services/catalogos';
 import { ModalAfiliacion } from './componentes';
 import {
   getAfiliaciones,
@@ -8,7 +10,6 @@ import {
   deleteAfiliacion,
   extraerFilasAfiliaciones,
   codigoAfiliacionDesde,
-  obtenerCatalogosAfiliacion,
 } from '../../services/afiliaciones';
 import {
   getEmpleadosCatalogo,
@@ -51,9 +52,13 @@ function tipoRegimenMostrar(v) {
 
 function Afiliaciones() {
   const navegar = useNavigate();
+  const { catalogos: catalogosGlobal } = useCatalogos();
+  const catalogos = useMemo(
+    () => catalogoAfiliacionDesdeGlobal(catalogosGlobal),
+    [catalogosGlobal],
+  );
   const [lista, setLista] = useState([]);
   const [empleados, setEmpleados] = useState([]);
-  const [catalogos, setCatalogos] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [mensajeLista, setMensajeLista] = useState('');
   const [mensajeExito, setMensajeExito] = useState('');
@@ -188,19 +193,11 @@ function Afiliaciones() {
 
   useEffect(() => {
     let activo = true;
-    const catalogoVacio = {
-      eps: [],
-      riesgos: [],
-      arls: [],
-      pensiones: [],
-      cesantias: [],
-      compensaciones: [],
-    };
     setMensajeLista('');
     setCargando(true);
     void ejecutarCargaEnFases({
       principal: (op) => getAfiliaciones(op),
-      secundarios: [(op) => getEmpleadosCatalogo(op), () => obtenerCatalogosAfiliacion()],
+      secundarios: [(op) => getEmpleadosCatalogo(op)],
       onPrincipal: (json, err) => {
         if (!activo) return;
         if (err) {
@@ -216,10 +213,6 @@ function Afiliaciones() {
         if (indice === 0) {
           if (err) setEmpleados([]);
           else setEmpleados(extraerFilasEmpleados(json));
-        }
-        if (indice === 1) {
-          if (err) setCatalogos(catalogoVacio);
-          else setCatalogos(json);
         }
       },
     });

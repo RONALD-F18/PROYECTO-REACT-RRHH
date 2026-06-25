@@ -9,9 +9,6 @@ import {
   updateIncapacidad,
   normalizarRegistroIncapacidad,
   codigoIncapacidadDesde,
-  getTiposIncapacidad,
-  getClasificacionesEnfermedad,
-  extraerFilasCatalogo,
 } from '../../../services/incapacidades';
 import {
   codigoEmpleadoDesde,
@@ -28,8 +25,8 @@ import {
   mensajeSiFechaAntesDeContrato,
   mensajeSiFechaInvalidaParaEmpleadoLaboral,
 } from '../../../utils/fechaIngresoLaboralEmpleado';
-import { mergeClasificacionesEnfermedad } from '../../../utils/mergeCatalogos';
-import { CLASIFICACION_CIE_REFERENCIA_SUPLEMENTO } from '../../../data/catalogosColombiaSuplemento';
+import { useCatalogos } from '../../../contextos/CatalogosContext';
+import { alertaError } from '../../../utils/alertasSwal';
 import '../../../estilos/componentes/formulario-secciones.css';
 
 const DESCRIPCION_MAX = 200;
@@ -133,11 +130,10 @@ function construirPayloadIncapacidad(formulario, codEmpleado) {
 }
 
 function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados = [], contratos = [], alExito }) {
+  const { catalogos } = useCatalogos();
   const esEdicion = !!datosIncapacidad && codigoIncapacidadDesde(datosIncapacidad) != null;
 
   const [formulario, setFormulario] = useState(() => estadoFormularioVacio());
-  const [tiposCatalogo, setTiposCatalogo] = useState([]);
-  const [clasifCatalogo, setClasifCatalogo] = useState([]);
   const [errores, setErrores] = useState({});
   const [camposTocados, setCamposTocados] = useState({});
   const [enviando, setEnviando] = useState(false);
@@ -158,30 +154,19 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     return 0;
   };
 
-  const diasCalculados = calcularDias();
+  const tiposCatalogo = useMemo(
+    () => (Array.isArray(catalogos?.tipos_incapacidad) ? catalogos.tipos_incapacidad : []),
+    [catalogos],
+  );
+  const clasifCatalogo = useMemo(
+    () =>
+      Array.isArray(catalogos?.clasificaciones_enfermedad)
+        ? catalogos.clasificaciones_enfermedad
+        : [],
+    [catalogos],
+  );
 
-  useEffect(() => {
-    if (!mostrar) return;
-    let cancel = false;
-    (async () => {
-      try {
-        const [st, sc] = await Promise.allSettled([getTiposIncapacidad(), getClasificacionesEnfermedad()]);
-        if (cancel) return;
-        if (st.status === 'fulfilled') setTiposCatalogo(extraerFilasCatalogo(st.value));
-        else setTiposCatalogo([]);
-        if (sc.status === 'fulfilled') setClasifCatalogo(extraerFilasCatalogo(sc.value));
-        else setClasifCatalogo([]);
-      } catch {
-        if (!cancel) {
-          setTiposCatalogo([]);
-          setClasifCatalogo([]);
-        }
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, [mostrar]);
+  const diasCalculados = calcularDias();
 
   useEffect(() => {
     if (!mostrar) return;
@@ -205,10 +190,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     [tiposCatalogo],
   );
 
-  const clasifCatalogoAmpliado = useMemo(
-    () => mergeClasificacionesEnfermedad(clasifCatalogo, CLASIFICACION_CIE_REFERENCIA_SUPLEMENTO),
-    [clasifCatalogo],
-  );
+  const clasifCatalogoAmpliado = useMemo(() => clasifCatalogo, [clasifCatalogo]);
 
   const opcionesClasif = useMemo(
     () =>
@@ -446,7 +428,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     const emp = buscarEmpleadoPorDocumento(empleados, formulario.documento);
     const codEmp = emp ? codigoEmpleadoDesde(emp) : null;
     if (codEmp == null) {
-      setErrorGeneral('No se encontró un empleado con ese documento. Verifique el número o sincronice empleados.');
+      void alertaError('Empleado no encontrado', 'No se encontró un empleado con ese documento.');
       return;
     }
 
@@ -454,7 +436,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     try {
       payload = construirPayloadIncapacidad(formulario, codEmp);
     } catch (err) {
-      setErrorGeneral(err instanceof Error ? err.message : String(err));
+      void alertaError('Datos inválidos', err instanceof Error ? err.message : String(err));
       return;
     }
 
@@ -469,7 +451,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
       }
       cerrar();
     } catch (err) {
-      setErrorGeneral(mensajeErrorApi(err));
+      void alertaError('No se pudo guardar', mensajeErrorApi(err));
     } finally {
       setEnviando(false);
     }
@@ -611,14 +593,9 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
       mostrar={mostrar}
       cerrar={cerrar}
       titulo={esEdicion ? 'Editar Incapacidad' : 'Registrar Nueva Incapacidad'}
+      confirmarAlCerrar
     >
       <form onSubmit={manejarGuardar}>
-        {errorGeneral ? (
-          <div className="login-alerta login-alerta--error" style={{ marginBottom: 16 }} role="alert">
-            <p className="login-alerta-mensaje">{errorGeneral}</p>
-          </div>
-        ) : null}
-
         <FormularioPasos
           pasos={[
             { numero: 1, titulo: 'Identificación del Empleado', color: 'morado' },

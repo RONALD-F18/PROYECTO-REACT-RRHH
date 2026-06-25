@@ -20,7 +20,10 @@ import {
   CAMPOS_EMPLEADO_VALIDACION_DEBOUNCED,
 } from '../../../utils/validacionEmpleadoFormulario';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
-import { alertaMensaje } from '../../../utils/alertasSwal';
+import { alertaError, alertaInfo, alertaMensaje } from '../../../utils/alertasSwal';
+import { confirmarCierreModal } from '../../../componentes/comunes/ConfirmCloseModal';
+import { useCatalogos } from '../../../contextos/CatalogosContext';
+import { opcionesTiposDocumento, opcionesSexosEmpleado } from '../../../services/catalogos';
 import {
   createEmpleado,
   patchEmpleado,
@@ -35,7 +38,6 @@ import {
 import { mergeCatalogoPorClave } from '../../../utils/mergeCatalogos';
 import { BANCOS_COLOMBIA_SUPLEMENTO } from '../../../data/catalogosColombiaSuplemento';
 import {
-  TIPO_DOCUMENTO,
   TIPO_CUENTA,
   ESTADO_EMP,
   DISCAPACIDAD,
@@ -51,6 +53,7 @@ function estadoInicialVacio() {
     apellidos_empleado: '',
     doc_iden: '',
     tipo_documento: '',
+    sexo: '',
     fecha_nac: '',
     direccion: '',
     numero_telefono: '',
@@ -77,6 +80,7 @@ function empleadoApiAFormulario(emp) {
     apellidos_empleado: e.apellidos_empleado ?? '',
     doc_iden: e.doc_iden != null ? String(e.doc_iden) : '',
     tipo_documento: e.tipo_documento ? String(e.tipo_documento).toUpperCase() : '',
+    sexo: e.sexo ? String(e.sexo).toUpperCase() : '',
     fecha_nac: e.fecha_nac ? String(e.fecha_nac).slice(0, 10) : '',
     direccion: e.direccion ?? '',
     numero_telefono: e.numero_telefono != null ? String(e.numero_telefono) : '',
@@ -130,6 +134,7 @@ function construirPayload(formulario) {
     apellidos_empleado: formulario.apellidos_empleado.trim(),
     doc_iden: formulario.doc_iden.trim(),
     tipo_documento: formulario.tipo_documento,
+    sexo: formulario.sexo,
     fecha_nac: formulario.fecha_nac,
     direccion: formulario.direccion.trim(),
     numero_telefono: formulario.numero_telefono.trim(),
@@ -155,6 +160,7 @@ const CAMPOS_POR_PASO_EMPLEADO = [
     'nombre_empleado',
     'apellidos_empleado',
     'fecha_nac',
+    'sexo',
     'fec_exp_doc',
     'numero_telefono',
     'correo_empleado',
@@ -188,6 +194,15 @@ function primerPasoConErroresEmpleado(erroresCliente, erroresApi) {
 }
 
 function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alExito }) {
+  const { catalogos } = useCatalogos();
+  const opcionesTipoDoc = useMemo(() => opcionesTiposDocumento(catalogos), [catalogos]);
+  const opcionesSexo = useMemo(() => opcionesSexosEmpleado(catalogos), [catalogos]);
+  const tiposDocumentoSet = useMemo(
+    () => new Set(opcionesTipoDoc.map((o) => o.valor)),
+    [opcionesTipoDoc],
+  );
+  const sexosSet = useMemo(() => new Set(opcionesSexo.map((o) => o.valor)), [opcionesSexo]);
+
   const registroEdicion = datosEmpleado ? normalizarRegistroEmpleado(datosEmpleado) : null;
   const codEdicion = codigoEmpleadoDesde(registroEdicion);
   const esEdicion = codEdicion != null;
@@ -211,8 +226,11 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
     () => new Set(bancosOpciones.map((b) => String(b.cod_banco))),
     [bancosOpciones],
   );
-  const ctxValidacionRef = useRef({ codigosBancoPermitidos });
-  ctxValidacionRef.current = { codigosBancoPermitidos };
+  const [tieneContratoActivo, setTieneContratoActivo] = useState(false);
+  const camposBloqueadosContrato = tieneContratoActivo && esEdicion;
+
+  const ctxValidacionRef = useRef({ codigosBancoPermitidos, tiposDocumento: tiposDocumentoSet, sexos: sexosSet });
+  ctxValidacionRef.current = { codigosBancoPermitidos, tiposDocumento: tiposDocumentoSet, sexos: sexosSet };
 
   const debounceTimersRef = useRef({});
 
@@ -296,6 +314,34 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
     setErrorGeneral('');
     setPasoActual(0);
   }, [datosEmpleado]);
+
+  useEffect(() => {
+    if (!mostrar || !esEdicion || codEdicion == null) {
+      setTieneContratoActivo(false);
+      return;
+    }
+    let cancel = false;
+    void (async () => {
+      try {
+        const jsonCtr = await getContratosCatalogo();
+        if (cancel) return;
+        const filas = extraerFilasContratos(jsonCtr);
+        const codEmp = Number(codEdicion);
+        const activo = filas.some(
+          (c) =>
+            c &&
+            Number(c.cod_empleado) === codEmp &&
+            esContratoVigenteParaEmpleado(c.estado_contrato),
+        );
+        setTieneContratoActivo(activo);
+      } catch {
+        if (!cancel) setTieneContratoActivo(false);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [mostrar, esEdicion, codEdicion]);
 
   useEffect(() => {
     if (mostrar) reiniciar();
@@ -400,7 +446,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
 
     const campos = camposPorPaso[idx] ?? [];
     const nuevosErrores = {};
-    const ctx = { codigosBancoPermitidos };
+    const ctx = { codigosBancoPermitidos, tiposDocumento: tiposDocumentoSet, sexos: sexosSet };
     for (const c of campos) {
       const m = validarCampoEmpleado(c, formulario, ctx);
       if (m) nuevosErrores[c] = m;
@@ -413,7 +459,11 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
     e.preventDefault();
     setErrorGeneral('');
     setErroresApi({});
-    const v = validarFormularioEmpleadoCompleto(formulario, { codigosBancoPermitidos });
+    const v = validarFormularioEmpleadoCompleto(formulario, {
+      codigosBancoPermitidos,
+      tiposDocumento: tiposDocumentoSet,
+      sexos: sexosSet,
+    });
     setErrores(v);
     if (Object.keys(v).length > 0) {
       setPasoActual(primerPasoConErroresEmpleado(v, {}));
@@ -426,7 +476,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
       if (esEdicion && codEdicion != null) {
         const parcial = construirPayloadParcialEdicion(payload, payloadInicialEdicionRef.current);
         if (Object.keys(parcial).length === 0) {
-          setErrorGeneral('No hay cambios que guardar.');
+          void alertaInfo('Sin cambios', 'No hay cambios que guardar.');
           return;
         }
         if (parcial.estado_emp === 'RETIRADO') {
@@ -458,16 +508,29 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
       cerrar();
     } catch (err) {
       const data = err.response?.data;
+      if (err.response?.status === 422 && data?.errors?.correo_empleado) {
+        void alertaError('Correo no disponible', mensajeErrorApi(err));
+        return;
+      }
       if (err.response?.status === 422 && data?.errors && typeof data.errors === 'object') {
         setErroresApi(data.errors);
-        setErrorGeneral('Revisa los campos marcados.');
+        void alertaError('Revisa el formulario', mensajeErrorApi(err));
         setPasoActual(primerPasoConErroresEmpleado({}, data.errors));
       } else {
-        setErrorGeneral(mensajeErrorApi(err));
+        void alertaError('No se pudo guardar', mensajeErrorApi(err));
       }
     } finally {
       setEnviando(false);
     }
+  };
+
+  const solicitarCierre = async () => {
+    const ok = await confirmarCierreModal({
+      mensaje: esEdicion
+        ? '¿Desea cancelar? Se perderán los datos no guardados.'
+        : '¿Desea cancelar la creación del empleado?',
+    });
+    if (ok) cerrar();
   };
 
   return (
@@ -476,13 +539,18 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
       cerrar={cerrar}
       titulo={esEdicion ? 'Editar empleado' : 'Registrar empleado'}
       classNameContenedor="modal-contenido--empleado-form"
+      confirmarAlCerrar
+      mensajeConfirmarCierre={
+        esEdicion
+          ? '¿Desea cancelar? Se perderán los datos no guardados.'
+          : '¿Desea cancelar la creación del empleado?'
+      }
     >
       <form className="formulario-empleado-api" onSubmit={manejarGuardar}>
-        {errorGeneral ? (
-          <div className="empleado-modal-alerta empleado-modal-alerta--error" role="alert">
-            <strong>Error</strong>
-            <p>{errorGeneral}</p>
-          </div>
+        {camposBloqueadosContrato ? (
+          <p className="empleado-modal-aviso-contrato" role="status">
+            Este empleado tiene un contrato ACTIVO. Los datos de identificación no pueden modificarse.
+          </p>
         ) : null}
 
         <FormularioPasos
@@ -493,7 +561,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
           ]}
           pasoActual={pasoActual}
           setPasoActual={setPasoActual}
-          onCancelar={cerrar}
+          onCancelar={solicitarCierre}
           enviando={enviando}
           textoGuardar={esEdicion ? 'Actualizar' : 'Guardar'}
           validarAntesDeSiguiente={validarAntesDeSiguiente}
@@ -512,9 +580,10 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
                 className={mensajeCampo('tipo_documento') ? 'campo-error' : ''}
+                disabled={camposBloqueadosContrato}
               >
                 <option value="">Seleccione</option>
-                {TIPO_DOCUMENTO.map((o) => (
+                {opcionesTipoDoc.map((o) => (
                   <option key={o.valor} value={o.valor}>
                     {o.etiqueta}
                   </option>
@@ -538,6 +607,8 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 autoComplete="off"
                 inputMode={formulario.tipo_documento === 'PASAPORTE' ? 'text' : 'numeric'}
                 className={mensajeCampo('doc_iden') ? 'campo-error' : ''}
+                readOnly={camposBloqueadosContrato}
+                disabled={camposBloqueadosContrato}
               />
               {mensajeCampo('doc_iden') ? (
                 <span className="mensaje-error">{mensajeCampo('doc_iden')}</span>
@@ -554,6 +625,8 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 onKeyDown={prevenirSiNoEsLetrasNombre}
                 maxLength={100}
                 className={mensajeCampo('nombre_empleado') ? 'campo-error' : ''}
+                readOnly={camposBloqueadosContrato}
+                disabled={camposBloqueadosContrato}
               />
               {mensajeCampo('nombre_empleado') ? (
                 <span className="mensaje-error">{mensajeCampo('nombre_empleado')}</span>
@@ -570,6 +643,8 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 onKeyDown={prevenirSiNoEsLetrasNombre}
                 maxLength={100}
                 className={mensajeCampo('apellidos_empleado') ? 'campo-error' : ''}
+                readOnly={camposBloqueadosContrato}
+                disabled={camposBloqueadosContrato}
               />
               {mensajeCampo('apellidos_empleado') ? (
                 <span className="mensaje-error">{mensajeCampo('apellidos_empleado')}</span>
@@ -586,9 +661,31 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
                 className={mensajeCampo('fecha_nac') ? 'campo-error' : ''}
+                disabled={camposBloqueadosContrato}
               />
               {mensajeCampo('fecha_nac') ? (
                 <span className="mensaje-error">{mensajeCampo('fecha_nac')}</span>
+              ) : null}
+            </div>
+            <div className="campo-formulario">
+              <label htmlFor="emp-sexo">Sexo *</label>
+              <select
+                id="emp-sexo"
+                name="sexo"
+                value={formulario.sexo}
+                onChange={manejarCambio}
+                onBlur={manejarBlurCampo}
+                className={mensajeCampo('sexo') ? 'campo-error' : ''}
+              >
+                <option value="">Seleccione</option>
+                {opcionesSexo.map((o) => (
+                  <option key={o.valor} value={o.valor}>
+                    {o.etiqueta}
+                  </option>
+                ))}
+              </select>
+              {mensajeCampo('sexo') ? (
+                <span className="mensaje-error">{mensajeCampo('sexo')}</span>
               ) : null}
             </div>
             <div className="campo-formulario">
@@ -602,6 +699,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
                 className={mensajeCampo('fec_exp_doc') ? 'campo-error' : ''}
+                disabled={camposBloqueadosContrato}
               />
               {mensajeCampo('fec_exp_doc') ? (
                 <span className="mensaje-error">{mensajeCampo('fec_exp_doc')}</span>

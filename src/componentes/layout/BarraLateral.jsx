@@ -111,16 +111,17 @@ function BarraLateral({ menuAbierto = false, cerrarMenu }) {
             <span className="barra-lateral-datos">
               <span className="barra-lateral-nombre">{nombreMostrar}</span>
               <span className="barra-lateral-correo">{correoMostrar}</span>
+              <button
+                type="button"
+                className="barra-lateral-cerrar-sesion-link"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  manejarCerrarSesion();
+                }}
+              >
+                Cerrar sesión
+              </button>
             </span>
-          </button>
-          <button
-            type="button"
-            className="barra-lateral-boton-perfil barra-lateral-boton-cerrar-sesion"
-            onClick={manejarCerrarSesion}
-            title="Cerrar sesión"
-            aria-label="Cerrar sesión"
-          >
-            <span className="barra-lateral-boton-perfil-icono">→</span>
           </button>
         </div>
 

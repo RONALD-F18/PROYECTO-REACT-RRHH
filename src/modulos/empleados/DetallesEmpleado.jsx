@@ -181,6 +181,14 @@ function DetallesEmpleado() {
               <span className="campo-valor">{empleado.numero_telefono ?? '—'}</span>
             </div>
             <div className="campo-item campo-blanco">
+              <span className="campo-etiqueta">Correo electrónico</span>
+              <span className="campo-valor">{empleado.correo_empleado ?? empleado.email ?? '—'}</span>
+            </div>
+            <div className="campo-item campo-amarillo">
+              <span className="campo-etiqueta">Sexo</span>
+              <span className="campo-valor">{empleado.sexo ?? '—'}</span>
+            </div>
+            <div className="campo-item campo-blanco">
               <span className="campo-etiqueta">Nacionalidad</span>
               <span className="campo-valor">{empleado.nacionalidad ?? '—'}</span>
             </div>

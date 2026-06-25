@@ -220,9 +220,9 @@ function Reportes() {
 
   const eliminarEventoHistorial = async (id) => {
     const ok = await confirmarAccion({
-      titulo: 'Eliminar registro',
-      texto: 'Se eliminará este registro del sistema. Los demás usuarios dejarán de verlo en la tabla.',
-      confirmButtonText: 'Sí, eliminar',
+      titulo: 'Quitar del historial',
+      texto: 'Se quitará este registro del historial de descargas. No se eliminan los datos del empleado ni las definiciones de reporte.',
+      confirmButtonText: 'Sí, quitar',
       cancelButtonText: 'Cancelar',
     });
     if (!ok) return;
@@ -423,8 +423,8 @@ function Reportes() {
                         type="button"
                         className="btn-accion-tabla btn-accion-eliminar"
                         onClick={() => eliminarEventoHistorial(item.id)}
-                        title="Eliminar del registro"
-                        aria-label="Eliminar del registro"
+                        title="Quitar del historial"
+                        aria-label="Quitar del historial"
                       >
                         <IconoBasuraReporte />
                       </button>

@@ -53,6 +53,7 @@ function DetailsStep({ form, onChange, contratoSeleccionado, afiliacionVigente }
 
   return (
     <div className="cert-detalles-layout">
+      {!esAfiliaciones ? (
       <div className="cert-detalles-bloque cert-detalles-bloque--salario">
         <label className="cert-label cert-label--inline" htmlFor="cert-incluye-salario">
           <input
@@ -79,6 +80,7 @@ function DetailsStep({ form, onChange, contratoSeleccionado, afiliacionVigente }
           </div>
         ) : null}
       </div>
+      ) : null}
 
       {esAfiliaciones ? (
         <div className="cert-detalles-bloque">

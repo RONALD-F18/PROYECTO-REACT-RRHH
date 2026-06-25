@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
+import { confirmarCierreModal } from '../../../componentes/comunes/ConfirmCloseModal';
 import FormularioSecciones from '../../../componentes/comunes/FormularioSecciones';
 import FormularioPasos from '../../../componentes/comunes/FormularioPasos';
 import { validarNumeroDocumento, validarNombres } from '../../../utils/validaciones';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
+import { alertaError } from '../../../utils/alertasSwal';
 import { createAfiliacion, updateAfiliacion, normalizarRegistroAfiliacion, codigoAfiliacionDesde } from '../../../services/afiliaciones';
 import { codigoEmpleadoDesde, nombreCompletoEmpleado, empleadoPorDocumento } from '../../../services/empleados';
 import {
@@ -11,7 +13,8 @@ import {
   tipoRegimenFormDesdeApi,
   etiquetaEstadoAfiliacion,
   estadoAfiliacionDesdeEtiquetaUi,
-  ETIQUETAS_ESTADO_AFILIACION,
+  etiquetasEstadoAfiliacion,
+  etiquetasTipoRegimen,
 } from '../../../utils/afiliacionEstado';
 import {
   EDAD_MINIMA_LABORAL_COLOMBIA,
@@ -115,9 +118,9 @@ function descripcionParaApi(v) {
   return 'Sin observaciones';
 }
 
-function construirPayloadAfiliacion(form) {
+function construirPayloadAfiliacion(form, catalogos) {
   const estadoUi = String(form.estadoAfiliacionUi ?? '').trim();
-  const estadoBd = estadoUi ? estadoAfiliacionDesdeEtiquetaUi(estadoUi) : 'ACTIVA';
+  const estadoBd = estadoUi ? estadoAfiliacionDesdeEtiquetaUi(estadoUi, catalogos) : 'Activa';
   return {
     fecha_afiliacion_eps: form.fechaAfiliacionEPS,
     fecha_afiliacion_arl: form.fechaAfiliacionARL,
@@ -133,7 +136,7 @@ function construirPayloadAfiliacion(form) {
     cod_caja_compensacion: Number(form.cajaCompensacion),
     cod_empleado: Number(form.cod_empleado),
     descripcion: descripcionParaApi(form.descripcion),
-    tipo_regimen: tipoRegimenApi(form.tipoAfiliacion),
+    tipo_regimen: tipoRegimenApi(form.tipoAfiliacion, catalogos),
   };
 }
 
@@ -211,7 +214,15 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
     setCamposTocados({});
   }, [datosAfiliacion, mostrar, empleados]);
 
-  const opcionesTipoAfiliacion = ['Contributivo', 'Subsidiado'];
+  const opcionesTipoAfiliacion = useMemo(
+    () => etiquetasTipoRegimen(catalogos),
+    [catalogos],
+  );
+
+  const opcionesEstadoAfiliacion = useMemo(
+    () => etiquetasEstadoAfiliacion(catalogos),
+    [catalogos],
+  );
 
   const empleadoRelacionado = useMemo(() => {
     if (!formulario.cod_empleado) return null;
@@ -392,7 +403,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
       return;
     }
 
-    const payload = construirPayloadAfiliacion(formulario);
+    const payload = construirPayloadAfiliacion(formulario, catalogos);
     setEnviando(true);
     try {
       if (esEdicion && codEdicion != null) {
@@ -404,7 +415,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
       }
       cerrar();
     } catch (err) {
-      setErrorGeneral(mensajeErrorApi(err));
+      void alertaError('No se pudo guardar la afiliación', mensajeErrorApi(err));
     } finally {
       setEnviando(false);
     }
@@ -468,7 +479,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
                 tipo: 'select',
                 requerido: true,
                 selectSinVacio: true,
-                opciones: ETIQUETAS_ESTADO_AFILIACION,
+                opciones: opcionesEstadoAfiliacion,
                 hint: 'Aprobada, pendiente o retirada. Se guarda al actualizar la afiliación.',
               },
             ]
@@ -596,15 +607,28 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
     );
   }
 
-  return (
-    <Modal mostrar={mostrar} cerrar={cerrar} titulo={esEdicion ? 'Editar Afiliación' : 'Registrar Nueva Afiliación'}>
-      <form onSubmit={manejarGuardar}>
-        {errorGeneral ? (
-          <div className="login-alerta login-alerta--error" style={{ marginBottom: 16 }} role="alert">
-            <p className="login-alerta-mensaje">{errorGeneral}</p>
-          </div>
-        ) : null}
+  const solicitarCierre = async () => {
+    const ok = await confirmarCierreModal({
+      mensaje: esEdicion
+        ? '¿Desea cancelar? Se perderán los datos no guardados.'
+        : '¿Desea cancelar la creación de la afiliación?',
+    });
+    if (ok) cerrar();
+  };
 
+  return (
+    <Modal
+      mostrar={mostrar}
+      cerrar={cerrar}
+      titulo={esEdicion ? 'Editar Afiliación' : 'Registrar Nueva Afiliación'}
+      confirmarAlCerrar
+      mensajeConfirmarCierre={
+        esEdicion
+          ? '¿Desea cancelar? Se perderán los datos no guardados.'
+          : '¿Desea cancelar la creación de la afiliación?'
+      }
+    >
+      <form onSubmit={manejarGuardar}>
         <FormularioPasos
           pasos={[
             { numero: 1, titulo: 'Identificación del Empleado', color: 'morado' },
@@ -617,7 +641,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
           ]}
           pasoActual={pasoActual}
           setPasoActual={setPasoActual}
-          onCancelar={cerrar}
+          onCancelar={solicitarCierre}
           enviando={enviando}
           validarAntesDeSiguiente={validarAntesDeSiguiente}
           textoGuardar={esEdicion ? 'Actualizar Afiliación' : 'Registrar Afiliación'}

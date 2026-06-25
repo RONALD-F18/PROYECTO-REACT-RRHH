@@ -129,7 +129,10 @@ export function validarCampoEmpleado(campo, f, ctx = {}) {
     case 'tipo_documento': {
       const t = String(f.tipo_documento ?? '').toUpperCase();
       if (!t) return 'El campo tipo documento es obligatorio.';
-      if (!TIPOS_DOC.has(t)) return 'El tipo de documento seleccionado no es válido.';
+      const tiposDoc = ctx.tiposDocumento ?? TIPOS_DOC;
+      const valido =
+        tiposDoc instanceof Set ? tiposDoc.has(t) : TIPOS_DOC.has(t);
+      if (!valido) return 'El tipo de documento seleccionado no es válido.';
       return null;
     }
     case 'doc_iden': {
@@ -176,7 +179,7 @@ export function validarCampoEmpleado(campo, f, ctx = {}) {
         return null;
       }
       if (tipo === 'TI') {
-        if (edad < 15) return 'Con tarjeta de identidad la edad debe ser al menos 15 años.';
+        if (edad < 7) return 'Con tarjeta de identidad la edad debe ser al menos 7 años.';
         if (edad >= 18) {
           return 'Con tarjeta de identidad la edad debe ser menor de 18 años.';
         }
@@ -210,6 +213,21 @@ export function validarCampoEmpleado(campo, f, ctx = {}) {
         if (cumple18 && fxStr < aIsoLocal(cumple18)) {
           return 'Con cédula de ciudadanía, la expedición no puede ser anterior a cumplir 18 años.';
         }
+      }
+      if (tipo === 'TI' && fn) {
+        const cumple7 = addYearsCalendar(fn, 7);
+        if (cumple7 && fxStr < aIsoLocal(cumple7)) {
+          return 'Con tarjeta de identidad, la expedición no puede ser anterior a cumplir 7 años.';
+        }
+      }
+      return null;
+    }
+    case 'sexo': {
+      const s = String(f.sexo ?? '').toUpperCase();
+      if (!s) return 'El campo sexo es obligatorio.';
+      const sexos = ctx.sexos;
+      if (sexos instanceof Set && sexos.size > 0 && !sexos.has(s)) {
+        return 'El sexo seleccionado no es válido.';
       }
       return null;
     }
@@ -313,6 +331,7 @@ export const CAMPOS_VALIDACION_ENVIO_EMPLEADO = [
   'tipo_documento',
   'doc_iden',
   'fecha_nac',
+  'sexo',
   'fec_exp_doc',
   'direccion',
   'numero_telefono',

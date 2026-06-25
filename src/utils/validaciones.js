@@ -3,7 +3,7 @@ export const expresionesRegulares = {
   soloLetras: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/,
   soloNumeros: /^\d+$/,
   nombreUsuario: /^[a-zA-Z0-9_]+$/,
-  correo: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  correo: /^(?!.*\.\.)[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)+$/i,
   telefono: /^\d{7,15}$/,
   mayuscula: /[A-Z]/,
   numero: /\d/,

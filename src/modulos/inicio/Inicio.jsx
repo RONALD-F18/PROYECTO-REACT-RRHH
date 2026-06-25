@@ -417,9 +417,6 @@ function Inicio() {
         <p className={claseRev("cta-p")} data-inicio-reveal="cta-p">
           Únete a cientos de empresas que ya confían en Talent Sphere
         </p>
-        <button type="button" className="inicio-cta-btn">
-          Solicita una demo gratuita
-        </button>
       </section>
 
       <section id="contacto" className="inicio-contacto">

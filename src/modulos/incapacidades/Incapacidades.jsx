@@ -124,7 +124,8 @@ function Incapacidades() {
       if (!row || typeof row !== 'object') return false;
       if (tipoF && String(row._tipo) !== tipoF) return false;
       if (est === 'Activa' && row._estado !== 'Activa') return false;
-      if (est === 'Finalizada' && row._estado !== 'Finalizada' && row._estado !== 'Cancelada') return false;
+      if (est === 'Finalizada' && row._estado !== 'Finalizada') return false;
+      if (est === 'Cancelada' && row._estado !== 'Cancelada') return false;
       if (q) {
         const nom = String(row._empleado || '').toLowerCase();
         const doc = String(row._documento || '').toLowerCase();
@@ -340,7 +341,7 @@ function Incapacidades() {
             {
               nombre: 'estado',
               placeholder: 'Todos los Estados',
-              opciones: ['Activa', 'Finalizada'],
+              opciones: ['Activa', 'Finalizada', 'Cancelada'],
             },
             {
               nombre: 'tipo',

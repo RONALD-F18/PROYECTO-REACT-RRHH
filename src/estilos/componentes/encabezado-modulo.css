@@ -29,6 +29,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
+}
+
+.encabezado-modulo-logo-icono {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
 }
 
 .encabezado-modulo-logo-texto {

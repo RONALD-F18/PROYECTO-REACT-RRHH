@@ -4,6 +4,7 @@ import { expresionesRegulares, validarContrasena } from '../../utils/validacione
 import { haySesionLocalActiva, iniciarSesion } from '../../services/autenticacion';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { getUrlRecuperacionContrasenaWeb } from '../../config/authWeb';
+import CampoContrasena from '../../componentes/comunes/CampoContrasena';
 
 function InicioSesion() {
   const navegar = useNavigate();
@@ -23,8 +24,10 @@ function InicioSesion() {
   }, [navegar]);
 
   const validarUsuarioCorreo = (valor) => {
-    if (!valor.trim()) return 'El correo es requerido';
-    if (expresionesRegulares.correo.test(valor)) return null;
+    const v = String(valor ?? '').trim().toLowerCase();
+    if (!v) return 'El correo es requerido';
+    if (v.includes('..')) return 'El correo no puede contener puntos dobles';
+    if (expresionesRegulares.correo.test(v)) return null;
     return 'Ingresa un correo electrónico válido';
   };
 
@@ -44,7 +47,7 @@ function InicioSesion() {
     setErrorServidor('');
 
     if (name === 'usuarioCorreo') {
-      setUsuarioCorreo(value);
+      setUsuarioCorreo(value.toLowerCase());
     } else if (name === 'contrasena') {
       setContrasena(value);
     }
@@ -87,7 +90,7 @@ function InicioSesion() {
     setEnviando(true);
     try {
       await iniciarSesion({
-        email_usuario: usuarioCorreo.trim(),
+        email_usuario: usuarioCorreo.trim().toLowerCase(),
         contrasena_usuario: contrasena,
       });
       const desde = ubicacion.state?.desde;
@@ -166,8 +169,8 @@ function InicioSesion() {
 
             <div className="login-campo">
               <label>Contraseña</label>
-              <input
-                type="password"
+              <CampoContrasena
+                id="login-contrasena"
                 name="contrasena"
                 value={contrasena}
                 onChange={manejarCambio}

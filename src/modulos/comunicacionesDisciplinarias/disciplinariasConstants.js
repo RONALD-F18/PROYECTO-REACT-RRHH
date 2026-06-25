@@ -1,11 +1,15 @@
-import { CATALOGOS_FALLBACK } from '../../services/catalogos';
+/** Solo Memorando — valores canónicos del catálogo Laravel. */
+export const TIPOS_COMUNICACION_DEFAULT = ['Memorando'];
 
-/** Valores enviados al API (strings del catálogo Laravel). */
-export const TIPOS_COMUNICACION_DEFAULT = CATALOGOS_FALLBACK.tipos_comunicacion;
+export const ESTADOS_COMUNICACION_DEFAULT = ['Emitida', 'En seguimiento', 'Cerrada'];
 
-export const ESTADOS_COMUNICACION_DEFAULT = CATALOGOS_FALLBACK.estados_comunicacion;
-
-export const MOTIVOS_COMUNICACION_DEFAULT = CATALOGOS_FALLBACK.motivos_comunicacion;
+export const MOTIVOS_COMUNICACION_DEFAULT = [
+  'Incumplimiento',
+  'Desacato',
+  'Reincidencia',
+  'Conducta',
+  'Retraso',
+];
 
 /** Estado al crear un documento. */
 export const ESTADO_INICIAL_AL_CREAR = 'Emitida';
@@ -28,49 +32,48 @@ export function listaMotivosComunicacion(catalogos) {
   return Array.isArray(arr) && arr.length ? arr : MOTIVOS_COMUNICACION_DEFAULT;
 }
 
-export function normalizarTipoComunicacion(valor) {
+export function normalizarTipoComunicacion(valor, catalogos = null) {
+  const lista = listaTiposComunicacion(catalogos);
   const s = String(valor || '').trim();
-  if (!s) return TIPOS_COMUNICACION_DEFAULT[0];
-  const exact = TIPOS_COMUNICACION_DEFAULT.find((t) => t.toLowerCase() === s.toLowerCase());
+  if (!s) return lista[0] ?? 'Memorando';
+  const exact = lista.find((t) => t.toLowerCase() === s.toLowerCase());
   if (exact) return exact;
   if (/memorand/i.test(s)) return 'Memorando';
-  if (/apercib/i.test(s)) return 'Apercibimiento formal';
-  if (/suspens/i.test(s)) return 'Suspension disciplinaria';
-  if (/compromiso/i.test(s)) return 'Compromiso de mejora';
-  return s.slice(0, 50);
+  return lista[0] ?? 'Memorando';
 }
 
-export function normalizarEstadoComunicacion(valor) {
+export function normalizarEstadoComunicacion(valor, catalogos = null) {
+  const lista = listaEstadosComunicacion(catalogos);
   const s = String(valor || '').trim();
   if (!s) return ESTADO_INICIAL_AL_CREAR;
-  const exact = ESTADOS_COMUNICACION_DEFAULT.find((e) => e.toLowerCase() === s.toLowerCase());
+  const exact = lista.find((e) => e.toLowerCase() === s.toLowerCase());
   if (exact) return exact;
   if (/seguimiento/i.test(s)) return 'En seguimiento';
   if (/cerrad/i.test(s)) return 'Cerrada';
   if (/emit/i.test(s)) return 'Emitida';
-  return s.slice(0, 50);
+  return lista[0] ?? ESTADO_INICIAL_AL_CREAR;
 }
 
 /** @deprecated usar normalizarTipoComunicacion */
-export function canonicalTipoApi(valor) {
-  return normalizarTipoComunicacion(valor);
+export function canonicalTipoApi(valor, catalogos) {
+  return normalizarTipoComunicacion(valor, catalogos);
 }
 
 /** @deprecated usar normalizarEstadoComunicacion */
-export function canonicalEstadoApi(valor) {
-  return normalizarEstadoComunicacion(valor);
+export function canonicalEstadoApi(valor, catalogos) {
+  return normalizarEstadoComunicacion(valor, catalogos);
 }
 
-export function etiquetaTipo(valor) {
-  return normalizarTipoComunicacion(valor);
+export function etiquetaTipo(valor, catalogos) {
+  return normalizarTipoComunicacion(valor, catalogos);
 }
 
-export function etiquetaEstado(valor) {
-  return normalizarEstadoComunicacion(valor);
+export function etiquetaEstado(valor, catalogos) {
+  return normalizarEstadoComunicacion(valor, catalogos);
 }
 
-export function esSuspensionDisciplinaria(tipo) {
-  return normalizarTipoComunicacion(tipo) === 'Suspension disciplinaria';
+export function esSuspensionDisciplinaria() {
+  return false;
 }
 
 export function radicadoDesdeCod(cod) {
@@ -78,20 +81,13 @@ export function radicadoDesdeCod(cod) {
   return `GD-${String(cod).padStart(4, '0')}`;
 }
 
-export function claseBadgeTipo(tipo) {
-  const c = normalizarTipoComunicacion(tipo);
-  if (c === 'Memorando') return 'disc-badge--memo';
-  if (c === 'Apercibimiento formal') return 'disc-badge--llamado';
-  if (c === 'Suspension disciplinaria') return 'disc-badge--susp';
-  if (c === 'Compromiso de mejora') return 'disc-badge--feli';
-  return 'disc-badge--neutral';
+export function claseBadgeTipo() {
+  return 'disc-badge--memo';
 }
 
-export function claseBadgeEstado(estado) {
-  const c = normalizarEstadoComunicacion(estado);
+export function claseBadgeEstado(estado, catalogos) {
+  const c = normalizarEstadoComunicacion(estado, catalogos);
   if (c === 'Cerrada') return 'disc-badge-est--ok';
-  if (c === 'En seguimiento') return 'disc-badge-est--emit';
-  if (c === 'Emitida') return 'disc-badge-est--emit';
   return 'disc-badge-est--emit';
 }
 
@@ -99,7 +95,7 @@ export function claseBadgeEstado(estado) {
 export const TIPOS_COMUNICACION = TIPOS_COMUNICACION_DEFAULT.map((etiqueta) => ({
   api: etiqueta,
   etiqueta,
-  icono: etiqueta === 'Memorando' ? 'memo' : etiqueta === 'Suspension disciplinaria' ? 'stop' : 'memo',
+  icono: 'memo',
 }));
 
 export const ESTADOS_COMUNICACION = ESTADOS_COMUNICACION_DEFAULT.map((etiqueta) => ({

@@ -141,16 +141,17 @@ function PanelNavegacion() {
               <span className="panel-navegacion-datos">
                 <span className="panel-navegacion-nombre">{nombreMostrar}</span>
                 <span className="panel-navegacion-correo">{correoMostrar}</span>
+                <button
+                  type="button"
+                  className="barra-lateral-cerrar-sesion-link"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    manejarCerrarSesion();
+                  }}
+                >
+                  Cerrar sesión
+                </button>
               </span>
-            </button>
-            <button
-              type="button"
-              className="panel-navegacion-boton-perfil panel-navegacion-boton-cerrar-sesion"
-              onClick={manejarCerrarSesion}
-              title="Cerrar sesión"
-              aria-label="Cerrar sesión"
-            >
-              <span className="panel-navegacion-boton-perfil-icono">→</span>
             </button>
           </div>
         </div>

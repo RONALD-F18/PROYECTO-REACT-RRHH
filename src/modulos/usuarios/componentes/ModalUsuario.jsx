@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
 import { createUsuario, updateUsuario } from '../../../services/usuario';
 import { usuarioSesionLocal } from '../../../services/autenticacion';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
-import { alertaErrorApi } from '../../../utils/alertasSwal';
+import { alertaErrorApi, confirmarAccion } from '../../../utils/alertasSwal';
 import {
   validarContrasenaUsuarioApi,
   REGEX_CONTRASENA_USUARIO_API,
@@ -42,7 +42,7 @@ function IconoUsuario() {
 function construirPayloadBase(formulario, codRol) {
   return {
     nombre_usuario: formulario.nombre_usuario.trim(),
-    email_usuario: formulario.email_usuario.trim(),
+    email_usuario: formulario.email_usuario.trim().toLowerCase(),
     cod_rol: codRol,
     estado_usuario: formulario.estado_usuario,
   };
@@ -89,7 +89,12 @@ function ModalUsuario({
   const rolesLista = useMemo(
     () =>
       (Array.isArray(rolesCatalogo) ? rolesCatalogo : []).filter(
-        (r) => r != null && typeof r === 'object' && r.cod_rol != null && r.cod_rol !== '',
+        (r) =>
+          r != null &&
+          typeof r === 'object' &&
+          r.cod_rol != null &&
+          r.cod_rol !== '' &&
+          !String(r.nombre_rol ?? '').toLowerCase().includes('admin'),
       ),
     [rolesCatalogo],
   );
@@ -99,6 +104,12 @@ function ModalUsuario({
   const [errorApi, setErrorApi] = useState('');
   const [errorContrasena, setErrorContrasena] = useState('');
   const [errorConfirmacionContrasena, setErrorConfirmacionContrasena] = useState('');
+  const emailInicialRef = useRef('');
+
+  useEffect(() => {
+    if (!mostrar) return;
+    emailInicialRef.current = datosUsuario?.email_usuario?.trim() ?? '';
+  }, [mostrar, datosUsuario]);
 
   useEffect(() => {
     if (!mostrar) return;
@@ -210,6 +221,20 @@ function ModalUsuario({
       setErrorApi('Elige un rol.');
       return;
     }
+
+    const emailNuevo = formulario.email_usuario.trim().toLowerCase();
+    const emailInicial = (emailInicialRef.current || '').trim().toLowerCase();
+    if (esEdicion && emailNuevo !== emailInicial) {
+      const confirma = await confirmarAccion({
+        titulo: 'Confirmar correo',
+        texto: '¿Confirma que el nuevo correo electrónico es correcto?',
+        confirmButtonText: 'Sí, es correcto',
+        cancelButtonText: 'Revisar',
+        icon: 'question',
+      });
+      if (!confirma) return;
+    }
+
     const errorPass = validarContrasenaUsuarioApi(formulario.contrasena_usuario, { permitirVacio: esEdicion });
     if (errorPass) {
       setErrorContrasena(errorPass);
@@ -262,6 +287,7 @@ function ModalUsuario({
       cerrar={cerrar}
       titulo={esEdicion ? 'Editar usuario' : 'Nuevo usuario'}
       classNameContenedor="modal-contenido--usuario-form"
+      confirmarAlCerrar
     >
       <form onSubmit={manejarEnviar} className="formulario-usuario-api">
         {errorApi ? (

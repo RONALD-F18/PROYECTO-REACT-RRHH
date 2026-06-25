@@ -132,18 +132,23 @@
 }
 
 /* Total consolidado pendiente — módulo prestaciones */
-.tarjeta-prestacion.total {
-  background: linear-gradient(135deg, #312e81 0%, #5b21b6 100%);
-  border-left: 4px solid #a78bfa;
+.tarjeta-prestacion.total,
+.total-liquidar-card {
+  background: #f3f0fa;
+  border: 2px solid #9b8ec4;
+  border-left: 4px solid #9b8ec4;
 }
 
-.tarjeta-prestacion.total .tarjeta-prestacion-info h3 {
-  color: rgba(255, 255, 255, 0.9);
+.tarjeta-prestacion.total .tarjeta-prestacion-info h3,
+.total-liquidar-card h3 {
+  color: #4a3f6b;
 }
 
-.tarjeta-prestacion.total .tarjeta-prestacion-valor {
-  color: #ffffff;
-  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+.tarjeta-prestacion.total .tarjeta-prestacion-valor,
+.total-liquidar-card .valor,
+.total-liquidar-card .tarjeta-prestacion-valor {
+  color: #5b4b8a;
+  font-weight: 700;
 }
 
 .tarjeta-prestacion-info h3 {

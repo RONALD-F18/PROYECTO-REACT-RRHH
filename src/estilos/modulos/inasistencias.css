@@ -299,6 +299,11 @@
   gap: 8px;
 }
 
+.inasistencias-table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
 .tarjeta-empleado-top {
   border-radius: 12px;
   padding: 12px 14px;

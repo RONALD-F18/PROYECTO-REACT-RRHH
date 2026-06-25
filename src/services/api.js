@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { alertaError } from '../utils/alertasSwal';
 import { obtenerTokenBearerDesdeSesion, limpiarAlmacenSesionCliente } from './sesionLocal';
 
 const baseURL =
@@ -68,12 +69,25 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+let ultimoToast429 = 0;
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
     const urlPedido = String(error.config?.url ?? '');
     const esRutaLogin = urlPedido.includes('/login');
+
+    if (status === 429) {
+      const ahora = Date.now();
+      if (ahora - ultimoToast429 > 4000) {
+        ultimoToast429 = ahora;
+        void alertaError(
+          'Demasiadas solicitudes',
+          'Espere unos segundos e intente de nuevo.',
+        );
+      }
+    }
 
     if (status === 401 && !esRutaLogin) {
       limpiarAlmacenSesionCliente();

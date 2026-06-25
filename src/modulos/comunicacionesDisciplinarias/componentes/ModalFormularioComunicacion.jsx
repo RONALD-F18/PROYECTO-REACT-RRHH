@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import Modal from '../../../componentes/comunes/Modal';
+import IconoBuho from '../../../componentes/comunes/IconoBuho';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
+import { alertaError } from '../../../utils/alertasSwal';
 import {
   createComunicacionDisciplinaria,
   updateComunicacionDisciplinaria,
@@ -222,7 +224,7 @@ function ModalFormularioComunicacion({
       }
       cerrar();
     } catch (err) {
-      setErrorGeneral(mensajeErrorApi(err));
+      void alertaError('No se pudo guardar', mensajeErrorApi(err));
     } finally {
       setEnviando(false);
     }
@@ -234,15 +236,14 @@ function ModalFormularioComunicacion({
       cerrar={cerrar}
       titulo={esEdicion ? 'Editar documento disciplinario' : 'Nuevo documento disciplinario'}
       classNameContenedor="modal-contenido--disciplinario-form"
+      confirmarAlCerrar
     >
-      <div className="disc-modal-subtitulo">Comunicaciones Disciplinarias · Talent Sphere</div>
+      <div className="disc-modal-subtitulo disc-modal-subtitulo--marca">
+        <IconoBuho className="disc-modal-logo" title="" />
+        <span>Comunicaciones Disciplinarias · Talent Sphere</span>
+      </div>
       <form onSubmit={manejarSubmit} className="disc-form disc-form--layout">
-        {errorGeneral ? (
-          <div className="login-alerta login-alerta--error disc-form-alerta" role="alert">
-            <p className="login-alerta-mensaje">{errorGeneral}</p>
-          </div>
-        ) : null}
-
+        {tiposLista.length > 1 ? (
         <section className="disc-seccion">
           <div className="disc-seccion-num">1</div>
           <div className="disc-seccion-body">
@@ -250,21 +251,15 @@ function ModalFormularioComunicacion({
             <div className="disc-tipo-grid">
               {tiposLista.map((nombreTipo) => {
                 const activo = tipoComunicacion === nombreTipo;
-                const icono =
-                  nombreTipo === 'Memorando'
-                    ? 'memo'
-                    : nombreTipo === 'Suspension disciplinaria'
-                      ? 'stop'
-                      : 'memo';
                 return (
                   <button
                     key={nombreTipo}
                     type="button"
-                    className={`disc-tipo-card ${activo ? `disc-tipo-card--activo disc-tipo-card--${icono}` : ''}`}
+                    className={`disc-tipo-card ${activo ? 'disc-tipo-card--activo disc-tipo-card--memo' : ''}`}
                     onClick={() => setTipoComunicacion(nombreTipo)}
                   >
                     <span className="disc-tipo-card-icon-wrap">
-                      <IconoTipoDoc icono={icono} activo={activo} />
+                      <IconoTipoDoc icono="memo" activo={activo} />
                     </span>
                     <span className="disc-tipo-card-text">{nombreTipo}</span>
                   </button>
@@ -273,6 +268,9 @@ function ModalFormularioComunicacion({
             </div>
           </div>
         </section>
+        ) : (
+        <input type="hidden" name="tipo_comunicacion" value={tiposLista[0] ?? 'Memorando'} />
+        )}
 
         <section className="disc-seccion">
           <div className="disc-seccion-num">2</div>

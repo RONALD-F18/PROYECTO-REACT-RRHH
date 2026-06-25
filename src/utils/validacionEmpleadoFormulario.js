@@ -83,8 +83,41 @@ export function haCumplidoAnios(fechaNac, anios, ref) {
   return r >= limite;
 }
 
-export const MENSAJE_FECHA_NAC_TIPO_DOC =
-  'La fecha de nacimiento no es coherente con el tipo de documento: mínimo 15 años para vínculo laboral; con CC debe ser mayor de edad (18+); con TI debe ser menor de 18 y al menos 7 años.';
+/** Mensajes alineados con EmpleadoRequest (Laravel / America/Bogota). */
+export const MSG_FECHA_NAC = {
+  laboral15: 'El empleado debe tener al menos 15 años para vínculo laboral.',
+  tiMenor18: 'Con tarjeta de identidad (TI), el empleado debe ser menor de 18 años.',
+  tiMin7: 'Con tarjeta de identidad (TI), el empleado debe tener al menos 7 años.',
+  ccMayor18: 'Con cédula de ciudadanía (CC), el empleado debe ser mayor de edad (18 años o más).',
+};
+
+/** @deprecated Usar MSG_FECHA_NAC y mensajeFechaNacPorTipoDoc */
+export const MENSAJE_FECHA_NAC_TIPO_DOC = MSG_FECHA_NAC.laboral15;
+
+/**
+ * Primer mensaje de incoherencia fecha_nac + tipo doc (espejo API).
+ * @returns {string|null}
+ */
+export function mensajeFechaNacPorTipoDoc(tipoDocumento, fechaNac, hoy, refLaboral = null) {
+  const fn = fechaNac instanceof Date ? fechaNac : parseFechaSoloDia(fechaNac);
+  if (!fn) return null;
+  const ref = hoy instanceof Date ? hoy : parseFechaSoloDia(hoy);
+  if (!ref) return null;
+  const laborRef = refLaboral instanceof Date ? refLaboral : parseFechaSoloDia(refLaboral) ?? ref;
+  const tipo = String(tipoDocumento ?? '').toUpperCase();
+
+  if (tipo === 'TI') {
+    if (!haCumplidoAnios(fn, 7, ref)) return MSG_FECHA_NAC.tiMin7;
+    if (haCumplidoAnios(fn, 18, ref)) return MSG_FECHA_NAC.tiMenor18;
+  }
+  if (!haCumplidoAnios(fn, EDAD_MINIMA_LABORAL_COLOMBIA, laborRef)) {
+    return MSG_FECHA_NAC.laboral15;
+  }
+  if (tipo === 'CC' && !haCumplidoAnios(fn, 18, ref)) {
+    return MSG_FECHA_NAC.ccMayor18;
+  }
+  return null;
+}
 
 /** Edad en años cumplidos a la fecha de referencia (medianoche local). */
 export function edadCumplidaEn(fechaNac, ref) {
@@ -195,27 +228,8 @@ export function validarCampoEmpleado(campo, f, ctx = {}) {
       const refLaboral = ctx.fechaReferenciaLaboral
         ? parseFechaSoloDia(ctx.fechaReferenciaLaboral)
         : hoy;
-      if (refLaboral && !haCumplidoAnios(fn, EDAD_MINIMA_LABORAL_COLOMBIA, refLaboral)) {
-        return MENSAJE_FECHA_NAC_TIPO_DOC;
-      }
-      if (tipo === 'CC') {
-        if (!haCumplidoAnios(fn, 18, hoy)) {
-          return MENSAJE_FECHA_NAC_TIPO_DOC;
-        }
-        return null;
-      }
-      if (tipo === 'TI') {
-        if (!haCumplidoAnios(fn, 7, hoy)) {
-          return MENSAJE_FECHA_NAC_TIPO_DOC;
-        }
-        if (haCumplidoAnios(fn, 18, hoy)) {
-          return MENSAJE_FECHA_NAC_TIPO_DOC;
-        }
-        return null;
-      }
-      if (tipo === 'CE' || tipo === 'PASAPORTE') {
-        return null;
-      }
+      const incoherente = mensajeFechaNacPorTipoDoc(tipo, fn, hoy, refLaboral);
+      if (incoherente) return incoherente;
       return null;
     }
     case 'fec_exp_doc': {
@@ -236,13 +250,13 @@ export function validarCampoEmpleado(campo, f, ctx = {}) {
       if (tipo === 'CC' && fn) {
         const cumple18 = addYearsCalendar(fn, 18);
         if (cumple18 && fxStr < aIsoLocal(cumple18)) {
-          return 'Con cédula de ciudadanía, la expedición no puede ser anterior a cumplir 18 años.';
+          return 'La expedición no puede ser anterior a cumplir 18 años (CC).';
         }
       }
       if (tipo === 'TI' && fn) {
         const cumple7 = addYearsCalendar(fn, 7);
         if (cumple7 && fxStr < aIsoLocal(cumple7)) {
-          return 'Con tarjeta de identidad, la expedición no puede ser anterior a cumplir 7 años.';
+          return 'La expedición no puede ser anterior a cumplir 7 años (TI).';
         }
       }
       return null;

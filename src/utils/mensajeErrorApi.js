@@ -40,6 +40,22 @@ function unirErroresLaravel(errors) {
     .join(' ');
 }
 
+/** Primer mensaje de un 422 Laravel (un solo campo, sin saturar). */
+export function primerMensajeValidacionApi(error) {
+  if (error?.response?.status !== 422) return '';
+  const raw = error.response.data;
+  if (!raw || typeof raw !== 'object') return '';
+  if (raw.errors && typeof raw.errors === 'object') {
+    for (const val of Object.values(raw.errors)) {
+      const msg = primerMensajeCampo(val);
+      if (msg) return msg;
+    }
+  }
+  const candidato = raw.message ?? raw.error ?? raw.mensaje;
+  if (typeof candidato === 'string' && candidato.trim()) return candidato.trim();
+  return '';
+}
+
 /** Texto legible desde error de red o respuesta HTTP (para mostrar al usuario final). */
 export function mensajeErrorApi(error) {
   const urlPedido = String(error?.config?.url ?? '');

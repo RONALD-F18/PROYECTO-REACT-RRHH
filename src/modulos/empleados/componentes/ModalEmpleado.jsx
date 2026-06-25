@@ -21,7 +21,7 @@ import {
   fechaApiAInput,
 } from '../../../utils/validacionEmpleadoFormulario';
 import { fechaIngresoLaboralReferencia } from '../../../utils/fechaIngresoLaboralEmpleado';
-import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
+import { mensajeErrorApi, primerMensajeValidacionApi } from '../../../utils/mensajeErrorApi';
 import { alertaError, alertaInfo, alertaMensaje } from '../../../utils/alertasSwal';
 import { confirmarCierreModal } from '../../../componentes/comunes/ConfirmCloseModal';
 import { mensajeSiSinTokenApi } from '../../../services/autenticacion';
@@ -526,6 +526,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
     setErrores(v);
     if (Object.keys(v).length > 0) {
       setPasoActual(primerPasoConErroresEmpleado(v, {}));
+      void alertaInfo('Revise el formulario', 'Corrija los campos marcados en rojo.');
       return;
     }
 
@@ -573,7 +574,9 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
       }
       if (err.response?.status === 422 && data?.errors && typeof data.errors === 'object') {
         setErroresApi(data.errors);
-        void alertaError('Revisa el formulario', mensajeErrorApi(err));
+        const detalle =
+          primerMensajeValidacionApi(err) || 'Corrija los campos marcados en rojo.';
+        void alertaError('Rechazado por el servidor', detalle);
         setPasoActual(primerPasoConErroresEmpleado({}, data.errors));
       } else {
         void alertaError('No se pudo guardar', mensajeErrorApi(err));

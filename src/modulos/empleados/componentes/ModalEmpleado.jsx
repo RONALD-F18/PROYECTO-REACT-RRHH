@@ -18,12 +18,14 @@ import {
   validarFormularioEmpleadoCompleto,
   CAMPOS_EMPLEADO_DEBOUNCE_MS,
   CAMPOS_EMPLEADO_VALIDACION_DEBOUNCED,
+  fechaApiAInput,
 } from '../../../utils/validacionEmpleadoFormulario';
+import { fechaIngresoLaboralReferencia } from '../../../utils/fechaIngresoLaboralEmpleado';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 import { alertaError, alertaInfo, alertaMensaje } from '../../../utils/alertasSwal';
 import { confirmarCierreModal } from '../../../componentes/comunes/ConfirmCloseModal';
 import { useCatalogos } from '../../../contextos/CatalogosContext';
-import { opcionesTiposDocumento, opcionesSexosEmpleado } from '../../../services/catalogos';
+import { opcionesTiposDocumento, opcionesSexosEmpleado, normalizarSexoEmpleadoCanonico } from '../../../services/catalogos';
 import {
   createEmpleado,
   patchEmpleado,
@@ -80,8 +82,8 @@ function empleadoApiAFormulario(emp) {
     apellidos_empleado: e.apellidos_empleado ?? '',
     doc_iden: e.doc_iden != null ? String(e.doc_iden) : '',
     tipo_documento: e.tipo_documento ? String(e.tipo_documento).toUpperCase() : '',
-    sexo: e.sexo ? String(e.sexo).toUpperCase() : '',
-    fecha_nac: e.fecha_nac ? String(e.fecha_nac).slice(0, 10) : '',
+    sexo: normalizarSexoEmpleadoCanonico(e.sexo),
+    fecha_nac: fechaApiAInput(e.fecha_nac),
     direccion: e.direccion ?? '',
     numero_telefono: e.numero_telefono != null ? String(e.numero_telefono) : '',
     correo_empleado: String(e.correo_empleado ?? e.email ?? '').trim().slice(0, 120),
@@ -97,7 +99,7 @@ function empleadoApiAFormulario(emp) {
     estado_civil: e.estado_civil ? String(e.estado_civil).toUpperCase() : '',
     grupo_sanguineo: e.grupo_sanguineo ? String(e.grupo_sanguineo).toUpperCase() : '',
     profesion: e.profesion ?? '',
-    fec_exp_doc: e.fec_exp_doc ? String(e.fec_exp_doc).slice(0, 10) : '',
+    fec_exp_doc: fechaApiAInput(e.fec_exp_doc),
     descripcion: e.descripcion ?? '',
   };
 }
@@ -134,7 +136,7 @@ function construirPayload(formulario) {
     apellidos_empleado: formulario.apellidos_empleado.trim(),
     doc_iden: formulario.doc_iden.trim(),
     tipo_documento: formulario.tipo_documento,
-    sexo: formulario.sexo,
+    sexo: normalizarSexoEmpleadoCanonico(formulario.sexo),
     fecha_nac: formulario.fecha_nac,
     direccion: formulario.direccion.trim(),
     numero_telefono: formulario.numero_telefono.trim(),
@@ -227,10 +229,33 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
     [bancosOpciones],
   );
   const [tieneContratoActivo, setTieneContratoActivo] = useState(false);
+  const [fechaReferenciaLaboral, setFechaReferenciaLaboral] = useState(null);
   const camposBloqueadosContrato = tieneContratoActivo && esEdicion;
 
-  const ctxValidacionRef = useRef({ codigosBancoPermitidos, tiposDocumento: tiposDocumentoSet, sexos: sexosSet });
-  ctxValidacionRef.current = { codigosBancoPermitidos, tiposDocumento: tiposDocumentoSet, sexos: sexosSet };
+  const valorSexoSelect = useMemo(
+    () => normalizarSexoEmpleadoCanonico(formulario.sexo),
+    [formulario.sexo],
+  );
+
+  const ctxValidacionRef = useRef({
+    codigosBancoPermitidos,
+    tiposDocumento: tiposDocumentoSet,
+    sexos: sexosSet,
+    fechaReferenciaLaboral,
+  });
+  ctxValidacionRef.current = {
+    codigosBancoPermitidos,
+    tiposDocumento: tiposDocumentoSet,
+    sexos: sexosSet,
+    fechaReferenciaLaboral,
+  };
+
+  const debeValidarCampoEmpleado = useCallback((campo, estadoFormulario) => {
+    const inicial = payloadInicialEdicionRef.current;
+    if (!inicial) return true;
+    const actual = construirPayload(estadoFormulario ?? formRef.current);
+    return !valoresPayloadEquivalentes(actual[campo], inicial[campo]);
+  }, []);
 
   const debounceTimersRef = useRef({});
 
@@ -257,13 +282,17 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
         campos.add('fec_exp_doc');
       }
       for (const c of campos) {
+        if (!debeValidarCampoEmpleado(c, estadoFusionado)) {
+          delete nuevos[c];
+          continue;
+        }
         const m = validarCampoEmpleado(c, estadoFusionado, ctx);
         if (m) nuevos[c] = m;
         else delete nuevos[c];
       }
       return nuevos;
     });
-  }, []);
+  }, [debeValidarCampoEmpleado]);
 
   const programarValidacionDebounced = useCallback(
     (name) => {
@@ -318,6 +347,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
   useEffect(() => {
     if (!mostrar || !esEdicion || codEdicion == null) {
       setTieneContratoActivo(false);
+      setFechaReferenciaLaboral(null);
       return;
     }
     let cancel = false;
@@ -334,14 +364,26 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
             esContratoVigenteParaEmpleado(c.estado_contrato),
         );
         setTieneContratoActivo(activo);
+        setFechaReferenciaLaboral(fechaIngresoLaboralReferencia(registroEdicion, filas));
       } catch {
-        if (!cancel) setTieneContratoActivo(false);
+        if (!cancel) {
+          setTieneContratoActivo(false);
+          setFechaReferenciaLaboral(null);
+        }
       }
     })();
     return () => {
       cancel = true;
     };
-  }, [mostrar, esEdicion, codEdicion]);
+  }, [mostrar, esEdicion, codEdicion, registroEdicion]);
+
+  useEffect(() => {
+    if (!mostrar) return;
+    const canon = normalizarSexoEmpleadoCanonico(formulario.sexo);
+    if (canon && formulario.sexo !== canon) {
+      setFormulario((prev) => ({ ...prev, sexo: canon }));
+    }
+  }, [mostrar, formulario.sexo]);
 
   useEffect(() => {
     if (mostrar) reiniciar();
@@ -395,6 +437,9 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
           case 'correo_empleado':
             next.correo_empleado = String(value).slice(0, 120);
             break;
+          case 'sexo':
+            next.sexo = normalizarSexoEmpleadoCanonico(value);
+            break;
           default:
             next[name] = value;
         }
@@ -424,30 +469,24 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
 
   const mensajeCampo = (campo) => errores[campo] || (erroresApi[campo] && erroresApi[campo][0]);
 
-  const validarAntesDeSiguiente = (idx) => {
-    const camposPorPaso = [
-      [
-        'tipo_documento',
-        'doc_iden',
-        'nombre_empleado',
-        'apellidos_empleado',
-        'fecha_nac',
-        'fec_exp_doc',
-        'numero_telefono',
-        'correo_empleado',
-        'direccion',
-        'nacionalidad',
-        'estado_civil',
-        'estado_emp',
-      ],
-      ['cod_banco', 'numero_cuenta', 'tipo_cuenta', 'profesion'],
-      ['grupo_sanguineo', 'discapacidad', 'descripcion'],
-    ];
+  const clasesCampo = (nombre, bloqueado = false) => {
+    const partes = [];
+    if (mensajeCampo(nombre)) partes.push('campo-error');
+    if (bloqueado) partes.push('campo-bloqueado');
+    return partes.join(' ') || undefined;
+  };
 
-    const campos = camposPorPaso[idx] ?? [];
+  const validarAntesDeSiguiente = (idx) => {
+    const campos = CAMPOS_POR_PASO_EMPLEADO[idx] ?? [];
     const nuevosErrores = {};
-    const ctx = { codigosBancoPermitidos, tiposDocumento: tiposDocumentoSet, sexos: sexosSet };
+    const ctx = {
+      codigosBancoPermitidos,
+      tiposDocumento: tiposDocumentoSet,
+      sexos: sexosSet,
+      fechaReferenciaLaboral,
+    };
     for (const c of campos) {
+      if (!debeValidarCampoEmpleado(c, formulario)) continue;
       const m = validarCampoEmpleado(c, formulario, ctx);
       if (m) nuevosErrores[c] = m;
     }
@@ -459,10 +498,17 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
     e.preventDefault();
     setErrorGeneral('');
     setErroresApi({});
-    const v = validarFormularioEmpleadoCompleto(formulario, {
+    const payload = construirPayload(formulario);
+    const ctx = {
       codigosBancoPermitidos,
       tiposDocumento: tiposDocumentoSet,
       sexos: sexosSet,
+      fechaReferenciaLaboral,
+    };
+    const v = validarFormularioEmpleadoCompleto(formulario, ctx, {
+      soloCamposModificados: esEdicion,
+      payloadInicial: payloadInicialEdicionRef.current,
+      payloadActual: payload,
     });
     setErrores(v);
     if (Object.keys(v).length > 0) {
@@ -472,7 +518,6 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
 
     setEnviando(true);
     try {
-      const payload = construirPayload(formulario);
       if (esEdicion && codEdicion != null) {
         const parcial = construirPayloadParcialEdicion(payload, payloadInicialEdicionRef.current);
         if (Object.keys(parcial).length === 0) {
@@ -579,7 +624,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 onChange={manejarCambio}
                 onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
-                className={mensajeCampo('tipo_documento') ? 'campo-error' : ''}
+                className={clasesCampo('tipo_documento', camposBloqueadosContrato)}
                 disabled={camposBloqueadosContrato}
               >
                 <option value="">Seleccione</option>
@@ -606,9 +651,8 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 maxLength={50}
                 autoComplete="off"
                 inputMode={formulario.tipo_documento === 'PASAPORTE' ? 'text' : 'numeric'}
-                className={mensajeCampo('doc_iden') ? 'campo-error' : ''}
+                className={clasesCampo('doc_iden', camposBloqueadosContrato)}
                 readOnly={camposBloqueadosContrato}
-                disabled={camposBloqueadosContrato}
               />
               {mensajeCampo('doc_iden') ? (
                 <span className="mensaje-error">{mensajeCampo('doc_iden')}</span>
@@ -624,9 +668,8 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 onBlur={manejarBlurCampo}
                 onKeyDown={prevenirSiNoEsLetrasNombre}
                 maxLength={100}
-                className={mensajeCampo('nombre_empleado') ? 'campo-error' : ''}
+                className={clasesCampo('nombre_empleado', camposBloqueadosContrato)}
                 readOnly={camposBloqueadosContrato}
-                disabled={camposBloqueadosContrato}
               />
               {mensajeCampo('nombre_empleado') ? (
                 <span className="mensaje-error">{mensajeCampo('nombre_empleado')}</span>
@@ -642,9 +685,8 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 onBlur={manejarBlurCampo}
                 onKeyDown={prevenirSiNoEsLetrasNombre}
                 maxLength={100}
-                className={mensajeCampo('apellidos_empleado') ? 'campo-error' : ''}
+                className={clasesCampo('apellidos_empleado', camposBloqueadosContrato)}
                 readOnly={camposBloqueadosContrato}
-                disabled={camposBloqueadosContrato}
               />
               {mensajeCampo('apellidos_empleado') ? (
                 <span className="mensaje-error">{mensajeCampo('apellidos_empleado')}</span>
@@ -660,7 +702,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 onChange={manejarCambio}
                 onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
-                className={mensajeCampo('fecha_nac') ? 'campo-error' : ''}
+                className={clasesCampo('fecha_nac', camposBloqueadosContrato)}
                 disabled={camposBloqueadosContrato}
               />
               {mensajeCampo('fecha_nac') ? (
@@ -672,7 +714,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
               <select
                 id="emp-sexo"
                 name="sexo"
-                value={formulario.sexo}
+                value={valorSexoSelect}
                 onChange={manejarCambio}
                 onBlur={manejarBlurCampo}
                 className={mensajeCampo('sexo') ? 'campo-error' : ''}
@@ -698,7 +740,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
                 onChange={manejarCambio}
                 onBlur={manejarBlurCampo}
                 onKeyUp={manejarKeyUpValidar}
-                className={mensajeCampo('fec_exp_doc') ? 'campo-error' : ''}
+                className={clasesCampo('fec_exp_doc', camposBloqueadosContrato)}
                 disabled={camposBloqueadosContrato}
               />
               {mensajeCampo('fec_exp_doc') ? (

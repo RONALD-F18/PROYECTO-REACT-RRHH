@@ -4,6 +4,7 @@
  */
 
 import { DISCAPACIDAD, ESTADO_CIVIL, GRUPO_SANGUINEO, TIPO_CUENTA, TIPO_DOCUMENTO } from '../modulos/empleados/empleadoEnums';
+import { normalizarSexoEmpleadoCanonico } from '../services/catalogos';
 
 /** Edad mínima laboral (aprendices SENA / trabajo adolescente Colombia). */
 export const EDAD_MINIMA_LABORAL_COLOMBIA = 15;
@@ -60,6 +61,30 @@ export function parseFechaSoloDia(valor) {
   dt.setHours(0, 0, 0, 0);
   return dt;
 }
+
+/** Normaliza fechas del API (ISO, datetime o DD/MM/AAAA) a YYYY-MM-DD para inputs type=date. */
+export function fechaApiAInput(valor) {
+  if (valor == null || valor === '') return '';
+  const s = String(valor).trim();
+  const iso = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (iso) return iso[1];
+  const dmy = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+  return s.slice(0, 10);
+}
+
+/** true si en `ref` ya cumplió `anios` años desde `fechaNac`. */
+export function haCumplidoAnios(fechaNac, anios, ref) {
+  const fn = fechaNac instanceof Date ? fechaNac : parseFechaSoloDia(fechaNac);
+  const limite = fn ? addYearsCalendar(fn, anios) : null;
+  const r = ref instanceof Date ? new Date(ref.getTime()) : parseFechaSoloDia(ref);
+  if (!limite || !r) return false;
+  r.setHours(0, 0, 0, 0);
+  return r >= limite;
+}
+
+export const MENSAJE_FECHA_NAC_TIPO_DOC =
+  'La fecha de nacimiento no es coherente con el tipo de documento: mínimo 15 años para vínculo laboral; con CC debe ser mayor de edad (18+); con TI debe ser menor de 18 y al menos 7 años.';
 
 /** Edad en años cumplidos a la fecha de referencia (medianoche local). */
 export function edadCumplidaEn(fechaNac, ref) {
@@ -166,29 +191,29 @@ export function validarCampoEmpleado(campo, f, ctx = {}) {
       if (hace120 && fn < hace120) {
         return 'La fecha de nacimiento no puede indicar una edad mayor a 120 años.';
       }
-      const edad = edadCumplidaEn(fn, hoy);
-      if (edad == null) return 'La fecha de nacimiento no es válida.';
-      if (edad < EDAD_MINIMA_LABORAL_COLOMBIA) {
-        return `La edad mínima laboral es ${EDAD_MINIMA_LABORAL_COLOMBIA} años.`;
-      }
       const tipo = String(f.tipo_documento ?? '').toUpperCase();
+      const refLaboral = ctx.fechaReferenciaLaboral
+        ? parseFechaSoloDia(ctx.fechaReferenciaLaboral)
+        : hoy;
+      if (refLaboral && !haCumplidoAnios(fn, EDAD_MINIMA_LABORAL_COLOMBIA, refLaboral)) {
+        return MENSAJE_FECHA_NAC_TIPO_DOC;
+      }
       if (tipo === 'CC') {
-        if (edad < 18) {
-          return 'Con cédula de ciudadanía la edad debe ser al menos 18 años.';
+        if (!haCumplidoAnios(fn, 18, hoy)) {
+          return MENSAJE_FECHA_NAC_TIPO_DOC;
         }
         return null;
       }
       if (tipo === 'TI') {
-        if (edad < 7) return 'Con tarjeta de identidad la edad debe ser al menos 7 años.';
-        if (edad >= 18) {
-          return 'Con tarjeta de identidad la edad debe ser menor de 18 años.';
+        if (!haCumplidoAnios(fn, 7, hoy)) {
+          return MENSAJE_FECHA_NAC_TIPO_DOC;
+        }
+        if (haCumplidoAnios(fn, 18, hoy)) {
+          return MENSAJE_FECHA_NAC_TIPO_DOC;
         }
         return null;
       }
       if (tipo === 'CE' || tipo === 'PASAPORTE') {
-        if (edad < EDAD_MINIMA_LABORAL_COLOMBIA) {
-          return `La edad mínima laboral es ${EDAD_MINIMA_LABORAL_COLOMBIA} años.`;
-        }
         return null;
       }
       return null;
@@ -223,7 +248,7 @@ export function validarCampoEmpleado(campo, f, ctx = {}) {
       return null;
     }
     case 'sexo': {
-      const s = String(f.sexo ?? '').toUpperCase();
+      const s = normalizarSexoEmpleadoCanonico(f.sexo);
       if (!s) return 'El campo sexo es obligatorio.';
       const sexos = ctx.sexos;
       if (sexos instanceof Set && sexos.size > 0 && !sexos.has(s)) {
@@ -347,14 +372,33 @@ export const CAMPOS_VALIDACION_ENVIO_EMPLEADO = [
   'descripcion',
 ];
 
+function payloadCampoEquivalente(a, b) {
+  if (a === b) return true;
+  const vacio = (v) => v === null || v === undefined || v === '';
+  if (vacio(a) && vacio(b)) return true;
+  if (typeof a === 'number' || typeof b === 'number') {
+    const na = Number(a);
+    const nb = Number(b);
+    return !Number.isNaN(na) && !Number.isNaN(nb) && na === nb;
+  }
+  return String(a ?? '').trim() === String(b ?? '').trim();
+}
+
 /**
  * @param {Record<string, string>} formulario
- * @param {{ codigosBancoPermitidos?: Set<string> }} [ctx]
+ * @param {{ codigosBancoPermitidos?: Set<string>, fechaReferenciaLaboral?: string }} [ctx]
+ * @param {{ payloadInicial?: Record<string, unknown>, payloadActual?: Record<string, unknown>, soloCamposModificados?: boolean }} [opciones]
  * @returns {Record<string, string>}
  */
-export function validarFormularioEmpleadoCompleto(formulario, ctx) {
+export function validarFormularioEmpleadoCompleto(formulario, ctx, opciones = {}) {
   const err = {};
+  const { payloadInicial, payloadActual, soloCamposModificados } = opciones;
+  const soloModificados = Boolean(soloCamposModificados && payloadInicial && payloadActual);
+
   for (const c of CAMPOS_VALIDACION_ENVIO_EMPLEADO) {
+    if (soloModificados && payloadCampoEquivalente(payloadActual[c], payloadInicial[c])) {
+      continue;
+    }
     const m = validarCampoEmpleado(c, formulario, ctx);
     if (m) err[c] = m;
   }

@@ -492,7 +492,12 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
                 autoComplete="off"
                 inputMode="numeric"
                 placeholder="Ej: 1128455781"
-                className={mensajeCampo('doc_iden') || mensajeCampo('cod_empleado') ? 'campo-error' : ''}
+                className={[
+                  mensajeCampo('doc_iden') || mensajeCampo('cod_empleado') ? 'campo-error' : '',
+                  esEdicion ? 'campo-bloqueado' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ') || undefined}
               />
               <span className="campo-ayuda">Ingrese el documento de identidad del empleado.</span>
               {mensajeCampo('doc_iden') ? <span className="mensaje-error">{mensajeCampo('doc_iden')}</span> : null}
@@ -504,9 +509,9 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
               <input
                 id="ctr-cod_contrato"
                 value={esEdicion && codEdicion != null ? String(codEdicion) : ''}
-                disabled
-                placeholder="Se asigna al guardar"
                 readOnly
+                className="campo-bloqueado"
+                placeholder="Se asigna al guardar"
               />
               <span className="campo-ayuda">Identificador generado por el sistema al registrar.</span>
             </div>
@@ -516,9 +521,9 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
               <input
                 id="ctr-nombre_empleado"
                 value={nombreEmpleadoMostrar === '—' ? '' : nombreEmpleadoMostrar}
-                disabled
-                placeholder="Se completa al validar el documento"
                 readOnly
+                className="campo-bloqueado"
+                placeholder="Se completa al validar el documento"
               />
             </div>
 

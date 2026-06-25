@@ -334,7 +334,7 @@
   line-height: 1.4;
 }
 
-.cert-input:disabled {
+.cert-input:disabled:not(.campo-bloqueado) {
   background: #f1f5f9;
   color: #475569;
   cursor: not-allowed;

@@ -97,3 +97,45 @@
   outline: 2px solid var(--color-primario, #667eea);
   outline-offset: 2px;
 }
+
+/* Campos bloqueados / solo lectura — texto legible, sin gris lavado del navegador */
+.campo-bloqueado,
+input.campo-bloqueado,
+input.campo-bloqueado[readonly],
+select.campo-bloqueado,
+textarea.campo-bloqueado,
+textarea.campo-bloqueado[readonly],
+.campo-formulario input.campo-bloqueado,
+.campo-formulario select.campo-bloqueado,
+.campo-formulario textarea.campo-bloqueado,
+.campo-seccion input.campo-bloqueado,
+.campo-seccion select.campo-bloqueado,
+.campo-seccion textarea.campo-bloqueado,
+.cert-input.campo-bloqueado {
+  background-color: #f5f3fa !important;
+  border-color: #c9c2dc !important;
+  color: #1e293b !important;
+  -webkit-text-fill-color: #1e293b !important;
+  opacity: 1 !important;
+  cursor: not-allowed;
+  box-shadow: none !important;
+}
+
+.campo-bloqueado:focus,
+input.campo-bloqueado:focus,
+select.campo-bloqueado:focus,
+textarea.campo-bloqueado:focus {
+  border-color: #c9c2dc !important;
+  box-shadow: none !important;
+  outline: none;
+}
+
+.campo-bloqueado::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+
+select.campo-bloqueado:disabled {
+  appearance: none;
+  background-image: none;
+}

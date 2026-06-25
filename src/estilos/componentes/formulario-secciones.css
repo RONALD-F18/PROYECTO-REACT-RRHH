@@ -222,7 +222,9 @@
   border-color: var(--color-exito);
 }
 
-.campo-seccion textarea:disabled {
+.campo-seccion input:disabled:not(.campo-bloqueado),
+.campo-seccion select:disabled:not(.campo-bloqueado),
+.campo-seccion textarea:disabled:not(.campo-bloqueado) {
   background: var(--gris-100);
   cursor: not-allowed;
 }

@@ -25,6 +25,10 @@ src/
 └── App.jsx
 ```
 
+## API y datos canónicos
+
+Tras reset de BD en el backend, los selects y payloads deben alinearse con `GET /api/v1/catalogos`. Reglas resumidas en **[docs/DATOS-CANONICOS-SEEDERS.md](docs/DATOS-CANONICOS-SEEDERS.md)**.
+
 ## Instalación
 
 ```bash

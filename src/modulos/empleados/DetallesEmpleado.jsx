@@ -11,7 +11,7 @@ import {
 import { getBancos, extraerFilasBancos } from '../../services/bancos';
 import { mergeCatalogoPorClave } from '../../utils/mergeCatalogos';
 import { BANCOS_COLOMBIA_SUPLEMENTO } from '../../data/catalogosColombiaSuplemento';
-import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
+import { etiquetaSexoEmpleado } from '../../services/catalogos';
 import {
   etiquetaTipoDocumento,
   etiquetaTipoCuenta,
@@ -186,7 +186,7 @@ function DetallesEmpleado() {
             </div>
             <div className="campo-item campo-amarillo">
               <span className="campo-etiqueta">Sexo</span>
-              <span className="campo-valor">{empleado.sexo ?? '—'}</span>
+              <span className="campo-valor">{etiquetaSexoEmpleado(empleado.sexo)}</span>
             </div>
             <div className="campo-item campo-blanco">
               <span className="campo-etiqueta">Nacionalidad</span>

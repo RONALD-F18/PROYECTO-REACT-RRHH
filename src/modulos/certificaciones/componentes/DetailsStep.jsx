@@ -90,7 +90,7 @@ function DetailsStep({ form, onChange, contratoSeleccionado, afiliacionVigente }
           </p>
           {!v ? (
             <p className="campo-seccion-error">
-              No hay afiliación vigente (ACTIVA/APROBADA) para este empleado. Registre o active una afiliación primero.
+              No hay afiliación vigente (Activa) para este empleado. Registre o active una afiliación primero.
             </p>
           ) : entidades.length === 0 ? (
             <p className="campo-seccion-error">La afiliación vigente no tiene códigos de entidades para incluir.</p>

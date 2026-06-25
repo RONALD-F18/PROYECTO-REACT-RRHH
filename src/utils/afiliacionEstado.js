@@ -29,6 +29,11 @@ export function etiquetaEstadoAfiliacion(estadoBd) {
   return 'Activa';
 }
 
+/** Afiliación en estado canónico Activa (seeders / GET catalogos). */
+export function esEstadoAfiliacionActiva(estadoBd) {
+  return etiquetaEstadoAfiliacion(estadoBd) === 'Activa';
+}
+
 /** Devuelve valor canónico del catálogo para enviar al API. */
 export function estadoAfiliacionDesdeEtiquetaUi(etiqueta, catalogos = null) {
   const e = String(etiqueta || '').trim();

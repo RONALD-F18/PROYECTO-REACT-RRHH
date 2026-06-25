@@ -50,14 +50,14 @@ function CertStepEmpleado({
           </label>
           <input
             id="cert-documento"
-            className="cert-input"
+            className={`cert-input${documentoSoloLectura ? ' campo-bloqueado' : ''}`}
             inputMode="numeric"
             autoComplete="off"
             placeholder="Ej: 1128455781"
             value={form.documento_consulta}
             onChange={(e) => onDocumentoChange(e.target.value)}
             onBlur={onDocumentoBlur}
-            disabled={documentoSoloLectura}
+            readOnly={documentoSoloLectura}
             aria-readonly={documentoSoloLectura || undefined}
           />
           {documentoSoloLectura ? (

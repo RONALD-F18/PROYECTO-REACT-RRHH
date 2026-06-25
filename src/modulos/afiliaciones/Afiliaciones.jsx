@@ -20,7 +20,7 @@ import {
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
-import { etiquetaEstadoAfiliacion } from '../../utils/afiliacionEstado';
+import { etiquetaEstadoAfiliacion, esEstadoAfiliacionActiva, tipoRegimenFormDesdeApi } from '../../utils/afiliacionEstado';
 import '../../estilos/modulos/afiliaciones.css';
 
 function mapaPorCod(lista, clave) {
@@ -43,11 +43,8 @@ function formatearSoloFecha(valor) {
   return t;
 }
 
-function tipoRegimenMostrar(v) {
-  const u = String(v || '').toUpperCase();
-  if (u === 'SUBSIDIADO') return 'Subsidiado';
-  if (u === 'CONTRIBUTIVO') return 'Contributivo';
-  return v ? String(v) : '—';
+function tipoRegimenMostrar(v, catalogos) {
+  return tipoRegimenFormDesdeApi(v, catalogos) || '—';
 }
 
 function Afiliaciones() {
@@ -115,7 +112,7 @@ function Afiliaciones() {
         _estadoEtiqueta: estadoEt,
         _codigoUi: codAf != null ? `AF-${codAf}` : '—',
         _fechaSolicitud: formatearSoloFecha(row.fecha_afiliacion_eps),
-        _tipoRegimen: tipoRegimenMostrar(row.tipo_regimen),
+        _tipoRegimen: tipoRegimenMostrar(row.tipo_regimen, catalogos),
       };
     });
   }, [lista, mapas]);
@@ -140,22 +137,12 @@ function Afiliaciones() {
   }, [filasVista, criteriosFiltro]);
 
   const kpis = useMemo(() => {
-    const u = (s) => String(s || '').toUpperCase().replace(/\s/g, '_');
     const base = filasFiltradas;
     return {
       total: base.length,
-      aprobadas: base.filter((r) => {
-        const e = u(r.estado_afiliacion);
-        return e === 'ACTIVA' || e === 'APROBADA';
-      }).length,
-      pendientes: base.filter((r) => {
-        const e = u(r.estado_afiliacion);
-        return e === 'PENDIENTE' || e === 'EN_PROCESO';
-      }).length,
-      retiradas: base.filter((r) => {
-        const e = u(r.estado_afiliacion);
-        return e === 'RETIRADA' || e === 'RETIRADO' || e === 'RECHAZADA';
-      }).length,
+      aprobadas: base.filter((r) => esEstadoAfiliacionActiva(r.estado_afiliacion)).length,
+      pendientes: base.filter((r) => etiquetaEstadoAfiliacion(r.estado_afiliacion) === 'Suspendida').length,
+      retiradas: base.filter((r) => etiquetaEstadoAfiliacion(r.estado_afiliacion) === 'Inactiva').length,
     };
   }, [filasFiltradas]);
 

@@ -29,7 +29,12 @@ function FormularioSecciones({
     const valor = valores[campo.nombre] || '';
     const error = errores[campo.nombre];
     const tocado = camposTocados[campo.nombre];
-    const claseCampo = obtenerClaseCampo ? obtenerClaseCampo(campo.nombre) : '';
+    const claseCampo = [
+      obtenerClaseCampo ? obtenerClaseCampo(campo.nombre) : '',
+      campo.deshabilitado ? 'campo-bloqueado' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
     const mensaje = mostrarMensaje ? mostrarMensaje(campo.nombre) : null;
 
     if (campo.tipo === 'select') {

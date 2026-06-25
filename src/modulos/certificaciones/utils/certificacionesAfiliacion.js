@@ -1,11 +1,11 @@
 /**
  * Afiliación asociada al empleado para precargar certificación de tipo AFILIACIONES.
- * Se consideran vigentes estados habituales del módulo de afiliaciones.
  */
+import { esEstadoAfiliacionActiva } from '../../../utils/afiliacionEstado';
+
 export function esAfiliacionVigenteParaCertificacion(row) {
   if (!row || typeof row !== 'object') return false;
-  const u = String(row.estado_afiliacion ?? '').toUpperCase().replace(/\s+/g, '_');
-  return u === 'ACTIVA' || u === 'APROBADA';
+  return esEstadoAfiliacionActiva(row.estado_afiliacion);
 }
 
 export function afiliacionVigentePorEmpleado(afiliaciones, codEmpleado) {

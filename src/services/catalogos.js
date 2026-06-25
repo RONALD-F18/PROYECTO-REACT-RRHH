@@ -29,10 +29,10 @@ export function opcionesDesdeListaStrings(lista) {
     });
 }
 
-/** Fallbacks mínimos si el GET falla (valores canónicos del backend). */
+/** Fallbacks mínimos si el GET falla (valores canónicos del backend). Ver docs/DATOS-CANONICOS-SEEDERS.md */
 export const CATALOGOS_FALLBACK = {
   tipos_documento: ['CC', 'CE', 'TI', 'PASAPORTE'],
-  sexos_empleado: ['MASCULINO', 'FEMENINO'],
+  sexos_empleado: ['Masculino', 'Femenino', 'Otro'],
   tipos_contrato: [
     'Termino indefinido',
     'Termino fijo',
@@ -74,8 +74,49 @@ export function opcionesTiposDocumento(catalogos) {
   });
 }
 
+const SEXOS_EMPLEADO_ORDEN = ['Masculino', 'Femenino', 'Otro'];
+
+/** Valor canónico Pascal case para POST/PUT empleados (backend acepta y normaliza). */
+export function normalizarSexoEmpleadoCanonico(valor) {
+  const s = String(valor ?? '').trim();
+  if (!s) return '';
+  const upper = s.toUpperCase();
+  if (upper === 'MASCULINO') return 'Masculino';
+  if (upper === 'FEMENINO') return 'Femenino';
+  if (upper === 'OTRO') return 'Otro';
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+export function etiquetaSexoEmpleado(valor) {
+  const canon = normalizarSexoEmpleadoCanonico(valor);
+  return canon || '—';
+}
+
 export function opcionesSexosEmpleado(catalogos) {
-  return opcionesDesdeListaStrings(listaCatalogo(catalogos, 'sexos_empleado'));
+  const desdeApi = listaCatalogo(catalogos, 'sexos_empleado');
+  const vistos = new Set();
+  const opciones = [];
+
+  for (const raw of desdeApi) {
+    const canon = normalizarSexoEmpleadoCanonico(raw);
+    if (canon && !vistos.has(canon)) {
+      vistos.add(canon);
+      opciones.push({ valor: canon, etiqueta: canon });
+    }
+  }
+
+  for (const canon of SEXOS_EMPLEADO_ORDEN) {
+    if (!vistos.has(canon)) {
+      vistos.add(canon);
+      opciones.push({ valor: canon, etiqueta: canon });
+    }
+  }
+
+  opciones.sort(
+    (a, b) => SEXOS_EMPLEADO_ORDEN.indexOf(a.valor) - SEXOS_EMPLEADO_ORDEN.indexOf(b.valor),
+  );
+
+  return opciones;
 }
 
 /**

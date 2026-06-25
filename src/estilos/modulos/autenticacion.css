@@ -156,6 +156,10 @@
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
+.login-campo .campo-contrasena-wrap input {
+  padding-right: 3rem;
+}
+
 /* Fila contraseña + botón ver (no usar .login-btn: tiene width 100%) */
 .login-campo-contrasena-fila {
   display: flex;

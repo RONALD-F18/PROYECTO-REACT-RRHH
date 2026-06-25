@@ -54,3 +54,46 @@
   font-size: var(--texto-xs);
   color: var(--color-error);
 }
+
+/* Contraseña con toggle mostrar/ocultar dentro del input */
+.campo-contrasena-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.campo-contrasena-wrap input {
+  width: 100%;
+  padding-right: 3rem;
+  box-sizing: border-box;
+}
+
+.campo-contrasena-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--gris-500, #64748b);
+  cursor: pointer;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.campo-contrasena-toggle:hover {
+  color: var(--gris-700, #334155);
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.campo-contrasena-toggle:focus-visible {
+  outline: 2px solid var(--color-primario, #667eea);
+  outline-offset: 2px;
+}

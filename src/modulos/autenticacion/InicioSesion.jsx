@@ -23,6 +23,12 @@ function InicioSesion() {
     }
   }, [navegar]);
 
+  useEffect(() => {
+    if (ubicacion.state?.sesionExpirada) {
+      setErrorServidor('Su sesión expiró. Inicie sesión de nuevo para continuar.');
+    }
+  }, [ubicacion.state?.sesionExpirada]);
+
   const validarUsuarioCorreo = (valor) => {
     const v = String(valor ?? '').trim().toLowerCase();
     if (!v) return 'El correo es requerido';
@@ -100,6 +106,11 @@ function InicioSesion() {
     } catch (e) {
       if (e?.code === 'LOGIN_SIN_TOKEN' || e?.code === 'LOGIN_STORAGE') {
         setErrorServidor(e.message);
+      } else if (e?.response?.status === 401) {
+        const msg = e?.response?.data?.message;
+        setErrorServidor(
+          typeof msg === 'string' && msg.trim() ? msg.trim() : 'Correo o contraseña incorrectos.',
+        );
       } else {
         setErrorServidor(mensajeErrorApi(e));
       }

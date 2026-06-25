@@ -294,8 +294,13 @@ export function validarCampoEmpleado(campo, f, ctx = {}) {
       return null;
     }
     case 'cod_banco': {
+      const cuenta = String(f.numero_cuenta ?? '').trim();
       const v = String(f.cod_banco ?? '').trim();
+      if (cuenta && !v) return 'Seleccione el banco cuando indica número de cuenta.';
       if (!v) return null;
+      if (!(codigosBanco instanceof Set) || codigosBanco.size === 0) {
+        return 'No se cargó el catálogo de bancos. Recargue la página o inicie sesión de nuevo.';
+      }
       if (!codigosBanco.has(v)) return 'El banco seleccionado no es válido.';
       return null;
     }

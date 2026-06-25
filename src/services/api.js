@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { alertaError } from '../utils/alertasSwal';
 import { obtenerTokenBearerDesdeSesion, limpiarAlmacenSesionCliente } from './sesionLocal';
+import { notificarSesionExpirada } from './sesionEventos';
 
 const baseURL =
   import.meta.env.VITE_API_URL ??
@@ -70,6 +71,7 @@ api.interceptors.request.use((config) => {
 });
 
 let ultimoToast429 = 0;
+let manejando401 = false;
 
 api.interceptors.response.use(
   (response) => response,
@@ -90,12 +92,24 @@ api.interceptors.response.use(
     }
 
     if (status === 401 && !esRutaLogin) {
-      limpiarAlmacenSesionCliente();
-      const hash = String(window.location.hash || '');
-      const enLogin = hash === '#/login' || hash.endsWith('/login');
-      if (!enLogin) {
-        const base = import.meta.env.BASE_URL || '/';
-        window.location.replace(`${window.location.origin}${base}#/login`);
+      if (!manejando401) {
+        manejando401 = true;
+        limpiarAlmacenSesionCliente();
+        void alertaError(
+          'Sesión expirada',
+          'Vuelva a iniciar sesión para continuar.',
+        ).finally(() => {
+          manejando401 = false;
+        });
+        notificarSesionExpirada();
+        const hash = String(window.location.hash || '');
+        const enLogin = hash === '#/login' || hash.endsWith('/login');
+        if (!enLogin) {
+          const base = import.meta.env.BASE_URL || '/';
+          window.setTimeout(() => {
+            window.location.replace(`${window.location.origin}${base}#/login`);
+          }, 400);
+        }
       }
     }
     return Promise.reject(error);

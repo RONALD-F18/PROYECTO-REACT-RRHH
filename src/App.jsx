@@ -3,6 +3,7 @@ import { MenuProvider } from './contextos/MenuContext';
 import { CatalogosProvider } from './contextos/CatalogosContext';
 import { EnrutadorPrincipal } from './rutas';
 import LimiteError from './componentes/comunes/LimiteError.jsx';
+import SesionGuard from './componentes/comunes/SesionGuard.jsx';
 import './estilos/index.css';
 
 function App() {
@@ -10,9 +11,11 @@ function App() {
     <HashRouter>
       <MenuProvider>
         <CatalogosProvider>
-          <LimiteError>
-            <EnrutadorPrincipal />
-          </LimiteError>
+          <SesionGuard>
+            <LimiteError>
+              <EnrutadorPrincipal />
+            </LimiteError>
+          </SesionGuard>
         </CatalogosProvider>
       </MenuProvider>
     </HashRouter>

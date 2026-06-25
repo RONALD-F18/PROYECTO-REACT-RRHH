@@ -42,6 +42,9 @@ function unirErroresLaravel(errors) {
 
 /** Texto legible desde error de red o respuesta HTTP (para mostrar al usuario final). */
 export function mensajeErrorApi(error) {
+  const urlPedido = String(error?.config?.url ?? '');
+  const esLogin = urlPedido.includes('/login');
+
   if (!error.response) {
     const codigo = error.code;
     if (codigo === 'ERR_NETWORK' || error.message === 'Network Error') {
@@ -81,7 +84,11 @@ export function mensajeErrorApi(error) {
     }
     const candidato = raw.message ?? raw.error ?? raw.mensaje;
     if (typeof candidato === 'string' && candidato.trim()) {
-      return candidato.trim();
+      const t = candidato.trim();
+      if (/^server error$/i.test(t)) {
+        return textoPorCodigoHttp(status);
+      }
+      return t;
     }
     if (Array.isArray(candidato) && candidato.length) {
       return candidato.filter(Boolean).join(' ');
@@ -91,6 +98,10 @@ export function mensajeErrorApi(error) {
     if (raw.success === false && typeof raw.message === 'string') {
       return raw.message;
     }
+  }
+
+  if (status === 401 && !esLogin) {
+    return 'Su sesión expiró o no es válida. Cierre sesión e inicie de nuevo.';
   }
 
   return textoPorCodigoHttp(status);

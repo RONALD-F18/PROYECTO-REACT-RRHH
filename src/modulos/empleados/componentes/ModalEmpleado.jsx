@@ -24,6 +24,7 @@ import { fechaIngresoLaboralReferencia } from '../../../utils/fechaIngresoLabora
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 import { alertaError, alertaInfo, alertaMensaje } from '../../../utils/alertasSwal';
 import { confirmarCierreModal } from '../../../componentes/comunes/ConfirmCloseModal';
+import { mensajeSiSinTokenApi } from '../../../services/autenticacion';
 import { useCatalogos } from '../../../contextos/CatalogosContext';
 import { opcionesTiposDocumento, opcionesSexosEmpleado, normalizarSexoEmpleadoCanonico } from '../../../services/catalogos';
 import {
@@ -496,6 +497,18 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
 
   const manejarGuardar = async (e) => {
     e.preventDefault();
+    const avisoSesion = mensajeSiSinTokenApi();
+    if (avisoSesion) {
+      void alertaError('Sesión expirada', avisoSesion);
+      return;
+    }
+    if (!esEdicion && bancosOpciones.length === 0) {
+      void alertaError(
+        'Datos incompletos',
+        'No se cargaron los bancos. Recargue la página o inicie sesión de nuevo antes de registrar.',
+      );
+      return;
+    }
     setErrorGeneral('');
     setErroresApi({});
     const payload = construirPayload(formulario);
@@ -552,6 +565,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
       }
       cerrar();
     } catch (err) {
+      if (err.response?.status === 401) return;
       const data = err.response?.data;
       if (err.response?.status === 422 && data?.errors?.correo_empleado) {
         void alertaError('Correo no disponible', mensajeErrorApi(err));

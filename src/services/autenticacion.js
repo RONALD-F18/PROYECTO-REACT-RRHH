@@ -8,6 +8,21 @@ import {
   persistirSesionTrasLogin,
 } from './sesionLocal';
 
+export { obtenerTokenBearerDesdeSesion };
+
+/** Token Bearer listo para Authorization (producción lo exige). */
+export function tokenApiDisponible() {
+  return Boolean(obtenerTokenBearerDesdeSesion());
+}
+
+/**
+ * @returns {string|null} mensaje si no hay sesión usable para el API
+ */
+export function mensajeSiSinTokenApi() {
+  if (tokenApiDisponible()) return null;
+  return 'Su sesión expiró o no está disponible. Cierre sesión e inicie de nuevo.';
+}
+
 /**
  * Sesión usable para el API: payload en localStorage + token Bearer.
  */

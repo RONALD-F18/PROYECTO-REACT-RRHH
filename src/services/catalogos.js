@@ -64,7 +64,7 @@ export const ETIQUETAS_TIPO_DOCUMENTO = {
 
 export function etiquetaTipoDocumentoCatalogo(codigo) {
   const c = String(codigo ?? '').trim().toUpperCase();
-  return ETIQUETAS_TIPO_DOCUMENTO[c] ?? c || '—';
+  return ETIQUETAS_TIPO_DOCUMENTO[c] ?? (c || '—');
 }
 
 export function opcionesTiposDocumento(catalogos) {

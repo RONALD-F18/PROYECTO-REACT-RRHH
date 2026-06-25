@@ -22,8 +22,7 @@ import {
   addYearsCalendar,
   parseFechaSoloDia,
 } from '../../../utils/validacionEmpleadoFormulario';
-import { mergeCatalogoPorClave } from '../../../utils/mergeCatalogos';
-import { RIESGOS_LABORALES_SUPLEMENTO } from '../../../data/catalogosColombiaSuplemento';
+import { opcionesDesdeFilasRelacionales } from '../../../services/catalogos';
 import '../../../estilos/componentes/formulario-secciones.css';
 
 /**
@@ -153,50 +152,42 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
   const [pasoActual, setPasoActual] = useState(0);
 
   const opcionesEPS = useMemo(
-    () =>
-      (catalogos?.eps ?? []).map((e) => ({
-        valor: String(e.cod_eps),
-        texto: e.nombre_eps ?? `EPS ${e.cod_eps}`,
-      })),
+    () => opcionesDesdeFilasRelacionales(catalogos?.eps, 'cod_eps', 'nombre_eps'),
     [catalogos],
   );
-  const opcionesRiesgo = useMemo(() => {
-    const merged = mergeCatalogoPorClave(catalogos?.riesgos ?? [], RIESGOS_LABORALES_SUPLEMENTO, 'cod_riesgo');
-    return merged.map((r) => ({
-      valor: String(r.cod_riesgo),
-      texto: r.nombre_riesgo ?? `Riesgo ${r.cod_riesgo}`,
-    }));
-  }, [catalogos]);
+  const opcionesRiesgo = useMemo(
+    () => opcionesDesdeFilasRelacionales(catalogos?.riesgos, 'cod_riesgo', 'nombre_riesgo'),
+    [catalogos],
+  );
   const opcionesARL = useMemo(
-    () =>
-      (catalogos?.arls ?? []).map((a) => ({
-        valor: String(a.cod_arl),
-        texto: a.nombre_arl ?? `ARL ${a.cod_arl}`,
-      })),
+    () => opcionesDesdeFilasRelacionales(catalogos?.arls, 'cod_arl', 'nombre_arl'),
     [catalogos],
   );
   const opcionesPensiones = useMemo(
     () =>
-      (catalogos?.pensiones ?? []).map((p) => ({
-        valor: String(p.cod_fondo_pensiones),
-        texto: p.nombre_fondo_pension ?? `Fondo ${p.cod_fondo_pensiones}`,
-      })),
+      opcionesDesdeFilasRelacionales(
+        catalogos?.pensiones,
+        'cod_fondo_pensiones',
+        'nombre_fondo_pension',
+      ),
     [catalogos],
   );
   const opcionesCesantias = useMemo(
     () =>
-      (catalogos?.cesantias ?? []).map((c) => ({
-        valor: String(c.cod_fondo_cesantias),
-        texto: c.nombre_fondo_cesantia ?? `Cesantías ${c.cod_fondo_cesantias}`,
-      })),
+      opcionesDesdeFilasRelacionales(
+        catalogos?.cesantias,
+        'cod_fondo_cesantias',
+        'nombre_fondo_cesantia',
+      ),
     [catalogos],
   );
   const opcionesCaja = useMemo(
     () =>
-      (catalogos?.compensaciones ?? []).map((x) => ({
-        valor: String(x.cod_caja_compensacion),
-        texto: x.nombre_caja_compensacion ?? `Caja ${x.cod_caja_compensacion}`,
-      })),
+      opcionesDesdeFilasRelacionales(
+        catalogos?.compensaciones,
+        'cod_caja_compensacion',
+        'nombre_caja_compensacion',
+      ),
     [catalogos],
   );
 
@@ -567,8 +558,12 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
           etiqueta: 'Clase de Riesgo',
           tipo: 'select',
           requerido: true,
-          placeholder: 'Seleccione...',
+          placeholder: opcionesRiesgo.length ? 'Seleccione...' : 'Sin catálogo en servidor',
           opciones: opcionesRiesgo,
+          hint:
+            opcionesRiesgo.length === 0
+              ? 'No hay clases de riesgo cargadas. En el servidor ejecute php artisan db:seed --class=RiesgoSeeder.'
+              : 'Solo clases registradas en el sistema (mismo cod_riesgo que valida el API).',
         },
         {
           nombre: 'fechaAfiliacionARL',

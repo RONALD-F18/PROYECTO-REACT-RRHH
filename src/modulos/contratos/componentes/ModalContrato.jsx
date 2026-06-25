@@ -22,8 +22,6 @@ import {
   HORARIO_TRABAJO_OPCIONES,
   ESTADO_CONTRATO,
 } from '../contratoEnums';
-import { mergeCatalogoPorClave } from '../../../utils/mergeCatalogos';
-import { CARGOS_REFERENCIA_SUPLEMENTO } from '../../../data/catalogosColombiaSuplemento';
 import { obtenerCatalogos, opcionesCatalogo, requiereFechaFinContrato } from '../../../services/catalogos';
 
 import '../../../estilos/componentes/formulario-secciones.css';
@@ -248,14 +246,11 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
     };
   }, [mostrar]);
 
-  const cargosConReferencia = useMemo(
-    () => mergeCatalogoPorClave(Array.isArray(cargos) ? cargos : [], CARGOS_REFERENCIA_SUPLEMENTO, 'cod_cargo'),
-    [cargos],
-  );
+  const cargosLista = useMemo(() => (Array.isArray(cargos) ? cargos : []), [cargos]);
 
   const cargosOpciones = [
     ...((formulario._cargosExtra && Array.isArray(formulario._cargosExtra) ? formulario._cargosExtra : []) || []),
-    ...cargosConReferencia,
+    ...cargosLista,
   ];
   const cargosUnicos = [];
   const vistos = new Set();
@@ -270,7 +265,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
   const sincronizarDesdeProps = useCallback(() => {
     if (!mostrar) return;
     if (esEdicion && datosContrato) {
-      const f = contratoApiAFormulario(datosContrato, cargosConReferencia);
+      const f = contratoApiAFormulario(datosContrato, cargosLista);
       const { _cargosExtra, ...rest } = f;
       setFormulario({ ...rest, _cargosExtra });
       const payload = construirPayloadApi(rest);
@@ -283,7 +278,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
     setErroresApi({});
     setErrorGeneral('');
     setPasoActual(0);
-  }, [mostrar, esEdicion, datosContrato, cargosConReferencia]);
+  }, [mostrar, esEdicion, datosContrato, cargosLista]);
 
   useEffect(() => {
     sincronizarDesdeProps();

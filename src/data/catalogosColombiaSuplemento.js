@@ -1,11 +1,10 @@
 /**
- * Suplementos de referencia para selects.
- * No usar aquí: tipos de incapacidad, EPS (catálogo contractual), etc.
- * Sí usar: bancos, cargos, riesgos laborales, y CIE opcional en formulario de incapacidad
- * (merge deduplica por codigo_cie10 frente al API).
- * Códigos altos (61xxx, 80xxx, …) para semillas en BD si aplica.
+ * Referencias locales (documentación / pruebas). NO usar en selects que envían FK al API:
+ * bancos, cargos y riesgos deben venir solo de GET /catalogos (tablas maestras en BD).
+ * CIE-10 ampliado: solo si se implementa merge con validación exists en incapacidades.
  */
 
+/** @deprecated No usar en formularios — códigos ficticios (800xx) no existen en BD. */
 export const BANCOS_COLOMBIA_SUPLEMENTO = [
   { cod_banco: 80001, nombre_banco: 'Bancolombia' },
   { cod_banco: 80002, nombre_banco: 'Banco de Bogotá' },
@@ -39,7 +38,7 @@ export const BANCOS_COLOMBIA_SUPLEMENTO = [
   { cod_banco: 80030, nombre_banco: 'Banco Credifinanciera' },
 ];
 
-/** Clases de riesgo ARL (referencia; el API puede usar otros códigos). */
+/** @deprecated No usar en formularios — códigos ficticios (900xx) no existen en BD. */
 export const RIESGOS_LABORALES_SUPLEMENTO = [
   { cod_riesgo: 90001, nombre_riesgo: 'I — Riesgo mínimo' },
   { cod_riesgo: 90002, nombre_riesgo: 'II — Riesgo bajo' },
@@ -53,7 +52,7 @@ export const RIESGOS_LABORALES_SUPLEMENTO = [
   { cod_riesgo: 90010, nombre_riesgo: 'Alturas / espacios confinados (referencia)' },
 ];
 
-/** Cargos frecuentes como referencia; el API sigue siendo la fuente principal. */
+/** @deprecated No usar en formularios — códigos ficticios (850xx) no existen en BD. */
 export const CARGOS_REFERENCIA_SUPLEMENTO = [
   { cod_cargo: 85001, nomb_cargo: 'Asistente administrativo' },
   { cod_cargo: 85002, nomb_cargo: 'Auxiliar de bodega' },

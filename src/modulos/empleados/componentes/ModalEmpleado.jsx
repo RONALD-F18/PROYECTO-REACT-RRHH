@@ -38,8 +38,6 @@ import {
   extraerFilasContratos,
   esContratoVigenteParaEmpleado,
 } from '../../../services/contratos';
-import { mergeCatalogoPorClave } from '../../../utils/mergeCatalogos';
-import { BANCOS_COLOMBIA_SUPLEMENTO } from '../../../data/catalogosColombiaSuplemento';
 import {
   TIPO_CUENTA,
   ESTADO_EMP,
@@ -220,10 +218,7 @@ function ModalEmpleado({ mostrar, cerrar, datosEmpleado = null, bancos = [], alE
   /** Payload al abrir el modal en edición (para PATCH solo con cambios). */
   const payloadInicialEdicionRef = useRef(null);
 
-  const bancosOpciones = useMemo(
-    () => mergeCatalogoPorClave(bancos, BANCOS_COLOMBIA_SUPLEMENTO, 'cod_banco'),
-    [bancos],
-  );
+  const bancosOpciones = useMemo(() => (Array.isArray(bancos) ? bancos : []), [bancos]);
 
   const codigosBancoPermitidos = useMemo(
     () => new Set(bancosOpciones.map((b) => String(b.cod_banco))),

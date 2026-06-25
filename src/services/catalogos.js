@@ -128,16 +128,21 @@ export function opcionesSexosEmpleado(catalogos) {
  */
 export function opcionesRelacional(catalogos, clave, codCampo, labelCampo) {
   const arr = catalogos?.[clave];
-  if (!Array.isArray(arr)) return [];
-  return arr
+  return opcionesDesdeFilasRelacionales(arr, codCampo, labelCampo);
+}
+
+/**
+ * Opciones de select desde filas del API (solo códigos que existen en BD).
+ * Usar en formularios que envían FK al backend — no mezclar con suplementos locales.
+ */
+export function opcionesDesdeFilasRelacionales(filas, codCampo, labelCampo) {
+  if (!Array.isArray(filas)) return [];
+  return filas
     .filter((row) => row && row[codCampo] != null && row[codCampo] !== '')
     .map((row) => {
-      const etiqueta = String(row[labelCampo] ?? row[codCampo]).trim();
-      return {
-        valor: String(row[codCampo]),
-        etiqueta,
-        texto: etiqueta,
-      };
+      const valor = String(row[codCampo]);
+      const texto = String(row[labelCampo] ?? valor).trim();
+      return { valor, texto, etiqueta: texto };
     });
 }
 

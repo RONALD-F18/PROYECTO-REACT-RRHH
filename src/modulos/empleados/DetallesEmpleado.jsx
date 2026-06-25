@@ -9,8 +9,6 @@ import {
   codigoEmpleadoDesde,
 } from '../../services/empleados';
 import { getBancos, extraerFilasBancos } from '../../services/bancos';
-import { mergeCatalogoPorClave } from '../../utils/mergeCatalogos';
-import { BANCOS_COLOMBIA_SUPLEMENTO } from '../../data/catalogosColombiaSuplemento';
 import { etiquetaSexoEmpleado } from '../../services/catalogos';
 import {
   etiquetaTipoDocumento,
@@ -81,7 +79,7 @@ function DetallesEmpleado() {
       );
 
       const rawBan = sBan.status === 'fulfilled' ? sBan.value : null;
-      const bancos = mergeCatalogoPorClave(extraerFilasBancos(rawBan), BANCOS_COLOMBIA_SUPLEMENTO, 'cod_banco');
+      const bancos = extraerFilasBancos(rawBan);
       setBancosLista(bancos);
       const codBanco = emp.cod_banco;
       const b = bancos.find((x) => Number(x.cod_banco) === Number(codBanco));

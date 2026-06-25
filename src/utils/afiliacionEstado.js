@@ -9,7 +9,10 @@ export function etiquetasEstadoAfiliacion(catalogos) {
 export const ETIQUETAS_ESTADO_AFILIACION = ['Activa', 'Inactiva', 'Suspendida'];
 
 export function etiquetasTipoRegimen(catalogos) {
-  return listaCatalogo(catalogos, 'tipos_regimen');
+  const lista = listaCatalogo(catalogos, 'tipos_regimen').filter(
+    (t) => String(t).trim().toLowerCase() === 'contributivo',
+  );
+  return lista.length ? lista : ETIQUETAS_TIPO_REGIMEN;
 }
 
 /** @deprecated usar etiquetasTipoRegimen(catalogos) */

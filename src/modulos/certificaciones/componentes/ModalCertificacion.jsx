@@ -198,7 +198,7 @@ function ModalCertificacion({ mostrar, cerrar, catalogos, registroEditar, envian
   if (!mostrar) return null;
 
   return (
-    <Modal mostrar={mostrar} cerrar={cerrar} titulo={registroEditar ? 'Editar Certificación' : 'Nueva Certificación'}>
+    <Modal mostrar={mostrar} cerrar={cerrar} titulo={registroEditar ? 'Editar Certificación' : 'Nueva Certificación'} confirmarAlCerrar>
       <form onSubmit={submit} className="cert-form">
         <FormularioPasos
           pasos={[

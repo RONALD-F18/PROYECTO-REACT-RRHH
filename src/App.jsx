@@ -1,4 +1,4 @@
-import { HashRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { MenuProvider } from './contextos/MenuContext';
 import { CatalogosProvider } from './contextos/CatalogosContext';
 import { EnrutadorPrincipal } from './rutas';
@@ -8,7 +8,7 @@ import './estilos/index.css';
 
 function App() {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <MenuProvider>
         <CatalogosProvider>
           <SesionGuard>
@@ -18,7 +18,7 @@ function App() {
           </SesionGuard>
         </CatalogosProvider>
       </MenuProvider>
-    </HashRouter>
+    </BrowserRouter>
   );
 }
 

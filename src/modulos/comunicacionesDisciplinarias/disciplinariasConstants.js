@@ -19,7 +19,9 @@ export const MAX_DESCRIPCION_CHARS = 500;
 
 export function listaTiposComunicacion(catalogos) {
   const arr = catalogos?.tipos_comunicacion;
-  return Array.isArray(arr) && arr.length ? arr : TIPOS_COMUNICACION_DEFAULT;
+  const base = Array.isArray(arr) && arr.length ? arr : TIPOS_COMUNICACION_DEFAULT;
+  const filtrados = base.filter((t) => String(t).trim().toLowerCase() === 'memorando');
+  return filtrados.length ? filtrados : TIPOS_COMUNICACION_DEFAULT;
 }
 
 export function listaEstadosComunicacion(catalogos) {

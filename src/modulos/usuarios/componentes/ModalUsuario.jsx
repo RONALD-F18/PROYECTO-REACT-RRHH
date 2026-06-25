@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import Modal from '../../../componentes/comunes/Modal';
+import Modal, { BotonCancelarModal } from '../../../componentes/comunes/Modal';
 import { createUsuario, updateUsuario } from '../../../services/usuario';
 import { usuarioSesionLocal } from '../../../services/autenticacion';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
@@ -492,9 +492,7 @@ function ModalUsuario({
           <button type="submit" className="btn-guardar usuario-modal-btn-principal" disabled={guardando}>
             {guardando ? 'Guardando…' : esEdicion ? 'Guardar' : 'Crear'}
           </button>
-          <button type="button" className="btn-cancelar" onClick={cerrar} disabled={guardando}>
-            Cancelar
-          </button>
+          <BotonCancelarModal className="btn-cancelar" disabled={guardando} />
         </div>
       </form>
     </Modal>

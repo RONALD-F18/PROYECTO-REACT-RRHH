@@ -102,12 +102,13 @@ api.interceptors.response.use(
           manejando401 = false;
         });
         notificarSesionExpirada();
-        const hash = String(window.location.hash || '');
-        const enLogin = hash === '#/login' || hash.endsWith('/login');
+        const pathname = String(window.location.pathname || '');
+        const enLogin = pathname === '/login' || pathname.endsWith('/login');
         if (!enLogin) {
           const base = import.meta.env.BASE_URL || '/';
+          const loginPath = `${base.replace(/\/$/, '')}/login`.replace(/\/+/g, '/');
           window.setTimeout(() => {
-            window.location.replace(`${window.location.origin}${base}#/login`);
+            window.location.replace(`${window.location.origin}${loginPath}`);
           }, 400);
         }
       }

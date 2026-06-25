@@ -15,6 +15,7 @@ import {
   estadoAfiliacionDesdeEtiquetaUi,
   etiquetasEstadoAfiliacion,
   etiquetasTipoRegimen,
+  opcionesTipoRegimen,
 } from '../../../utils/afiliacionEstado';
 import {
   EDAD_MINIMA_LABORAL_COLOMBIA,
@@ -215,7 +216,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
   }, [datosAfiliacion, mostrar, empleados]);
 
   const opcionesTipoAfiliacion = useMemo(
-    () => etiquetasTipoRegimen(catalogos),
+    () => opcionesTipoRegimen(catalogos),
     [catalogos],
   );
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import Modal from '../../../componentes/comunes/Modal';
+import Modal, { BotonCancelarModal } from '../../../componentes/comunes/Modal';
 import IconoBuho from '../../../componentes/comunes/IconoBuho';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 import { alertaError } from '../../../utils/alertasSwal';
@@ -388,9 +388,7 @@ function ModalFormularioComunicacion({
         </section>
 
         <div className="modal-acciones disc-form-acciones">
-          <button type="button" className="btn-cancelar" onClick={cerrar} disabled={enviando}>
-            Cancelar
-          </button>
+          <BotonCancelarModal className="btn-cancelar" disabled={enviando} />
           <button type="submit" className="btn-guardar disc-btn-crear" disabled={enviando}>
             {enviando ? 'Guardando…' : esEdicion ? 'Actualizar documento' : 'Crear documento'}
           </button>

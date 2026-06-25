@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import Modal from '../../../componentes/comunes/Modal';
+import Modal, { BotonCancelarModal } from '../../../componentes/comunes/Modal';
 import {
   construirPayloadInasistencia,
   extraerMensajeValidacion,
@@ -129,6 +129,7 @@ function ModalInasistencia({
       cerrar={onClose}
       titulo={registroEditar ? 'Editar Inasistencia' : 'Registrar Inasistencia'}
       classNameContenedor="inasistencia-modal"
+      confirmarAlCerrar
     >
       <form className="inasistencia-form" onSubmit={manejarSubmit}>
         <section className="bloque-form bloque-paso-1">
@@ -289,9 +290,7 @@ function ModalInasistencia({
         </section>
 
         <div className="inasistencia-form-acciones">
-          <button type="button" className="btn-secundario" onClick={onClose}>
-            Cancelar
-          </button>
+          <BotonCancelarModal className="btn-secundario" disabled={guardando} />
           <button type="submit" className="btn-primario" disabled={guardando}>
             {guardando ? 'Guardando...' : registroEditar ? 'Actualizar' : 'Registrar'}
           </button>

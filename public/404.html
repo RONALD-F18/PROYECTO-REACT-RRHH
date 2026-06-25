@@ -1,14 +1,17 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <title>Redirigiendo…</title>
+    <title>Talent Sphere</title>
     <script>
       (function () {
-        var path = window.location.pathname.replace(/^\//, '');
-        var destino = '/#/' + path;
-        if (!path) destino = '/#/';
-        window.location.replace(destino);
+        var path = window.location.pathname + window.location.search;
+        var base = '/';
+        if (!path || path === '/') {
+          window.location.replace(base);
+          return;
+        }
+        window.location.replace(base);
       })();
     </script>
   </head>

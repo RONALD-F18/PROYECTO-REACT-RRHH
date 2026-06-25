@@ -161,6 +161,13 @@
   }
 
   .encabezado-modulo:not(.encabezado-modulo--detalle) .encabezado-modulo-btn {
+    padding: 10px 12px;
+    gap: 0;
+    min-width: 40px;
+    justify-content: center;
+  }
+
+  .encabezado-modulo:not(.encabezado-modulo--detalle) .encabezado-modulo-btn-texto {
     display: none;
   }
 

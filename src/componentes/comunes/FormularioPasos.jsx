@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSolicitarCierreModal } from './Modal';
 
 /**
  * Componente reutilizable para formularios por pasos.
@@ -74,6 +75,16 @@ function FormularioPasos({
     if (!esPrimero) setPasoActual((p) => p - 1);
   };
 
+  const solicitarCierreModal = useSolicitarCierreModal();
+
+  const manejarCancelar = () => {
+    if (solicitarCierreModal) {
+      void solicitarCierreModal();
+      return;
+    }
+    onCancelar?.();
+  };
+
   if (!paso) return null;
 
   return (
@@ -86,7 +97,7 @@ function FormularioPasos({
       <div className="formulario-pasos-contenido">{children ?? paso.contenido}</div>
 
       <div className="modal-acciones modal-acciones--formulario-pasos">
-        <button type="button" className="btn-cancelar" onClick={onCancelar} disabled={enviando}>
+        <button type="button" className="btn-cancelar" onClick={manejarCancelar} disabled={enviando}>
           {textoCancelar}
         </button>
 

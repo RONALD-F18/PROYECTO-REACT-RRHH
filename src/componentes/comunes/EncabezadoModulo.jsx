@@ -40,7 +40,7 @@ function EncabezadoModulo({
                 +
               </span>
             )}
-            {textoBoton}
+            <span className="encabezado-modulo-btn-texto">{textoBoton}</span>
           </button>
         )}
         {contenidoDerechaAdicional}

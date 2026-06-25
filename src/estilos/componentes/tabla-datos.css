@@ -170,7 +170,24 @@
   }
 
   .tabla-datos {
-    min-width: 600px;
+    min-width: 640px;
+  }
+
+  .tabla-datos th.tabla-th-acciones-centro,
+  .tabla-datos th.tabla-th-acciones-derecha,
+  .tabla-datos td.tabla-td-acciones-centro,
+  .tabla-datos td.tabla-td-acciones-derecha {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: var(--color-fondo-tarjeta);
+    box-shadow: -6px 0 10px rgba(15, 23, 42, 0.08);
+  }
+
+  .tabla-datos th.tabla-th-acciones-centro,
+  .tabla-datos th.tabla-th-acciones-derecha {
+    background: var(--color-primario);
+    box-shadow: -6px 0 10px rgba(15, 23, 42, 0.12);
   }
 
   .tabla-datos th {

@@ -454,6 +454,7 @@ function ModalContrato({ mostrar, cerrar, datosContrato, empleados, cargos, alEx
       cerrar={cerrar}
       titulo={esEdicion ? 'Editar contrato' : 'Registrar contrato'}
       classNameContenedor="modal-contenido--contrato-form"
+      confirmarAlCerrar
     >
       <form className="formulario-contrato-api" onSubmit={manejarGuardar}>
         {errorGeneral ? (

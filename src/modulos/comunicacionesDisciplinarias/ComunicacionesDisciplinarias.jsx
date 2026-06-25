@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ContenedorPrincipal, FiltrosBusqueda, SinDatos, Tabs, BotonMenu } from '../../componentes';
+import { ContenedorPrincipal, EncabezadoModulo, FiltrosBusqueda, SinDatos, Tabs } from '../../componentes';
 import { ModalFormularioComunicacion, ModalDetalleComunicacion } from './componentes';
 import {
   getComunicacionesDisciplinarias,
@@ -233,22 +233,16 @@ function ComunicacionesDisciplinarias() {
 
   const kpis = useMemo(() => {
     const base = filasFiltradas;
-    let memorandos = 0;
-    let suspensiones = 0;
-    let felicitaciones = 0;
-    for (const r of base) {
-      const t = r._tipoCanon;
-      if (t === 'MEMORANDO') memorandos += 1;
-      if (t === 'SUSPENSION') suspensiones += 1;
-      if (t === 'FELICITACION') felicitaciones += 1;
-    }
     return {
       total: base.length,
-      memorandos,
-      suspensiones,
-      felicitaciones,
+      memorandos: base.length,
     };
   }, [filasFiltradas]);
+
+  const filtrosTipoDisponibles = useMemo(
+    () => listaTiposComunicacion(catalogos),
+    [catalogos],
+  );
 
   const gruposPorEmpleado = useMemo(() => {
     const m = new Map();
@@ -388,22 +382,12 @@ function ComunicacionesDisciplinarias() {
   return (
     <ContenedorPrincipal>
       <div className="disc-modulo">
-        <header className="disc-encabezado">
-          <div className="disc-encabezado-izq">
-            <BotonMenu className="disc-enc-hamburger" />
-            <span className="disc-encabezado-marca">Talent Sphere</span>
-            <div className="disc-encabezado-divider" aria-hidden="true" />
-            <div className="disc-encabezado-textos">
-              <h1 className="disc-encabezado-titulo">Comunicaciones Disciplinarias</h1>
-              <p className="disc-encabezado-sub">Memorandos, llamados de atención, suspensiones y reconocimientos</p>
-            </div>
-          </div>
-          <div className="disc-encabezado-der">
-            <button type="button" className="disc-btn-primario disc-btn-enc" onClick={abrirNuevo}>
-              + Nuevo documento
-            </button>
-          </div>
-        </header>
+        <EncabezadoModulo
+          titulo="Comunicaciones Disciplinarias"
+          subtitulo="Registro y seguimiento de memorandos disciplinarios"
+          textoBoton="Nuevo documento"
+          alHacerClic={abrirNuevo}
+        />
 
         {mensajeLista ? (
           <div className="login-alerta login-alerta--error disc-alerta" role="alert">
@@ -424,14 +408,6 @@ function ComunicacionesDisciplinarias() {
           <div className="disc-kpi disc-kpi--memo">
             <span className="disc-kpi-valor">{kpis.memorandos}</span>
             <span className="disc-kpi-etiq">Memorandos</span>
-          </div>
-          <div className="disc-kpi disc-kpi--susp">
-            <span className="disc-kpi-valor">{kpis.suspensiones}</span>
-            <span className="disc-kpi-etiq">Suspensiones</span>
-          </div>
-          <div className="disc-kpi disc-kpi--feli">
-            <span className="disc-kpi-valor">{kpis.felicitaciones}</span>
-            <span className="disc-kpi-etiq">Felicitaciones</span>
           </div>
         </div>
 
@@ -467,12 +443,16 @@ function ComunicacionesDisciplinarias() {
                 : 'Buscar por empleado o radicado…'
             }
             filtrosSelect={[
-              {
-                nombre: 'tipo',
-                etiqueta: 'Tipo',
-                placeholder: 'Todos los tipos',
-                opciones: listaTiposComunicacion(catalogos).map((t) => ({ valor: t, texto: t })),
-              },
+              ...(filtrosTipoDisponibles.length > 1
+                ? [
+                    {
+                      nombre: 'tipo',
+                      etiqueta: 'Tipo',
+                      placeholder: 'Todos los tipos',
+                      opciones: filtrosTipoDisponibles.map((t) => ({ valor: t, texto: t })),
+                    },
+                  ]
+                : []),
               {
                 nombre: 'estado',
                 etiqueta: 'Estado',

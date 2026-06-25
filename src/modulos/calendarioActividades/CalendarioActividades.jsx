@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ContenedorPrincipal, EncabezadoModulo, SinDatos, TarjetasResumen } from '../../componentes';
-import Modal from '../../componentes/comunes/Modal';
+import Modal, { BotonCancelarModal } from '../../componentes/comunes/Modal';
 import {
   listarCalendarioActividadesApi,
   obtenerCalendarioActividadApi,
@@ -666,6 +666,7 @@ function CalendarioActividades() {
         cerrar={cerrarModal}
         titulo={actividadEditar ? `Editar actividad #${actividadEditar.cod_actividad}` : 'Nueva actividad'}
         classNameContenedor="cal-act-modal"
+        confirmarAlCerrar
       >
         <form className="cal-act-form" onSubmit={guardar}>
           <div className="cal-form-date-banner">
@@ -800,9 +801,7 @@ function CalendarioActividades() {
           </section>
 
           <div className="cal-act-form-acciones">
-            <button type="button" className="btn btn-secundario btn-sm" onClick={cerrarModal}>
-              Cancelar
-            </button>
+            <BotonCancelarModal className="btn btn-secundario btn-sm" />
             {actividadEditar ? (
               <button type="button" className="btn btn-danger btn-sm" onClick={eliminar} disabled={guardando}>
                 Eliminar

@@ -1,53 +1,8 @@
-import { useState, useEffect, useRef, useCallback, useId } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { enviarContactoLanding } from "../../services/api/contactoApi";
 import { alertaErrorApi, alertaMensaje } from "../../utils/alertasSwal";
-
-/** Logo esfera del header/footer (no confundir con el favicon de la pestaña del navegador). */
-function LogoEsferaMarca({ size = 32 }) {
-  const gradId = useId().replace(/:/g, "");
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
-      <circle cx="16" cy="16" r="14" fill={`url(#${gradId})`} />
-      <ellipse
-        cx="16"
-        cy="16"
-        rx="10"
-        ry="4"
-        fill="none"
-        stroke="rgba(255,255,255,0.5)"
-        strokeWidth="1"
-      />
-      <ellipse
-        cx="16"
-        cy="16"
-        rx="10"
-        ry="4"
-        fill="none"
-        stroke="rgba(255,255,255,0.5)"
-        strokeWidth="1"
-        transform="rotate(60 16 16)"
-      />
-      <ellipse
-        cx="16"
-        cy="16"
-        rx="10"
-        ry="4"
-        fill="none"
-        stroke="rgba(255,255,255,0.5)"
-        strokeWidth="1"
-        transform="rotate(-60 16 16)"
-      />
-      <circle cx="16" cy="16" r="3" fill="white" />
-      <defs>
-        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#667eea" />
-          <stop offset="100%" stopColor="#764ba2" />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
-}
+import IconoBuho from "../../componentes/comunes/IconoBuho";
 
 function Inicio() {
   const navegar = useNavigate();
@@ -155,7 +110,7 @@ function Inicio() {
   const claseRev = (id) =>
     `inicio-reveal ${revelado.has(id) ? "inicio-reveal-vis" : ""}`;
 
-  /** HashRouter usa #/ruta — href="#seccion" rompe el router; scroll programático. */
+  /** En rutas limpias, href="#seccion" no aplica; scroll programático al ancla. */
   const irASeccion = useCallback(
     (idSeccion) => {
       cerrarMenu();
@@ -262,7 +217,7 @@ function Inicio() {
       <header className="inicio-header">
         <div className="inicio-header-contenido">
           <div className="inicio-marca">
-            <LogoEsferaMarca size={32} />
+            <IconoBuho className="inicio-logo-buho" title="Talent Sphere" style={{ width: 32, height: 32 }} />
             <span className="inicio-marca-nombre">Talent Sphere</span>
           </div>
           <nav className={`inicio-nav ${menuAbierto ? "inicio-nav-abierto" : ""}`}>
@@ -505,7 +460,7 @@ function Inicio() {
         <div className="inicio-footer-contenido">
           <div className="inicio-footer-marca">
             <div className="inicio-marca">
-              <LogoEsferaMarca size={28} />
+              <IconoBuho className="inicio-logo-buho" title="" style={{ width: 28, height: 28 }} />
               <span className="inicio-marca-nombre">Talent Sphere</span>
             </div>
             <p>Soluciones inteligentes para la gestión de recursos humanos.</p>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import Modal from '../../../componentes/comunes/Modal';
+import Modal, { BotonCancelarModal } from '../../../componentes/comunes/Modal';
 import {
   formatearMonedaCop,
   textoPeriodoPrestacion,
@@ -68,6 +68,7 @@ function ModalGestionarPrestacion({
       cerrar={cerrar}
       titulo="Gestionar prestación social"
       classNameContenedor="modal-contenido--ancho-medio"
+      confirmarAlCerrar
     >
       <p className="prestaciones-modal-subtitulo">
         Cambiar estado de período: Pendiente → Pagado o Trasladado
@@ -151,9 +152,9 @@ function ModalGestionarPrestacion({
           </p>
         ) : null}
         <div className="prestaciones-modal-botones">
-          <button type="button" className="btn-volver" onClick={cerrar} disabled={enviando}>
+          <BotonCancelarModal className="btn-volver" disabled={enviando}>
             Volver
-          </button>
+          </BotonCancelarModal>
           <button
             type="button"
             className="btn btn-primario"

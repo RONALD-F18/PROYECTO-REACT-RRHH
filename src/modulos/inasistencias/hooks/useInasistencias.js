@@ -131,6 +131,7 @@ export function useInasistencias() {
   return {
     empleados,
     contratos,
+    inasistenciasGlobales: inasistencias,
     inasistenciasTodas: inasistenciasBase,
     inasistencias: inasistenciasFiltradas,
     kpis,

@@ -19,7 +19,7 @@ import { getUsuarios, extraerFilasUsuarios } from '../../services/usuario';
 import { esAdminSesionLocal } from '../../services/autenticacion';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
-import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
+import { alertaErrorApi, alertaExito, confirmarEliminacion } from '../../utils/alertasSwal';
 import {
   TIPOS_COMUNICACION,
   ESTADOS_COMUNICACION,
@@ -90,6 +90,15 @@ function IcoEliminarDoc() {
   );
 }
 
+function compararDocumentosRecientes(a, b) {
+  const fa = a?.fecha_emision ? String(a.fecha_emision).slice(0, 10) : '';
+  const fb = b?.fecha_emision ? String(b.fecha_emision).slice(0, 10) : '';
+  if (fa !== fb) return fb.localeCompare(fa);
+  const ca = Number(codigoDisciplinarioDesde(a)) || 0;
+  const cb = Number(codigoDisciplinarioDesde(b)) || 0;
+  return cb - ca;
+}
+
 function mesAnioDesdeFecha(fecha) {
   const t = fecha ? String(fecha).trim().slice(0, 10) : '';
   const m = t.match(/^(\d{4})-(\d{2})(?:-(\d{2}))?$/);
@@ -143,7 +152,6 @@ function ComunicacionesDisciplinarias() {
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [mensajeLista, setMensajeLista] = useState('');
-  const [mensajeExito, setMensajeExito] = useState('');
   const [vistaTab, setVistaTab] = useState('documentos');
   const [mostrarForm, setMostrarForm] = useState(false);
   const [mostrarDetalle, setMostrarDetalle] = useState(false);
@@ -204,27 +212,29 @@ function ComunicacionesDisciplinarias() {
     const tipoF = criteriosFiltro.tipo || '';
     const estF = criteriosFiltro.estado || '';
 
-    return filasVista.filter((row) => {
-      if (!row || typeof row !== 'object') return false;
-      if (filtroCodEmpleado != null) {
-        const ce = row.cod_empleado != null ? Number(row.cod_empleado) : NaN;
-        if (ce !== filtroCodEmpleado) return false;
-      }
-      if (tipoF && row._tipoCanon !== tipoF) return false;
-      if (estF && row._estadoCanon !== estF) return false;
-      if (q) {
-        const nom = String(row._nombreEmpleado || '').toLowerCase();
-        if (vistaTab === 'empleados') {
-          if (!nom.includes(q)) return false;
-        } else {
-          const mot = String(row.motivo_comunicacion || '').toLowerCase();
-          const rad = String(row._radicado || '').toLowerCase();
-          const desc = String(row.descripcion || '').toLowerCase();
-          if (!nom.includes(q) && !mot.includes(q) && !rad.includes(q) && !desc.includes(q)) return false;
+    return filasVista
+      .filter((row) => {
+        if (!row || typeof row !== 'object') return false;
+        if (filtroCodEmpleado != null) {
+          const ce = row.cod_empleado != null ? Number(row.cod_empleado) : NaN;
+          if (ce !== filtroCodEmpleado) return false;
         }
-      }
-      return true;
-    });
+        if (tipoF && row._tipoCanon !== tipoF) return false;
+        if (estF && row._estadoCanon !== estF) return false;
+        if (q) {
+          const nom = String(row._nombreEmpleado || '').toLowerCase();
+          if (vistaTab === 'empleados') {
+            if (!nom.includes(q)) return false;
+          } else {
+            const mot = String(row.motivo_comunicacion || '').toLowerCase();
+            const rad = String(row._radicado || '').toLowerCase();
+            const desc = String(row.descripcion || '').toLowerCase();
+            if (!nom.includes(q) && !mot.includes(q) && !rad.includes(q) && !desc.includes(q)) return false;
+          }
+        }
+        return true;
+      })
+      .sort(compararDocumentosRecientes);
   }, [filasVista, criteriosFiltro, filtroCodEmpleado, vistaTab]);
 
   const kpis = useMemo(() => {
@@ -329,11 +339,14 @@ function ComunicacionesDisciplinarias() {
     };
   }, [esAdmin]);
 
-  const alExitoFormulario = async () => {
+  const alExitoFormulario = async (accion) => {
     await recargarLista();
-    setMensajeExito('Cambios guardados correctamente.');
-    window.setTimeout(() => setMensajeExito(''), 3000);
     setRegistroEditar(null);
+    if (accion === 'actualizado') {
+      await alertaExito('Documento actualizado');
+    } else {
+      await alertaExito('Documento registrado correctamente');
+    }
   };
 
   const abrirNuevo = () => {
@@ -369,8 +382,7 @@ function ComunicacionesDisciplinarias() {
       setMostrarDetalle(false);
       setDetalleSeleccion(null);
       await recargarLista();
-      setMensajeExito('Documento eliminado correctamente.');
-      window.setTimeout(() => setMensajeExito(''), 3000);
+      await alertaExito('Documento eliminado');
     } catch (e) {
       void alertaErrorApi('No se pudo eliminar el documento', e);
     }
@@ -396,12 +408,6 @@ function ComunicacionesDisciplinarias() {
             <p className="login-alerta-mensaje">{mensajeLista}</p>
           </div>
         ) : null}
-        {mensajeExito ? (
-          <div className="login-alerta login-alerta--exito disc-alerta" role="status">
-            <p className="login-alerta-mensaje">{mensajeExito}</p>
-          </div>
-        ) : null}
-
         <div className="disc-kpis">
           <div className="disc-kpi disc-kpi--total">
             <span className="disc-kpi-valor">{kpis.total}</span>

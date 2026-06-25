@@ -15,9 +15,14 @@ function FiltrosBusqueda({
   onFiltrar,
   titulo = null,
   className = '',
+  valoresIniciales = null,
 }) {
-  const [busqueda, setBusqueda] = useState('');
-  const [filtros, setFiltros] = useState({});
+  const [busqueda, setBusqueda] = useState(valoresIniciales?.busqueda ?? '');
+  const [filtros, setFiltros] = useState(() => {
+    if (!valoresIniciales || typeof valoresIniciales !== 'object') return {};
+    const { busqueda: _b, ...rest } = valoresIniciales;
+    return rest;
+  });
 
   const manejarCambioBusqueda = (e) => {
     setBusqueda(e.target.value);

@@ -117,6 +117,24 @@ export function filtrarInasistencias(lista, filtros) {
   });
 }
 
+/** Novedades del empleado desde fecha de ingreso (sin filtrar por mes en el listado). */
+export function listadoNovedadesEmpleadoDesdeIngreso(novedades, { codEmpleado, fechaIngreso, tipo }) {
+  if (!codEmpleado) return [];
+  let rows = listaSoloNovedadesRegistrables(novedades).filter(
+    (x) => String(x.cod_empleado) === String(codEmpleado),
+  );
+  const ingreso = fechaIngreso ? String(fechaIngreso).slice(0, 10) : '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(ingreso)) {
+    rows = rows.filter((x) => String(x.fecha_inasistencia || '').slice(0, 10) >= ingreso);
+  }
+  if (tipo) {
+    rows = rows.filter((x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === tipo);
+  }
+  return rows.sort((a, b) =>
+    String(b.fecha_inasistencia || '').localeCompare(String(a.fecha_inasistencia || '')),
+  );
+}
+
 function ymdDesdeValor(valor) {
   if (!valor) return '';
   if (valor instanceof Date) {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ContenedorPrincipal, EncabezadoModulo, SinDatos } from '../../componentes';
+import { ContenedorPrincipal, EncabezadoModulo, FiltrosBusqueda, SinDatos } from '../../componentes';
 import { useInasistencias } from './hooks/useInasistencias';
 import ModalInasistencia from './componentes/ModalInasistencia';
 import {
@@ -11,6 +11,7 @@ import {
   inicialesEmpleado,
   limpiarMotivoPersistido,
   listaSoloNovedadesRegistrables,
+  listadoNovedadesEmpleadoDesdeIngreso,
   nombreCompleto,
   obtenerCodigoEmpleado,
   estadoUiDesdeMotivo,
@@ -31,10 +32,41 @@ function isoDesdeYMD(y, m, d) {
   return `${yy}-${mm}-${dd}`;
 }
 
+const NOMBRES_MESES = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
+
+const MESES_OPCIONES = NOMBRES_MESES.map((nombre, idx) => ({
+  valor: String(idx + 1),
+  texto: nombre,
+}));
+
+function opcionesAniosDesde(minAnio) {
+  const actual = new Date().getFullYear();
+  const min = Number.isFinite(minAnio) && minAnio > 1970 ? minAnio : actual - 10;
+  const desde = Math.min(min, actual);
+  return Array.from({ length: actual - desde + 1 }, (_, i) => {
+    const a = actual - i;
+    return { valor: String(a), texto: String(a) };
+  });
+}
+
 function Inasistencias() {
   const {
     empleados,
     contratos,
+    inasistenciasGlobales,
     inasistenciasTodas,
     inasistencias,
     kpis,
@@ -44,23 +76,23 @@ function Inasistencias() {
     error,
     guardarInasistencia,
     borrarInasistencia,
-  } =
-    useInasistencias();
+  } = useInasistencias();
   const [modalAbierto, setModalAbierto] = useState(false);
   const [registroEditar, setRegistroEditar] = useState(null);
   const [busquedaEmpleado, setBusquedaEmpleado] = useState('');
-  const [filtrosDraft, setFiltrosDraft] = useState(filtros);
   const [fechaPreseleccionada, setFechaPreseleccionada] = useState('');
   const [selectorMesAnioAbierto, setSelectorMesAnioAbierto] = useState(false);
 
-  /** Registros que cumplen mes / año / tipo del filtro (sin restringir por empleado). Sin filas "Presente" redundantes. */
+  const aniosFiltroOpciones = useMemo(() => opcionesAniosDesde(2015), []);
+
+  /** Registros globales que cumplen mes / año / tipo (sin restringir por empleado). */
   const inasistenciasCriterioGlobal = useMemo(
     () =>
-      filtrarInasistencias(listaSoloNovedadesRegistrables(inasistenciasTodas), {
+      filtrarInasistencias(listaSoloNovedadesRegistrables(inasistenciasGlobales), {
         ...filtros,
         codEmpleado: '',
       }),
-    [inasistenciasTodas, filtros.mes, filtros.anio, filtros.tipo],
+    [inasistenciasGlobales, filtros.mes, filtros.anio, filtros.tipo],
   );
 
   const conteoInasistenciasPorEmpleado = useMemo(() => {
@@ -73,22 +105,22 @@ function Inasistencias() {
     return m;
   }, [inasistenciasCriterioGlobal]);
 
-  /** Solo empleados con al menos un registro que coincide con el filtro; búsqueda por nombre, documento o código. */
+  /** Todos los empleados; la búsqueda solo filtra por nombre, documento o código. */
   const empleadosListaIzquierda = useMemo(() => {
     const q = busquedaEmpleado.toLowerCase().trim();
-    return empleados.filter((e) => {
-      const cod = String(obtenerCodigoEmpleado(e) ?? '');
-      const n = conteoInasistenciasPorEmpleado.get(cod) || 0;
-      if (n === 0) return false;
-      if (!q) return true;
-      const nombre = nombreCompleto(e).toLowerCase();
-      return (
-        nombre.includes(q) ||
-        String(e.doc_iden || '').toLowerCase().includes(q) ||
-        cod.toLowerCase().includes(q)
-      );
-    });
-  }, [empleados, conteoInasistenciasPorEmpleado, busquedaEmpleado]);
+    return empleados
+      .filter((e) => {
+        if (!q) return true;
+        const cod = String(obtenerCodigoEmpleado(e) ?? '');
+        const nombre = nombreCompleto(e).toLowerCase();
+        return (
+          nombre.includes(q) ||
+          String(e.doc_iden || '').toLowerCase().includes(q) ||
+          cod.toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => nombreCompleto(a).localeCompare(nombreCompleto(b), 'es'));
+  }, [empleados, busquedaEmpleado]);
 
   const empleadoSeleccionado = useMemo(
     () => empleados.find((e) => String(obtenerCodigoEmpleado(e)) === String(filtros.codEmpleado)) || null,
@@ -101,33 +133,6 @@ function Inasistencias() {
     return inasistenciasTodas.filter((x) => String(x.cod_empleado) === cod);
   }, [inasistenciasTodas, empleadoSeleccionado]);
 
-  const vistaCalendario = useMemo(() => {
-    const mesN = Number(filtros.mes);
-    const anioN = Number(filtros.anio);
-    const m = Number.isFinite(mesN) && mesN >= 1 && mesN <= 12 ? mesN : new Date().getMonth() + 1;
-    const y = Number.isFinite(anioN) && anioN > 1970 ? anioN : new Date().getFullYear();
-    const diasMes = new Date(y, m, 0).getDate();
-    const first = new Date(y, m - 1, 1);
-    // JS: 0=Dom, 1=Lun ... 6=Sab. Queremos L..D => offset de espacios al inicio.
-    const jsDow = first.getDay();
-    const offset = (jsDow + 6) % 7; // 0=>Lun, 6=>Dom
-    const monthNames = [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
-    ];
-    return { y, m, diasMes, offset, monthLabel: `${monthNames[m - 1]} ${y}` };
-  }, [filtros.mes, filtros.anio]);
-
   const fechaIngresoEmpleado = useMemo(() => {
     if (!empleadoSeleccionado) return '';
     const cod = String(obtenerCodigoEmpleado(empleadoSeleccionado));
@@ -139,17 +144,49 @@ function Inasistencias() {
     return fechas[0] || '';
   }, [contratos, empleadoSeleccionado]);
 
+  const aniosCalendarioDisponibles = useMemo(() => {
+    let min = 2015;
+    if (fechaIngresoEmpleado) {
+      const y = Number(String(fechaIngresoEmpleado).slice(0, 4));
+      if (Number.isFinite(y) && y > 1970) min = y;
+    }
+    return opcionesAniosDesde(min);
+  }, [fechaIngresoEmpleado]);
+
+  const vistaCalendario = useMemo(() => {
+    const mesN = Number(filtros.mes);
+    const anioN = Number(filtros.anio);
+    const m = Number.isFinite(mesN) && mesN >= 1 && mesN <= 12 ? mesN : new Date().getMonth() + 1;
+    const y = Number.isFinite(anioN) && anioN > 1970 ? anioN : new Date().getFullYear();
+    const diasMes = new Date(y, m, 0).getDate();
+    const first = new Date(y, m - 1, 1);
+    const jsDow = first.getDay();
+    const offset = (jsDow + 6) % 7;
+    return { y, m, diasMes, offset, monthLabel: `${NOMBRES_MESES[m - 1]} ${y}` };
+  }, [filtros.mes, filtros.anio]);
+
   const registrosEmpleadoListado = useMemo(() => {
     if (!empleadoSeleccionado) return inasistencias;
     const cod = String(obtenerCodigoEmpleado(empleadoSeleccionado));
-    return inasistencias.filter((x) => String(x.cod_empleado) === cod);
-  }, [inasistencias, empleadoSeleccionado]);
+    return listadoNovedadesEmpleadoDesdeIngreso(inasistenciasTodas, {
+      codEmpleado: cod,
+      fechaIngreso: fechaIngresoEmpleado,
+      tipo: filtros.tipo || '',
+    });
+  }, [inasistencias, empleadoSeleccionado, inasistenciasTodas, fechaIngresoEmpleado, filtros.tipo]);
 
   const conteoNovedades = useMemo(() => {
-    const tardanzas = registrosEmpleado.filter((x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.TARDE).length;
-    const libres = registrosEmpleado.filter((x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.LIBRE).length;
+    const { y, m } = vistaCalendario;
+    const delMes = registrosEmpleado.filter((x) => {
+      const f = String(x.fecha_inasistencia || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(f)) return false;
+      const [yy, mm] = f.split('-');
+      return Number(yy) === y && Number(mm) === m;
+    });
+    const tardanzas = delMes.filter((x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.TARDE).length;
+    const libres = delMes.filter((x) => estadoUiDesdeMotivo(x.motivo_inasistencia) === ESTADO_UI.LIBRE).length;
     return { tardanzas, libres };
-  }, [registrosEmpleado]);
+  }, [registrosEmpleado, vistaCalendario.y, vistaCalendario.m]);
 
   const calendarioAsistencia = useMemo(
     () =>
@@ -186,26 +223,14 @@ function Inasistencias() {
     return map;
   }, [calendarioAsistencia.days]);
 
-  // Mantener filtrosDraft sincronizado con filtros "reales"
   useEffect(() => {
-    setFiltrosDraft(filtros);
-  }, [filtros]);
-
-  useEffect(() => {
-    if (filtros.tipo !== ESTADO_UI.PRESENTE && filtrosDraft.tipo !== ESTADO_UI.PRESENTE) return;
+    if (filtros.tipo !== ESTADO_UI.PRESENTE) return;
     setFiltros((p) => (p.tipo === ESTADO_UI.PRESENTE ? { ...p, tipo: '' } : p));
-    setFiltrosDraft((p) => (p.tipo === ESTADO_UI.PRESENTE ? { ...p, tipo: '' } : p));
-  }, [filtros.tipo, filtrosDraft.tipo]);
+  }, [filtros.tipo, setFiltros]);
 
-  useEffect(() => {
-    if (!filtros.codEmpleado) return;
-    const cod = String(filtros.codEmpleado);
-    const visible = empleadosListaIzquierda.some((e) => String(obtenerCodigoEmpleado(e)) === cod);
-    if (!visible) {
-      setFiltros((p) => ({ ...p, codEmpleado: '' }));
-      setFiltrosDraft((p) => ({ ...p, codEmpleado: '' }));
-    }
-  }, [empleadosListaIzquierda, filtros.codEmpleado]);
+  const seleccionarEmpleado = (cod) => {
+    setFiltros((p) => ({ ...p, codEmpleado: String(cod) }));
+  };
 
   const handleDelete = async (item) => {
     const ok = await confirmarAccion({
@@ -264,68 +289,49 @@ function Inasistencias() {
           </article>
         </section>
 
-        <div className="inasistencias-filtros-bar">
-          <div className="inasistencias-filtros-bar-inner">
-            <input
-              type="search"
-              className="inasistencias-filtro-busqueda"
-              placeholder="Buscar por empleado, documento o código..."
-              value={busquedaEmpleado}
-              onChange={(e) => setBusquedaEmpleado(e.target.value)}
-            />
-            <select
-              className="inasistencias-filtro-select"
-              value={filtrosDraft.tipo}
-              onChange={(e) => setFiltrosDraft((p) => ({ ...p, tipo: e.target.value }))}
-            >
-              <option value="">Todos los tipos</option>
-              <option value={ESTADO_UI.AUSENTE}>Ausente</option>
-              <option value={ESTADO_UI.TARDE}>Tardanza</option>
-              <option value={ESTADO_UI.LIBRE}>Libre</option>
-            </select>
-            <select
-              className="inasistencias-filtro-select"
-              value={filtrosDraft.mes}
-              onChange={(e) => setFiltrosDraft((p) => ({ ...p, mes: e.target.value }))}
-            >
-              {[
-                'Enero',
-                'Febrero',
-                'Marzo',
-                'Abril',
-                'Mayo',
-                'Junio',
-                'Julio',
-                'Agosto',
-                'Septiembre',
-                'Octubre',
-                'Noviembre',
-                'Diciembre',
-              ].map((nombre, idx) => (
-                <option key={nombre} value={String(idx + 1)}>
-                  {nombre}
-                </option>
-              ))}
-            </select>
-            <select
-              className="inasistencias-filtro-select"
-              value={filtrosDraft.anio}
-              onChange={(e) => setFiltrosDraft((p) => ({ ...p, anio: e.target.value }))}
-            >
-              {Array.from({ length: 5 }, (_, i) => Number(new Date().getFullYear()) - 2 + i).map((a) => (
-                <option key={a} value={String(a)}>
-                  {a}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className="inasistencias-filtro-boton"
-              onClick={() => setFiltros((p) => ({ ...p, ...filtrosDraft }))}
-            >
-              Filtrar
-            </button>
-          </div>
+        <div className="inasistencias-barra-busqueda">
+          <FiltrosBusqueda
+            placeholderBusqueda="Buscar por empleado, documento o código..."
+            valoresIniciales={{
+              busqueda: busquedaEmpleado,
+              tipo: filtros.tipo,
+              mes: filtros.mes,
+              anio: filtros.anio,
+            }}
+            filtrosSelect={[
+              {
+                nombre: 'tipo',
+                etiqueta: 'Tipo',
+                placeholder: 'Todos los tipos',
+                opciones: [
+                  { valor: ESTADO_UI.AUSENTE, texto: 'Ausente' },
+                  { valor: ESTADO_UI.TARDE, texto: 'Tardanza' },
+                  { valor: ESTADO_UI.LIBRE, texto: 'Libre' },
+                ],
+              },
+              {
+                nombre: 'mes',
+                etiqueta: 'Mes',
+                placeholder: 'Todos los meses',
+                opciones: MESES_OPCIONES,
+              },
+              {
+                nombre: 'anio',
+                etiqueta: 'Año',
+                placeholder: 'Todos los años',
+                opciones: aniosFiltroOpciones,
+              },
+            ]}
+            onFiltrar={(f) => {
+              setBusquedaEmpleado(f.busqueda || '');
+              setFiltros((p) => ({
+                ...p,
+                tipo: f.tipo || '',
+                mes: f.mes || '',
+                anio: f.anio || String(new Date().getFullYear()),
+              }));
+            }}
+          />
         </div>
 
         {error ? <div className="login-alerta login-alerta--error">{error}</div> : null}
@@ -335,20 +341,11 @@ function Inasistencias() {
           <aside className="inasistencias-empleados">
             <div className="inasistencias-empleados-header">
               <h3>Empleados</h3>
-              <span>
-                {empleadosListaIzquierda.length} con registros
-                {busquedaEmpleado.trim() ? ' (búsqueda)' : ''}
-              </span>
+              <span>{empleadosListaIzquierda.length} en lista</span>
             </div>
-            <input
-              type="search"
-              placeholder="Buscar empleado..."
-              value={busquedaEmpleado}
-              onChange={(e) => setBusquedaEmpleado(e.target.value)}
-            />
             <div className="inasistencias-empleados-lista">
               {empleadosListaIzquierda.length === 0 ? (
-                <p className="inasistencias-empleados-vacio">Ningún empleado coincide con el filtro actual.</p>
+                <p className="inasistencias-empleados-vacio">Ningún empleado coincide con la búsqueda.</p>
               ) : null}
               {empleadosListaIzquierda.map((emp) => {
                 const cod = obtenerCodigoEmpleado(emp);
@@ -359,11 +356,7 @@ function Inasistencias() {
                     key={String(cod)}
                     type="button"
                     className={`fila-empleado ${activo ? 'activo' : ''}`}
-                    onClick={() => {
-                      const next = { ...filtros, codEmpleado: String(cod) };
-                      setFiltros(next);
-                      setFiltrosDraft(next);
-                    }}
+                    onClick={() => seleccionarEmpleado(cod)}
                   >
                     <span className="avatar">{inicialesEmpleado(emp).toUpperCase()}</span>
                     <span className="datos">
@@ -385,11 +378,18 @@ function Inasistencias() {
                 <header className="detalle-header tarjeta-empleado-top">
                   <div>
                     <h3>{nombreCompleto(empleadoSeleccionado)}</h3>
-                    <p>{empleadoSeleccionado.email || empleadoSeleccionado.correo_electronico || 'Sin correo'}</p>
+                    <p>
+                      Ingreso: {formatearFechaCorta(fechaIngresoEmpleado) || '—'} · Calendario del mes seleccionado
+                      {filtros.mes ? ` (${NOMBRES_MESES[Number(filtros.mes) - 1] || ''} ${filtros.anio})` : ''}
+                    </p>
                   </div>
                   <div className="tarjeta-empleado-acciones">
-                    <button type="button" className="btn-link-limpiar" onClick={() => setFiltros((p) => ({ ...p, codEmpleado: '' }))}>
-                      Limpiar
+                    <button
+                      type="button"
+                      className="btn-link-limpiar"
+                      onClick={() => setFiltros((p) => ({ ...p, codEmpleado: '' }))}
+                    >
+                      Cerrar detalle
                     </button>
                   </div>
                 </header>
@@ -417,20 +417,7 @@ function Inasistencias() {
                                 }))
                               }
                             >
-                              {[
-                                'Enero',
-                                'Febrero',
-                                'Marzo',
-                                'Abril',
-                                'Mayo',
-                                'Junio',
-                                'Julio',
-                                'Agosto',
-                                'Septiembre',
-                                'Octubre',
-                                'Noviembre',
-                                'Diciembre',
-                              ].map((nombre, idx) => (
+                              {NOMBRES_MESES.map((nombre, idx) => (
                                 <option key={nombre} value={String(idx + 1)}>
                                   {nombre}
                                 </option>
@@ -445,9 +432,9 @@ function Inasistencias() {
                                 }))
                               }
                             >
-                              {Array.from({ length: 5 }, (_, i) => vistaCalendario.y - 2 + i).map((anio) => (
-                                <option key={anio} value={String(anio)}>
-                                  {anio}
+                              {aniosCalendarioDisponibles.map((op) => (
+                                <option key={op.valor} value={op.valor}>
+                                  {op.texto}
                                 </option>
                               ))}
                             </select>
@@ -624,7 +611,13 @@ function Inasistencias() {
                 </div>
 
                 <div className="detalle-lista inasistencias-table-wrapper">
-                  {registrosEmpleadoListado.length === 0 ? <SinDatos mensaje="No hay registros para este filtro." /> : registrosEmpleadoListado.map((item) => {
+                  <h4 className="inasistencias-lista-titulo">
+                    Novedades desde el ingreso ({registrosEmpleadoListado.length})
+                  </h4>
+                  {registrosEmpleadoListado.length === 0 ? (
+                    <SinDatos mensaje="No hay novedades registradas desde la fecha de ingreso." />
+                  ) : (
+                    registrosEmpleadoListado.map((item) => {
                     const estado = estadoUiDesdeMotivo(item.motivo_inasistencia);
                     return (
                       <div key={String(item.cod_inasistencias)} className="detalle-item-inasistencia">
@@ -640,7 +633,8 @@ function Inasistencias() {
                         </div>
                       </div>
                     );
-                  })}
+                  })
+                  )}
                 </div>
               </>
             )}

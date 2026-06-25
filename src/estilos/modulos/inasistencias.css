@@ -1200,7 +1200,23 @@
   gap: 12px;
 }
 
-/* Barra de filtros tipo otros módulos */
+.inasistencias-barra-busqueda {
+  width: 100%;
+  margin: 12px 0 18px;
+}
+
+.inasistencias-barra-busqueda .bloque-filtros {
+  margin-bottom: 0;
+}
+
+.inasistencias-lista-titulo {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+/* Barra de filtros legacy (deprecada) */
 .inasistencias-filtros-bar {
   width: 100%;
   margin: 12px 0 18px;

@@ -1,6 +1,5 @@
 ﻿import { useState, useEffect, useMemo } from 'react';
 import Modal, { BotonCancelarModal } from '../../../componentes/comunes/Modal';
-import IconoBuho from '../../../componentes/comunes/IconoBuho';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
 import { alertaError } from '../../../utils/alertasSwal';
 import {
@@ -9,8 +8,11 @@ import {
   normalizarRegistroComunicacion,
   codigoDisciplinarioDesde,
 } from '../../../services/comunicacionesDisciplinarias';
-import { codigoEmpleadoDesde, nombreCompletoEmpleado } from '../../../services/empleados';
-import { usuarioSesionLocal } from '../../../services/autenticacion';
+import {
+  buscarEmpleadoPorDocumento,
+  codigoEmpleadoDesde,
+  nombreCompletoEmpleado,
+} from '../../../services/empleados';
 import {
   TIPOS_COMUNICACION,
   ESTADOS_FORMULARIO,
@@ -20,7 +22,6 @@ import {
   ESTADO_INICIAL_AL_CREAR,
   MAX_MOTIVO_CHARS,
   MAX_DESCRIPCION_CHARS,
-  claseTemaModalFormulario,
 } from '../disciplinariasConstants';
 
 function IconoTipoDoc({ icono, activo }) {
@@ -87,33 +88,31 @@ function diasSuspensionEntreFechas(isoIni, isoFin) {
   return Math.floor((t1 - t0) / 86400000) + 1;
 }
 
-function etiquetaUsuario(u) {
-  if (!u || typeof u !== 'object') return '';
-  return String(u.nombre_usuario ?? u.nombre ?? '').trim();
+function MensajeCampo({ mensaje }) {
+  if (!mensaje) return null;
+  return (
+    <span className="disc-field-error" role="alert">
+      {mensaje}
+    </span>
+  );
 }
 
-function codigoUsuarioDesde(u) {
-  if (!u || typeof u !== 'object') return null;
-  const c = u.cod_usuario ?? u.id;
-  if (c == null || c === '') return null;
-  return String(c);
-}
+const ETIQUETAS_ERROR = {
+  docEmpleado: 'Documento del empleado',
+  fechaEmision: 'Fecha de emisión',
+  motivo: 'Motivo',
+  fechaIniSusp: 'Inicio de suspensión',
+  fechaFinSusp: 'Fin de suspensión',
+  diasSuspension: 'Días de suspensión',
+};
 
-function ModalFormularioComunicacion({
-  mostrar,
-  cerrar,
-  registroEditar,
-  empleados = [],
-  usuarios = [],
-  alExito,
-}) {
+function ModalFormularioComunicacion({ mostrar, cerrar, registroEditar, empleados = [], alExito }) {
   const esEdicion = registroEditar != null && codigoDisciplinarioDesde(registroEditar) != null;
   const codEdicion = esEdicion ? codigoDisciplinarioDesde(registroEditar) : null;
-  const sesion = usuarioSesionLocal();
 
   const [tipoComunicacion, setTipoComunicacion] = useState('MEMORANDO');
   const [codEmpleado, setCodEmpleado] = useState('');
-  const [codEmisor, setCodEmisor] = useState('');
+  const [docEmpleadoInput, setDocEmpleadoInput] = useState('');
   const [estadoForm, setEstadoForm] = useState('BORRADOR');
   const [fechaEmision, setFechaEmision] = useState('');
   const [motivo, setMotivo] = useState('');
@@ -121,45 +120,17 @@ function ModalFormularioComunicacion({
   const [fechaIniSusp, setFechaIniSusp] = useState('');
   const [fechaFinSusp, setFechaFinSusp] = useState('');
   const [enviando, setEnviando] = useState(false);
-  const [errorGeneral, setErrorGeneral] = useState('');
-
-  const opcionesEmpleados = useMemo(() => {
-    return empleados
-      .map((e) => {
-        const cod = codigoEmpleadoDesde(e);
-        if (cod == null) return null;
-        return { valor: String(cod), etiqueta: nombreCompletoEmpleado(e) };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, 'es'));
-  }, [empleados]);
-
-  const opcionesEmisores = useMemo(() => {
-    const lista = usuarios.length
-      ? usuarios
-      : sesion?.user
-        ? [sesion.user]
-        : [];
-    return lista
-      .map((u) => {
-        const cod = codigoUsuarioDesde(u);
-        const etq = etiquetaUsuario(u);
-        if (!cod || !etq) return null;
-        return { valor: cod, etiqueta: etq };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, 'es'));
-  }, [usuarios, sesion]);
+  const [errores, setErrores] = useState({});
+  const [intentoEnvio, setIntentoEnvio] = useState(false);
 
   useEffect(() => {
     if (!mostrar) return;
-    setErrorGeneral('');
-    const codSesion = sesion?.cod != null ? String(sesion.cod) : '';
+    setErrores({});
+    setIntentoEnvio(false);
     if (esEdicion) {
       const r = normalizarRegistroComunicacion(registroEditar) ?? registroEditar;
       setTipoComunicacion(canonicalTipoApi(r.tipo_comunicacion));
       setCodEmpleado(r.cod_empleado != null ? String(r.cod_empleado) : '');
-      setCodEmisor(r.cod_usuario != null ? String(r.cod_usuario) : codSesion);
       const est = canonicalEstadoApi(r.estado_comunicacion);
       setEstadoForm(est === 'NOTIFICADO' ? 'NOTIFICADO' : est === 'EMITIDO' ? 'EMITIDO' : 'BORRADOR');
       setFechaEmision(r.fecha_emision ? String(r.fecha_emision).slice(0, 10) : '');
@@ -171,7 +142,7 @@ function ModalFormularioComunicacion({
       const hoy = new Date().toISOString().slice(0, 10);
       setTipoComunicacion('MEMORANDO');
       setCodEmpleado('');
-      setCodEmisor(codSesion);
+      setDocEmpleadoInput('');
       setEstadoForm('BORRADOR');
       setFechaEmision(hoy);
       setMotivo('');
@@ -179,16 +150,37 @@ function ModalFormularioComunicacion({
       setFechaIniSusp('');
       setFechaFinSusp('');
     }
-  }, [mostrar, registroEditar, esEdicion, sesion?.cod]);
+  }, [mostrar, registroEditar, esEdicion]);
+
+  useEffect(() => {
+    if (!mostrar || !esEdicion || !codEmpleado) return;
+    const emp = empleados.find((e) => String(codigoEmpleadoDesde(e)) === String(codEmpleado));
+    if (emp?.doc_iden != null) setDocEmpleadoInput(String(emp.doc_iden).trim());
+  }, [mostrar, esEdicion, codEmpleado, empleados]);
 
   const esMemorando = esMemorandoConSuspension(tipoComunicacion);
   const esFelicitacion = canonicalTipoApi(tipoComunicacion) === 'FELICITACION';
-  const temaModal = claseTemaModalFormulario(tipoComunicacion);
 
   const diasSuspensionCalc = useMemo(
     () => diasSuspensionEntreFechas(fechaIniSusp, fechaFinSusp),
     [fechaIniSusp, fechaFinSusp],
   );
+
+  const empleadoResuelto = useMemo(() => {
+    if (!codEmpleado) return null;
+    return empleados.find((e) => String(codigoEmpleadoDesde(e)) === String(codEmpleado)) ?? null;
+  }, [codEmpleado, empleados]);
+
+  const nombreEmpleadoMostrado = empleadoResuelto ? nombreCompletoEmpleado(empleadoResuelto) : '';
+
+  const limpiarError = (campo) => {
+    if (!errores[campo]) return;
+    setErrores((prev) => {
+      const next = { ...prev };
+      delete next[campo];
+      return next;
+    });
+  };
 
   const estadoApiDesdeForm = (est) => {
     const c = canonicalEstadoApi(est);
@@ -201,7 +193,7 @@ function ModalFormularioComunicacion({
     const motivoCorto = motivo.trim().slice(0, MAX_MOTIVO_CHARS);
     const desc = descripcion.trim().slice(0, MAX_DESCRIPCION_CHARS);
     const codEmp = Number(codEmpleado);
-    const payload = {
+    return {
       tipo_comunicacion: tipo,
       fecha_emision: fechaEmision,
       fecha_inicio_suspension: esMemorando && fechaIniSusp ? fechaIniSusp : null,
@@ -209,32 +201,43 @@ function ModalFormularioComunicacion({
       estado_comunicacion: estadoApiDesdeForm(estadoForm),
       motivo_comunicacion: motivoCorto,
       descripcion: desc || null,
-      dias_suspension: esMemorando ? diasSuspensionCalc : null,
+      dias_suspension: esMemorando && diasSuspensionCalc > 0 ? diasSuspensionCalc : null,
       cod_empleado: codEmp,
     };
-    return payload;
   };
 
   const validar = () => {
-    if (!codEmpleado) return 'Seleccione el empleado.';
-    if (!codEmisor) return 'Seleccione quién emite el documento.';
-    if (!fechaEmision) return 'Indique la fecha de emisión.';
-    if (!motivo.trim()) return 'El motivo es obligatorio.';
-    if (esMemorando) {
-      if (!fechaIniSusp || !fechaFinSusp) return 'Indique fecha de inicio y fin de la suspensión.';
-      if (diasSuspensionCalc <= 0) return 'La fecha de fin debe ser igual o posterior a la de inicio.';
+    const next = {};
+    const doc = docEmpleadoInput.trim();
+    if (!doc) {
+      next.docEmpleado = 'Indique el número de documento del empleado.';
+    } else if (!codEmpleado) {
+      next.docEmpleado = 'No hay empleado registrado con ese documento.';
     }
-    return null;
+    if (!fechaEmision) next.fechaEmision = 'Indique la fecha de emisión.';
+    if (!motivo.trim()) next.motivo = 'El motivo es obligatorio.';
+    if (esMemorando) {
+      if (!fechaIniSusp) next.fechaIniSusp = 'Indique la fecha de inicio de la suspensión.';
+      if (!fechaFinSusp) next.fechaFinSusp = 'Indique la fecha de fin de la suspensión.';
+      if (fechaIniSusp && fechaFinSusp && diasSuspensionCalc < 1) {
+        next.diasSuspension =
+          diasSuspensionCalc <= 0
+            ? 'La fecha de fin debe ser igual o posterior a la de inicio.'
+            : 'El memorando debe incluir al menos 1 día de suspensión.';
+      }
+    }
+    return next;
   };
+
+  const clavesErrores = Object.keys(errores);
 
   const manejarSubmit = async (e) => {
     e.preventDefault();
-    setErrorGeneral('');
+    setIntentoEnvio(true);
     const v = validar();
-    if (v) {
-      setErrorGeneral(v);
-      return;
-    }
+    setErrores(v);
+    if (Object.keys(v).length > 0) return;
+
     const payload = construirPayload();
     setEnviando(true);
     try {
@@ -258,20 +261,10 @@ function ModalFormularioComunicacion({
       mostrar={mostrar}
       cerrar={cerrar}
       titulo={esEdicion ? 'Editar documento disciplinario' : 'Nuevo documento disciplinario'}
-      classNameContenedor={`modal-contenido--disciplinario-form ${temaModal}`}
+      classNameContenedor="modal-contenido--disciplinario-form"
       confirmarAlCerrar
     >
-      <div className="disc-modal-subtitulo disc-modal-subtitulo--marca">
-        <IconoBuho className="disc-modal-logo" title="" />
-        <span>Comunicaciones Disciplinarias · Talent Sphere</span>
-      </div>
-      <form onSubmit={manejarSubmit} className="disc-form disc-form--layout">
-        {errorGeneral ? (
-          <div className="login-alerta login-alerta--error disc-form-alerta" role="alert">
-            <p className="login-alerta-mensaje">{errorGeneral}</p>
-          </div>
-        ) : null}
-
+      <form onSubmit={manejarSubmit} className="disc-form disc-form--layout" noValidate>
         <section className="disc-seccion">
           <div className="disc-seccion-num">1</div>
           <div className="disc-seccion-body">
@@ -284,7 +277,12 @@ function ModalFormularioComunicacion({
                     key={t.api}
                     type="button"
                     className={`disc-tipo-card ${activo ? `disc-tipo-card--activo disc-tipo-card--${t.icono}` : ''}`}
-                    onClick={() => setTipoComunicacion(t.api)}
+                    onClick={() => {
+                      setTipoComunicacion(t.api);
+                      limpiarError('fechaIniSusp');
+                      limpiarError('fechaFinSusp');
+                      limpiarError('diasSuspension');
+                    }}
                   >
                     <span className="disc-tipo-card-icon-wrap">
                       <IconoTipoDoc icono={t.icono} activo={activo} />
@@ -302,47 +300,44 @@ function ModalFormularioComunicacion({
           <div className="disc-seccion-body">
             <h3 className="disc-seccion-titulo">Personas involucradas</h3>
             <div className="disc-grid-2 disc-grid-personas">
-              <label className="disc-field">
-                <span className="disc-field-label">Empleado *</span>
-                <select
-                  value={codEmpleado}
-                  onChange={(e) => setCodEmpleado(e.target.value)}
-                  className="disc-select"
+              <label className="disc-field disc-field--full">
+                <span className="disc-field-label">Documento del empleado *</span>
+                <input
+                  type="text"
+                  value={docEmpleadoInput}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDocEmpleadoInput(v);
+                    const emp = buscarEmpleadoPorDocumento(empleados, v);
+                    const c = emp ? codigoEmpleadoDesde(emp) : null;
+                    setCodEmpleado(c != null ? String(c) : '');
+                    limpiarError('docEmpleado');
+                  }}
+                  className={`disc-input${errores.docEmpleado ? ' disc-input--error' : ''}`}
                   disabled={esEdicion}
-                  required
-                >
-                  <option value="">Seleccionar…</option>
-                  {opcionesEmpleados.map((o) => (
-                    <option key={o.valor} value={o.valor}>
-                      {o.etiqueta}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Número de documento"
+                  autoComplete="off"
+                />
+                <MensajeCampo mensaje={errores.docEmpleado} />
               </label>
+              {nombreEmpleadoMostrado ? (
+                <div className="disc-field disc-field--full">
+                  <span className="disc-field-label">Nombre del empleado</span>
+                  <p className="disc-field-readonly disc-doc-nombre-resuelto">{nombreEmpleadoMostrado}</p>
+                </div>
+              ) : null}
               <label className="disc-field">
-                <span className="disc-field-label">Emitido por *</span>
-                <select
-                  value={codEmisor}
-                  onChange={(e) => setCodEmisor(e.target.value)}
-                  className="disc-select"
-                  required
-                >
-                  <option value="">Seleccionar…</option>
-                  {opcionesEmisores.map((o) => (
-                    <option key={o.valor} value={o.valor}>
-                      {o.etiqueta}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="disc-field">
-                <span className="disc-field-label">Fecha emisión</span>
+                <span className="disc-field-label">Fecha emisión *</span>
                 <input
                   type="date"
                   value={fechaEmision}
-                  onChange={(e) => setFechaEmision(e.target.value)}
-                  className="disc-input"
+                  onChange={(e) => {
+                    setFechaEmision(e.target.value);
+                    limpiarError('fechaEmision');
+                  }}
+                  className={`disc-input${errores.fechaEmision ? ' disc-input--error' : ''}`}
                 />
+                <MensajeCampo mensaje={errores.fechaEmision} />
               </label>
               <label className="disc-field">
                 <span className="disc-field-label">Estado</span>
@@ -380,11 +375,15 @@ function ModalFormularioComunicacion({
               <input
                 type="text"
                 value={motivo}
-                onChange={(e) => setMotivo(e.target.value.slice(0, MAX_MOTIVO_CHARS))}
+                onChange={(e) => {
+                  setMotivo(e.target.value.slice(0, MAX_MOTIVO_CHARS));
+                  limpiarError('motivo');
+                }}
                 maxLength={MAX_MOTIVO_CHARS}
                 placeholder={esFelicitacion ? 'Ej: Excelente desempeño en proyecto…' : 'Razón resumida…'}
-                className="disc-input"
+                className={`disc-input${errores.motivo ? ' disc-input--error' : ''}`}
               />
+              <MensajeCampo mensaje={errores.motivo} />
               <span className="disc-counter">
                 {motivo.length}/{MAX_MOTIVO_CHARS}
               </span>
@@ -416,37 +415,61 @@ function ModalFormularioComunicacion({
           <section className="disc-seccion disc-seccion--susp">
             <div className="disc-seccion-num">4</div>
             <div className="disc-seccion-body">
-              <h3 className="disc-seccion-titulo">Días de suspensión</h3>
-              <div className="disc-suspension-box">
+              <h3 className="disc-seccion-titulo">Días de suspensión *</h3>
+              <div className={`disc-suspension-box${errores.diasSuspension ? ' disc-suspension-box--error' : ''}`}>
                 <div className="disc-dias-wrap disc-dias-wrap--destacado">
                   <span className="disc-dias-grande" aria-live="polite">
                     {diasSuspensionCalc}
                   </span>
                   <span className="disc-dias-sufijo">días sin goce de salario</span>
                 </div>
+                <MensajeCampo mensaje={errores.diasSuspension} />
                 <div className="disc-grid-2 disc-grid-susp-fechas">
                   <label className="disc-field">
                     <span className="disc-field-label">Inicio suspensión *</span>
                     <input
                       type="date"
                       value={fechaIniSusp}
-                      onChange={(e) => setFechaIniSusp(e.target.value)}
-                      className="disc-input"
+                      onChange={(e) => {
+                        setFechaIniSusp(e.target.value);
+                        limpiarError('fechaIniSusp');
+                        limpiarError('diasSuspension');
+                      }}
+                      className={`disc-input${errores.fechaIniSusp ? ' disc-input--error' : ''}`}
                     />
+                    <MensajeCampo mensaje={errores.fechaIniSusp} />
                   </label>
                   <label className="disc-field">
                     <span className="disc-field-label">Fin suspensión *</span>
                     <input
                       type="date"
                       value={fechaFinSusp}
-                      onChange={(e) => setFechaFinSusp(e.target.value)}
-                      className="disc-input"
+                      onChange={(e) => {
+                        setFechaFinSusp(e.target.value);
+                        limpiarError('fechaFinSusp');
+                        limpiarError('diasSuspension');
+                      }}
+                      className={`disc-input${errores.fechaFinSusp ? ' disc-input--error' : ''}`}
                     />
+                    <MensajeCampo mensaje={errores.fechaFinSusp} />
                   </label>
                 </div>
               </div>
             </div>
           </section>
+        ) : null}
+
+        {intentoEnvio && clavesErrores.length > 0 ? (
+          <div className="disc-form-errores-resumen" role="alert">
+            <p className="disc-form-errores-resumen-titulo">Complete los campos pendientes:</p>
+            <ul className="disc-form-errores-lista">
+              {clavesErrores.map((k) => (
+                <li key={k}>
+                  <strong>{ETIQUETAS_ERROR[k] ?? k}:</strong> {errores[k]}
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
 
         <div className="modal-acciones disc-form-acciones">

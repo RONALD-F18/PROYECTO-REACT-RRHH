@@ -618,7 +618,6 @@ function ComunicacionesDisciplinarias() {
         }}
         registroEditar={registroEditar}
         empleados={empleados}
-        usuarios={usuarios}
         alExito={alExitoFormulario}
       />
 

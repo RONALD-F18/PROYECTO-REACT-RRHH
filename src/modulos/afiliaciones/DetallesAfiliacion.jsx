@@ -19,11 +19,12 @@ import {
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import {
-  ETIQUETAS_ESTADO_AFILIACION,
+  etiquetasEstadoAfiliacion,
   etiquetaEstadoAfiliacion,
   estadoAfiliacionDesdeEtiquetaUi,
   tipoRegimenFormDesdeApi,
 } from '../../utils/afiliacionEstado';
+import { useCatalogos } from '../../contextos/CatalogosContext';
 import '../../estilos/modulos/afiliaciones.css';
 
 function formatearSoloFecha(valor) {
@@ -59,6 +60,7 @@ function mapaPorCod(lista, clave) {
 function DetallesAfiliacion() {
   const { id } = useParams();
   const navegar = useNavigate();
+  const { catalogos: catalogosRrhh } = useCatalogos();
   const [registro, setRegistro] = useState(null);
   const [empleados, setEmpleados] = useState([]);
   const [catalogos, setCatalogos] = useState(null);
@@ -175,12 +177,17 @@ function DetallesAfiliacion() {
     };
   }, [registro, catalogos, empleados]);
 
+  const estadosAfiliacionOpciones = useMemo(
+    () => etiquetasEstadoAfiliacion(catalogosRrhh),
+    [catalogosRrhh],
+  );
+
   const manejarCambioEstado = async (etiquetaUi) => {
     const cod = registro ? codigoAfiliacionDesde(registro) : null;
     if (cod == null) return;
     const estadoActual = etiquetaEstadoAfiliacion(registro?.estado_afiliacion);
     if (etiquetaUi === estadoActual) return;
-    const estadoBd = estadoAfiliacionDesdeEtiquetaUi(etiquetaUi);
+    const estadoBd = estadoAfiliacionDesdeEtiquetaUi(etiquetaUi, catalogosRrhh);
     setActualizandoEstado(true);
     try {
       await patchAfiliacion(cod, { estado_afiliacion: estadoBd });
@@ -272,9 +279,9 @@ function DetallesAfiliacion() {
           </div>
           <div className="detalle-afiliacion-estado">
             {(() => {
-              const estadoVal = ETIQUETAS_ESTADO_AFILIACION.includes(vista.estadoUi)
+              const estadoVal = estadosAfiliacionOpciones.includes(vista.estadoUi)
                 ? vista.estadoUi
-                : ETIQUETAS_ESTADO_AFILIACION[0];
+                : estadosAfiliacionOpciones[0];
               return (
                 <select
                   value={estadoVal}
@@ -283,7 +290,7 @@ function DetallesAfiliacion() {
                   disabled={actualizandoEstado}
                   aria-busy={actualizandoEstado}
                 >
-                  {ETIQUETAS_ESTADO_AFILIACION.map((est) => (
+                  {estadosAfiliacionOpciones.map((est) => (
                     <option key={est} value={est}>
                       {est}
                     </option>

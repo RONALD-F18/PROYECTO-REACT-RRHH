@@ -21,10 +21,11 @@ import { getContratosCatalogo, extraerFilasContratos } from '../../services/cont
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import {
-  ETIQUETAS_ESTADO_EDICION_INCAPACIDAD,
+  etiquetasEstadoIncapacidad,
   estadoIncapacidadEdicionDesdeApi,
   estadoIncapacidadApiDesdeEtiquetaEdicion,
 } from '../../utils/incapacidadEstado';
+import { useCatalogos } from '../../contextos/CatalogosContext';
 
 function formatearSoloFecha(valor) {
   if (!valor) return '—';
@@ -70,6 +71,7 @@ function formatearCOP(n) {
 function DetallesIncapacidad() {
   const { id } = useParams();
   const navegar = useNavigate();
+  const { catalogos } = useCatalogos();
   const [registro, setRegistro] = useState(null);
   const [distribucionPagos, setDistribucionPagos] = useState(null);
   const [empleados, setEmpleados] = useState([]);
@@ -148,7 +150,7 @@ function DetallesIncapacidad() {
     const dias = registro.dias_incapacidad ?? registro.dias ?? diasEntre(fi, ff);
     const dp = distribucionPagos;
     const pagador = dp?.entidad_responsable ?? registro.entidad_responsable ?? registro.entidad_pagadora ?? entidadPagadoraPorTipo(tipo);
-    const estadoVal = estadoIncapacidadEdicionDesdeApi(registro.estado_incapacidad);
+    const estadoVal = estadoIncapacidadEdicionDesdeApi(registro.estado_incapacidad, catalogos);
 
     const desc = registro.descripcion != null && String(registro.descripcion).trim() !== '' ? String(registro.descripcion) : '—';
     const cieObj = registro.clasificacionEnfermedad;
@@ -182,14 +184,16 @@ function DetallesIncapacidad() {
       observaciones: desc,
       estadoSelect: estadoVal,
     };
-  }, [registro, empleados, distribucionPagos]);
+  }, [registro, empleados, distribucionPagos, catalogos]);
+
+  const opcionesEstadoUi = useMemo(() => etiquetasEstadoIncapacidad(catalogos), [catalogos]);
 
   const manejarCambioEstado = async (nuevoEstado) => {
     const cod = registro ? codigoIncapacidadDesde(registro) : null;
     if (cod == null || !nuevoEstado) return;
-    const estadoActual = estadoIncapacidadEdicionDesdeApi(registro?.estado_incapacidad);
+    const estadoActual = estadoIncapacidadEdicionDesdeApi(registro?.estado_incapacidad, catalogos);
     if (nuevoEstado === estadoActual) return;
-    const apiEstado = estadoIncapacidadApiDesdeEtiquetaEdicion(nuevoEstado);
+    const apiEstado = estadoIncapacidadApiDesdeEtiquetaEdicion(nuevoEstado, catalogos);
     setActualizandoEstado(true);
     try {
       await patchIncapacidad(cod, { estado_incapacidad: apiEstado });
@@ -307,7 +311,7 @@ function DetallesIncapacidad() {
               disabled={actualizandoEstado}
               aria-busy={actualizandoEstado}
             >
-              {ETIQUETAS_ESTADO_EDICION_INCAPACIDAD.map((est) => (
+              {opcionesEstadoUi.map((est) => (
                 <option key={est} value={est}>
                   {est}
                 </option>

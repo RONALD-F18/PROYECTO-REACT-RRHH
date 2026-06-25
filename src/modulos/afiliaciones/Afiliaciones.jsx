@@ -20,7 +20,7 @@ import {
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
-import { etiquetaEstadoAfiliacion, esEstadoAfiliacionActiva, tipoRegimenFormDesdeApi } from '../../utils/afiliacionEstado';
+import { etiquetaEstadoAfiliacion, esEstadoAfiliacionActiva, tipoRegimenFormDesdeApi, claseCssEstadoAfiliacion, opcionesFiltroEstadoAfiliacion } from '../../utils/afiliacionEstado';
 import '../../estilos/modulos/afiliaciones.css';
 
 function mapaPorCod(lista, clave) {
@@ -140,20 +140,25 @@ function Afiliaciones() {
     const base = filasFiltradas;
     return {
       total: base.length,
-      aprobadas: base.filter((r) => esEstadoAfiliacionActiva(r.estado_afiliacion)).length,
-      pendientes: base.filter((r) => etiquetaEstadoAfiliacion(r.estado_afiliacion) === 'Suspendida').length,
-      retiradas: base.filter((r) => etiquetaEstadoAfiliacion(r.estado_afiliacion) === 'Inactiva').length,
+      activas: base.filter((r) => esEstadoAfiliacionActiva(r.estado_afiliacion)).length,
+      suspendidas: base.filter((r) => etiquetaEstadoAfiliacion(r.estado_afiliacion) === 'Suspendida').length,
+      inactivas: base.filter((r) => etiquetaEstadoAfiliacion(r.estado_afiliacion) === 'Inactiva').length,
     };
   }, [filasFiltradas]);
 
   const tarjetasResumen = useMemo(
     () => [
       { etiqueta: 'Total', valor: String(kpis.total), color: 'azul', icono: '' },
-      { etiqueta: 'Aprobadas', valor: String(kpis.aprobadas), color: 'verde', icono: '' },
-      { etiqueta: 'Pendientes', valor: String(kpis.pendientes), color: 'azul', icono: '' },
-      { etiqueta: 'Retiradas', valor: String(kpis.retiradas), color: 'amarillo', icono: '' },
+      { etiqueta: 'Activas', valor: String(kpis.activas), color: 'verde', icono: '' },
+      { etiqueta: 'Suspendidas', valor: String(kpis.suspendidas), color: 'amarillo', icono: '' },
+      { etiqueta: 'Inactivas', valor: String(kpis.inactivas), color: 'azul', icono: '' },
     ],
     [kpis],
+  );
+
+  const opcionesFiltroEstado = useMemo(
+    () => opcionesFiltroEstadoAfiliacion(catalogos),
+    [catalogos],
   );
 
   const opcionesFiltroEps = useMemo(() => {
@@ -281,8 +286,9 @@ function Afiliaciones() {
           filtrosSelect={[
             {
               nombre: 'estado',
-              placeholder: 'Todos los Estados',
-              opciones: ['Aprobada', 'Pendiente', 'Retirada'],
+              etiqueta: 'Estado',
+              placeholder: 'Todos los estados',
+              opciones: opcionesFiltroEstado,
             },
             {
               nombre: 'eps',
@@ -314,7 +320,9 @@ function Afiliaciones() {
                       <p className="tarjeta-afiliacion-documento">Documento: {afiliacion._documento}</p>
                     </div>
                     <div className="tarjeta-afiliacion-estado">
-                      <span className="etiqueta etiqueta-verde">{afiliacion._estadoEtiqueta}</span>
+                      <span className={`etiqueta ${claseCssEstadoAfiliacion(afiliacion.estado_afiliacion)}`}>
+                        {afiliacion._estadoEtiqueta}
+                      </span>
                     </div>
                   </div>
 

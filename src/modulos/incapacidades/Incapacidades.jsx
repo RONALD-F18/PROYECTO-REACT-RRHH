@@ -26,7 +26,8 @@ import { getContratosCatalogo, extraerFilasContratos } from '../../services/cont
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
-import { normalizarEstadoIncapacidadApi } from '../../utils/incapacidadEstado';
+import { normalizarEstadoIncapacidadApi, opcionesFiltroEstadoIncapacidad } from '../../utils/incapacidadEstado';
+import { useCatalogos } from '../../contextos/CatalogosContext';
 function diasEntre(fechaInicio, fechaFin) {
   if (!fechaInicio || !fechaFin) return 0;
   const a = new Date(`${String(fechaInicio).slice(0, 10)}T12:00:00`);
@@ -63,6 +64,7 @@ function formatearCOP(n) {
 
 function Incapacidades() {
   const navegar = useNavigate();
+  const { catalogos } = useCatalogos();
   const [lista, setLista] = useState([]);
   const [empleados, setEmpleados] = useState([]);
   const [contratos, setContratos] = useState([]);
@@ -109,11 +111,11 @@ function Incapacidades() {
         _periodo: formatearPeriodo(fi, ff),
         _dias: dias,
         _entidad: row.entidad_responsable ?? row.entidad_pagadora ?? entidadPagadoraPorTipo(nombreTipo),
-        _estado: normalizarEstadoIncapacidadApi(row.estado_incapacidad),
+        _estado: normalizarEstadoIncapacidadApi(row.estado_incapacidad, catalogos),
         _codigoMostrar: codigoIncapacidadDesde(row) ?? '—',
       };
     });
-  }, [lista, mapaEmpleados]);
+  }, [lista, mapaEmpleados, catalogos]);
 
   const filasFiltradas = useMemo(() => {
     const q = (criteriosFiltro.busqueda || '').trim().toLowerCase();
@@ -123,9 +125,7 @@ function Incapacidades() {
     return filasVista.filter((row) => {
       if (!row || typeof row !== 'object') return false;
       if (tipoF && String(row._tipo) !== tipoF) return false;
-      if (est === 'Activa' && row._estado !== 'Activa') return false;
-      if (est === 'Finalizada' && row._estado !== 'Finalizada') return false;
-      if (est === 'Cancelada' && row._estado !== 'Cancelada') return false;
+      if (est && row._estado !== est) return false;
       if (q) {
         const nom = String(row._empleado || '').toLowerCase();
         const doc = String(row._documento || '').toLowerCase();
@@ -158,6 +158,11 @@ function Incapacidades() {
       costoTotal: ct == null || ct === '' ? '—' : formatearCOP(ct),
     };
   }, [resumenApi]);
+
+  const opcionesFiltroEstado = useMemo(
+    () => opcionesFiltroEstadoIncapacidad(catalogos),
+    [catalogos],
+  );
 
   const opcionesFiltroTipo = useMemo(() => {
     const nCat = tiposCatalogo
@@ -341,7 +346,7 @@ function Incapacidades() {
             {
               nombre: 'estado',
               placeholder: 'Todos los Estados',
-              opciones: ['Activa', 'Finalizada', 'Cancelada'],
+              opciones: opcionesFiltroEstado,
             },
             {
               nombre: 'tipo',

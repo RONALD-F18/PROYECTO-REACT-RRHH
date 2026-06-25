@@ -72,6 +72,21 @@ export function opcionesEstadoAfiliacion(catalogos) {
   return opcionesCatalogo(catalogos, 'estados_afiliacion');
 }
 
+/** Clase CSS de badge según estado canónico del catálogo. */
+export function claseCssEstadoAfiliacion(estadoBd) {
+  const e = etiquetaEstadoAfiliacion(estadoBd);
+  if (e === 'Suspendida') return 'etiqueta-amarilla';
+  if (e === 'Inactiva') return 'etiqueta-inactivo';
+  return 'etiqueta-verde';
+}
+
+export function opcionesFiltroEstadoAfiliacion(catalogos) {
+  return etiquetasEstadoAfiliacion(catalogos).map((est) => ({
+    valor: est,
+    texto: est,
+  }));
+}
+
 export function opcionesTipoRegimen(catalogos) {
   return opcionesCatalogo(catalogos, 'tipos_regimen');
 }

@@ -16,7 +16,7 @@ import {
   buscarEmpleadoPorDocumento,
 } from '../../../services/empleados';
 import {
-  ETIQUETAS_ESTADO_EDICION_INCAPACIDAD,
+  etiquetasEstadoIncapacidad,
   estadoIncapacidadEdicionDesdeApi,
   estadoIncapacidadApiDesdeEtiquetaEdicion,
 } from '../../../utils/incapacidadEstado';
@@ -63,7 +63,7 @@ function combinarDescripcionParaApi(diagnostico, notas) {
   return { ok: true, value: s || undefined };
 }
 
-function incapacidadApiAFormulario(raw, empleados) {
+function incapacidadApiAFormulario(raw, empleados, catalogos = null) {
   const r = normalizarRegistroIncapacidad(raw) ?? raw;
   if (!r || typeof r !== 'object') return estadoFormularioVacio();
   let emp =
@@ -94,11 +94,11 @@ function incapacidadApiAFormulario(raw, empleados) {
     diagnostico: r.descripcion != null ? String(r.descripcion) : '',
     cod_clasificacion_enfermedad: codClas,
     descripcion: '',
-    estadoIncapacidadUi: estadoIncapacidadEdicionDesdeApi(r.estado_incapacidad),
+    estadoIncapacidadUi: estadoIncapacidadEdicionDesdeApi(r.estado_incapacidad, catalogos),
   };
 }
 
-function construirPayloadIncapacidad(formulario, codEmpleado) {
+function construirPayloadIncapacidad(formulario, codEmpleado, catalogos = null) {
   const cod = Number(codEmpleado);
   const tipoN = Number(formulario.tipoIncapacidad);
   const comb = combinarDescripcionParaApi(formulario.diagnostico, formulario.descripcion);
@@ -123,7 +123,7 @@ function construirPayloadIncapacidad(formulario, codEmpleado) {
 
   const estadoUi = String(formulario.estadoIncapacidadUi ?? '').trim();
   if (estadoUi) {
-    payload.estado_incapacidad = estadoIncapacidadApiDesdeEtiquetaEdicion(estadoUi);
+    payload.estado_incapacidad = estadoIncapacidadApiDesdeEtiquetaEdicion(estadoUi, catalogos);
   }
 
   return payload;
@@ -173,13 +173,15 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
     setErrorGeneral('');
     setPasoActual(0);
     if (datosIncapacidad && codigoIncapacidadDesde(datosIncapacidad) != null) {
-      setFormulario(incapacidadApiAFormulario(datosIncapacidad, empleados));
+      setFormulario(incapacidadApiAFormulario(datosIncapacidad, empleados, catalogos));
     } else {
       setFormulario(estadoFormularioVacio());
     }
     setErrores({});
     setCamposTocados({});
-  }, [datosIncapacidad, mostrar, empleados]);
+  }, [datosIncapacidad, mostrar, empleados, catalogos]);
+
+  const opcionesEstadoUi = useMemo(() => etiquetasEstadoIncapacidad(catalogos), [catalogos]);
 
   const opcionesTipo = useMemo(
     () =>
@@ -434,7 +436,7 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
 
     let payload;
     try {
-      payload = construirPayloadIncapacidad(formulario, codEmp);
+      payload = construirPayloadIncapacidad(formulario, codEmp, catalogos);
     } catch (err) {
       void alertaError('Datos inválidos', err instanceof Error ? err.message : String(err));
       return;
@@ -507,8 +509,8 @@ function ModalIncapacidad({ mostrar, cerrar, datosIncapacidad = null, empleados 
                 tipo: 'select',
                 requerido: true,
                 selectSinVacio: true,
-                opciones: ETIQUETAS_ESTADO_EDICION_INCAPACIDAD,
-                hint: 'Solo Activa o Finalizada. Se guarda al actualizar.',
+                opciones: opcionesEstadoUi,
+                hint: 'Activa, Finalizada o Cancelada. Se guarda al actualizar.',
               },
             ]
           : []),

@@ -1,31 +1,28 @@
-/** Valores enviados al API (string, máx. 150 en backend). */
+/** Valores enviados al API (string, máx. 150 en backend). Deben coincidir con config/rrhh.php. */
 
 export const TIPO_CONTRATO_OPCIONES = [
-  { valor: 'Término fijo', etiqueta: 'Término fijo' },
-  { valor: 'Término indefinido', etiqueta: 'Término indefinido' },
+  { valor: 'Termino indefinido', etiqueta: 'Término indefinido' },
+  { valor: 'Termino fijo', etiqueta: 'Término fijo' },
   { valor: 'Obra o labor', etiqueta: 'Obra o labor' },
   { valor: 'Aprendizaje', etiqueta: 'Aprendizaje' },
-  { valor: 'Temporal', etiqueta: 'Temporal' },
+  { valor: 'Prestacion de servicios', etiqueta: 'Prestación de servicios' },
 ];
 
 export const FORMA_DE_PAGO_OPCIONES = [
-  { valor: 'Consignación bancaria', etiqueta: 'Consignación bancaria' },
-  { valor: 'Consignación', etiqueta: 'Consignación' },
-  { valor: 'Efectivo', etiqueta: 'Efectivo' },
-  { valor: 'Cheque', etiqueta: 'Cheque' },
-  { valor: 'Transferencia', etiqueta: 'Transferencia' },
+  { valor: 'Mensual', etiqueta: 'Mensual' },
+  { valor: 'Quincenal', etiqueta: 'Quincenal' },
+  { valor: 'Por hora', etiqueta: 'Por hora' },
 ];
 
 export const MODALIDAD_TRABAJO_OPCIONES = [
   { valor: 'Presencial', etiqueta: 'Presencial' },
-  { valor: 'Híbrido', etiqueta: 'Híbrido' },
   { valor: 'Remoto', etiqueta: 'Remoto' },
+  { valor: 'Hibrido', etiqueta: 'Híbrido' },
 ];
 
 export const HORARIO_TRABAJO_OPCIONES = [
-  { valor: 'Lun - Vie (8:00 - 12:00, 14:00 - 18:00)', etiqueta: 'Lun - Vie (8:00 - 12:00, 14:00 - 18:00)' },
-  { valor: 'Lun - Vie (8:00am - 5:00pm)', etiqueta: 'Lun - Vie (8:00am - 5:00pm)' },
-  { valor: 'Lun - Sáb (rotativo)', etiqueta: 'Lun - Sáb (rotativo)' },
+  { valor: 'Tiempo completo', etiqueta: 'Tiempo completo' },
+  { valor: 'Medio tiempo', etiqueta: 'Medio tiempo' },
   { valor: 'Por turnos', etiqueta: 'Por turnos' },
 ];
 

@@ -197,11 +197,11 @@ function ComunicacionesDisciplinarias() {
         _docEmpleado: emp?.doc_iden != null ? String(emp.doc_iden) : '—',
         _iniciales: inicialesNombre(nombreEmp),
         _nombreEmisor: nombreUsu,
-        _tipoCanon: canonicalTipoApi(row.tipo_comunicacion),
-        _estadoCanon: canonicalEstadoApi(row.estado_comunicacion),
+        _tipoCanon: canonicalTipoApi(row.tipo_comunicacion, catalogos),
+        _estadoCanon: canonicalEstadoApi(row.estado_comunicacion, catalogos),
       };
     });
-  }, [lista, mapaEmpleados, mapaUsuarios]);
+  }, [lista, mapaEmpleados, mapaUsuarios, catalogos]);
 
   const filasFiltradas = useMemo(() => {
     const q = (criteriosFiltro.busqueda || '').trim().toLowerCase();

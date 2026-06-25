@@ -481,7 +481,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
                 requerido: true,
                 selectSinVacio: true,
                 opciones: opcionesEstadoAfiliacion,
-                hint: 'Aprobada, pendiente o retirada. Se guarda al actualizar la afiliación.',
+                hint: 'Activa, Inactiva o Suspendida (valores del catálogo RRHH).',
               },
             ]
           : []),

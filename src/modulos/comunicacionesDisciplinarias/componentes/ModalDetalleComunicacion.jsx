@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useCatalogos } from '../../../contextos/CatalogosContext';
 import Modal from '../../../componentes/comunes/Modal';
 import { alertaErrorApi, confirmarEliminacion } from '../../../utils/alertasSwal';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
@@ -14,8 +15,9 @@ import {
   etiquetaTipo,
   etiquetaEstado,
   radicadoDesdeCod,
-  canonicalEstadoApi,
-  ESTADOS_COMUNICACION,
+  normalizarEstadoComunicacion,
+  listaEstadosComunicacion,
+  ESTADO_INICIAL_AL_CREAR,
 } from '../disciplinariasConstants';
 
 function formatearFechaMostrar(iso) {
@@ -47,6 +49,7 @@ function docEmpleadoDesdeRegistro(r) {
 }
 
 function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizado, onEditar, onEliminado }) {
+  const { catalogos } = useCatalogos();
   const cod = vistaFallback ? codigoDisciplinarioDesde(vistaFallback) : null;
   const [detalle, setDetalle] = useState(null);
   const [cargando, setCargando] = useState(false);
@@ -90,15 +93,21 @@ function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizad
 
   const r = detalle;
 
+  const estadosPaso = useMemo(
+    () => listaEstadosComunicacion(catalogos).map((etiqueta) => ({ api: etiqueta, etiqueta })),
+    [catalogos],
+  );
+
   const radicado = r ? radicadoDesdeCod(codigoDisciplinarioDesde(r)) : '';
-  const tipoTxt = r ? etiquetaTipo(r.tipo_comunicacion) : '';
-  const estadoApi = r ? canonicalEstadoApi(r.estado_comunicacion) : 'EMITIDO';
-  const idxEstadoPaso =
-    estadoApi === 'NOTIFICADO' ? 1 : estadoApi === 'EMITIDO' ? 0 : -1;
+  const tipoTxt = r ? etiquetaTipo(r.tipo_comunicacion, catalogos) : '';
+  const estadoActual = r
+    ? normalizarEstadoComunicacion(r.estado_comunicacion, catalogos)
+    : ESTADO_INICIAL_AL_CREAR;
+  const idxEstadoPaso = estadosPaso.findIndex((s) => s.api === estadoActual);
 
   const manejarCambiarEstado = async (nuevoApi) => {
     if (!r || cod == null) return;
-    if (nuevoApi === estadoApi) return;
+    if (nuevoApi === estadoActual) return;
     setActualizandoEstado(true);
     try {
       await patchComunicacionDisciplinaria(cod, { estado_comunicacion: nuevoApi });
@@ -139,7 +148,7 @@ function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizad
         {r ? (
           <>
             <div className="disc-stepper disc-stepper--dos" role="tablist" aria-label="Estado del documento">
-              {ESTADOS_COMUNICACION.map((s, idxPaso) => {
+              {estadosPaso.map((s, idxPaso) => {
                 const completado = idxEstadoPaso > idxPaso;
                 const activo =
                   idxEstadoPaso === idxPaso || (idxEstadoPaso === -1 && idxPaso === 0);
@@ -157,7 +166,7 @@ function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizad
               })}
             </div>
             <p className="disc-stepper-hint">
-              Marca como notificado cuando el empleado haya recibido el documento.
+              Cambie el estado según el avance: Emitida → En seguimiento → Cerrada.
             </p>
 
             <div className="disc-paper">

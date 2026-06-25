@@ -13,9 +13,9 @@ import {
   tipoRegimenFormDesdeApi,
   etiquetaEstadoAfiliacion,
   estadoAfiliacionDesdeEtiquetaUi,
-  etiquetasEstadoAfiliacion,
   etiquetasTipoRegimen,
   opcionesTipoRegimen,
+  opcionesEstadoAfiliacion as opcionesEstadoAfiliacionCatalogo,
 } from '../../../utils/afiliacionEstado';
 import {
   EDAD_MINIMA_LABORAL_COLOMBIA,
@@ -79,7 +79,7 @@ function estadoVacio(codigoAuto) {
   };
 }
 
-function afiliacionApiAFormulario(raw, empleados) {
+function afiliacionApiAFormulario(raw, empleados, catalogos = null) {
   const r = normalizarRegistroAfiliacion(raw) ?? raw;
   if (!r || typeof r !== 'object') return estadoVacio('');
   let emp =
@@ -93,7 +93,7 @@ function afiliacionApiAFormulario(raw, empleados) {
     nombre: emp ? nombreCompletoEmpleado(emp) : '',
     codigoAfiliacion: r.cod_afiliacion != null ? `AF-${r.cod_afiliacion}` : '',
     eps: r.cod_eps != null ? String(r.cod_eps) : '',
-    tipoAfiliacion: tipoRegimenFormDesdeApi(r.tipo_regimen),
+    tipoAfiliacion: tipoRegimenFormDesdeApi(r.tipo_regimen, catalogos),
     fechaAfiliacionEPS: r.fecha_afiliacion_eps ? String(r.fecha_afiliacion_eps).slice(0, 10) : '',
     fondoPensiones: r.cod_fondo_pensiones != null ? String(r.cod_fondo_pensiones) : '',
     fechaAfiliacionPensiones: r.fecha_afiliacion_fondo_pensiones
@@ -206,14 +206,15 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
     setPasoActual(0);
     if (datosAfiliacion && codigoAfiliacionDesde(datosAfiliacion) != null) {
       const r = normalizarRegistroAfiliacion(datosAfiliacion) ?? datosAfiliacion;
-      setFormulario(afiliacionApiAFormulario(r, empleados));
+      setFormulario(afiliacionApiAFormulario(r, empleados, catalogos));
     } else {
       const codigoAuto = `AF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`;
-      setFormulario(estadoVacio(codigoAuto));
+      const tipoPorDefecto = etiquetasTipoRegimen(catalogos)[0] ?? 'Contributivo';
+      setFormulario({ ...estadoVacio(codigoAuto), tipoAfiliacion: tipoPorDefecto });
     }
     setErrores({});
     setCamposTocados({});
-  }, [datosAfiliacion, mostrar, empleados]);
+  }, [datosAfiliacion, mostrar, empleados, catalogos]);
 
   const opcionesTipoAfiliacion = useMemo(
     () => opcionesTipoRegimen(catalogos),
@@ -221,7 +222,7 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
   );
 
   const opcionesEstadoAfiliacion = useMemo(
-    () => etiquetasEstadoAfiliacion(catalogos),
+    () => opcionesEstadoAfiliacionCatalogo(catalogos),
     [catalogos],
   );
 
@@ -498,7 +499,9 @@ function ModalAfiliacion({ mostrar, cerrar, datosAfiliacion = null, empleados = 
           etiqueta: 'Tipo de Afiliación',
           tipo: 'select',
           requerido: true,
+          selectSinVacio: opcionesTipoAfiliacion.length <= 1,
           opciones: opcionesTipoAfiliacion,
+          hint: 'Solo régimen contributivo (catálogo RRHH).',
         },
         {
           nombre: 'fechaAfiliacionEPS',

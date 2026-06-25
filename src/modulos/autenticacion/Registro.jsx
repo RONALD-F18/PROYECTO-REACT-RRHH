@@ -182,7 +182,7 @@ function Registro() {
                 <option value="">Seleccionar...</option>
                 {tiposDocumento.map((tipo) => (
                   <option key={tipo.valor} value={tipo.valor}>
-                    {tipo.texto}
+                    {tipo.texto ?? tipo.etiqueta ?? tipo.valor}
                   </option>
                 ))}
               </select>

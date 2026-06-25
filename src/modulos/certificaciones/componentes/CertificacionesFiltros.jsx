@@ -85,7 +85,7 @@ function CertificacionesFiltros({ onAplicar }) {
             <option value="">Todos los tipos</option>
             {OPCIONES_TIPO.map((o) => (
               <option key={o.valor} value={o.valor}>
-                {o.texto}
+                {o.texto ?? o.etiqueta ?? o.valor}
               </option>
             ))}
           </select>

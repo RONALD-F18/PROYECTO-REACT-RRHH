@@ -88,5 +88,9 @@ export function opcionesFiltroEstadoAfiliacion(catalogos) {
 }
 
 export function opcionesTipoRegimen(catalogos) {
-  return opcionesCatalogo(catalogos, 'tipos_regimen');
+  return etiquetasTipoRegimen(catalogos).map((t) => ({
+    valor: t,
+    texto: t,
+    etiqueta: t,
+  }));
 }

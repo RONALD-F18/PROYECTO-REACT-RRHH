@@ -27,7 +27,7 @@ function CampoFormulario({
             <option value="">Seleccione...</option>
             {opciones.map((opcion, indice) => (
               <option key={indice} value={opcion.valor || opcion}>
-                {opcion.texto || opcion}
+                {opcion.texto ?? opcion.etiqueta ?? opcion.valor ?? opcion}
               </option>
             ))}
           </select>

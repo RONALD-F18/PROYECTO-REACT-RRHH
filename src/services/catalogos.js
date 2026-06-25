@@ -18,14 +18,14 @@ export function invalidarCacheCatalogos() {
   invalidarEjecutorCompartido(ejecutarGetCatalogos);
 }
 
-/** Convierte array de strings del API en opciones { valor, etiqueta }. */
+/** Convierte array de strings del API en opciones { valor, etiqueta, texto }. */
 export function opcionesDesdeListaStrings(lista) {
   if (!Array.isArray(lista)) return [];
   return lista
     .filter((v) => v != null && String(v).trim() !== '')
     .map((v) => {
       const s = String(v).trim();
-      return { valor: s, etiqueta: s };
+      return { valor: s, etiqueta: s, texto: s };
     });
 }
 
@@ -70,7 +70,7 @@ export function etiquetaTipoDocumentoCatalogo(codigo) {
 export function opcionesTiposDocumento(catalogos) {
   return listaCatalogo(catalogos, 'tipos_documento').map((v) => {
     const s = String(v).trim();
-    return { valor: s, etiqueta: etiquetaTipoDocumentoCatalogo(s) };
+    return { valor: s, etiqueta: etiquetaTipoDocumentoCatalogo(s), texto: etiquetaTipoDocumentoCatalogo(s) };
   });
 }
 
@@ -101,14 +101,14 @@ export function opcionesSexosEmpleado(catalogos) {
     const canon = normalizarSexoEmpleadoCanonico(raw);
     if (canon && !vistos.has(canon)) {
       vistos.add(canon);
-      opciones.push({ valor: canon, etiqueta: canon });
+      opciones.push({ valor: canon, etiqueta: canon, texto: canon });
     }
   }
 
   for (const canon of SEXOS_EMPLEADO_ORDEN) {
     if (!vistos.has(canon)) {
       vistos.add(canon);
-      opciones.push({ valor: canon, etiqueta: canon });
+      opciones.push({ valor: canon, etiqueta: canon, texto: canon });
     }
   }
 
@@ -131,10 +131,14 @@ export function opcionesRelacional(catalogos, clave, codCampo, labelCampo) {
   if (!Array.isArray(arr)) return [];
   return arr
     .filter((row) => row && row[codCampo] != null && row[codCampo] !== '')
-    .map((row) => ({
-      valor: String(row[codCampo]),
-      etiqueta: String(row[labelCampo] ?? row[codCampo]).trim(),
-    }));
+    .map((row) => {
+      const etiqueta = String(row[labelCampo] ?? row[codCampo]).trim();
+      return {
+        valor: String(row[codCampo]),
+        etiqueta,
+        texto: etiqueta,
+      };
+    });
 }
 
 export function listaCatalogo(catalogos, clave) {

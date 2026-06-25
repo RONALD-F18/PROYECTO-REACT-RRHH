@@ -85,11 +85,18 @@ function FiltrosBusqueda({
               title={filtro.placeholder || undefined}
             >
               <option value="">{filtro.placeholder || 'Todos'}</option>
-              {(filtro.opciones ?? []).map((opcion, idx) => (
-                <option key={idx} value={typeof opcion === 'string' ? opcion : opcion.valor}>
-                  {typeof opcion === 'string' ? opcion : opcion.texto}
-                </option>
-              ))}
+              {(filtro.opciones ?? []).map((opcion, idx) => {
+                const esString = typeof opcion === 'string';
+                const valorOpcion = esString ? opcion : opcion.valor;
+                const textoOpcion = esString
+                  ? opcion
+                  : (opcion.texto ?? opcion.etiqueta ?? opcion.valor ?? '');
+                return (
+                  <option key={idx} value={valorOpcion}>
+                    {textoOpcion}
+                  </option>
+                );
+              })}
             </select>
           </div>
         ))}

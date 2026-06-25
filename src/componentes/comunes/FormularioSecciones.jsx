@@ -56,11 +56,18 @@ function FormularioSecciones({
             {!campo.selectSinVacio ? (
               <option value="">{campo.placeholder || 'Seleccione...'}</option>
             ) : null}
-            {campo.opciones?.map((opcion, idx) => (
-              <option key={idx} value={typeof opcion === 'string' ? opcion : opcion.valor}>
-                {typeof opcion === 'string' ? opcion : opcion.texto}
-              </option>
-            ))}
+            {campo.opciones?.map((opcion, idx) => {
+              const esString = typeof opcion === 'string';
+              const valorOpcion = esString ? opcion : opcion.valor;
+              const textoOpcion = esString
+                ? opcion
+                : (opcion.texto ?? opcion.etiqueta ?? opcion.valor ?? '');
+              return (
+                <option key={idx} value={valorOpcion}>
+                  {textoOpcion}
+                </option>
+              );
+            })}
           </select>
           {campo.hint && <span className="campo-seccion-hint">{campo.hint}</span>}
           {mensaje}

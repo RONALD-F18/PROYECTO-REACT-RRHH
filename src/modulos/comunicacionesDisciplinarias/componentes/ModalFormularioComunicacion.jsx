@@ -9,21 +9,20 @@ import {
   normalizarRegistroComunicacion,
   codigoDisciplinarioDesde,
 } from '../../../services/comunicacionesDisciplinarias';
-import {
-  buscarEmpleadoPorDocumento,
-  codigoEmpleadoDesde,
-  nombreCompletoEmpleado,
-} from '../../../services/empleados';
+import { codigoEmpleadoDesde, nombreCompletoEmpleado } from '../../../services/empleados';
+import { usuarioSesionLocal } from '../../../services/autenticacion';
 import {
   TIPOS_COMUNICACION,
+  ESTADOS_FORMULARIO,
   canonicalTipoApi,
   canonicalEstadoApi,
+  esMemorandoConSuspension,
   ESTADO_INICIAL_AL_CREAR,
   MAX_MOTIVO_CHARS,
   MAX_DESCRIPCION_CHARS,
+  claseTemaModalFormulario,
 } from '../disciplinariasConstants';
 
-/** Iconos tipo l├¡nea / mockup (SVG, no emoji). */
 function IconoTipoDoc({ icono, activo }) {
   const stroke = (w) => ({ fill: 'none', strokeWidth: w, strokeLinecap: 'round', strokeLinejoin: 'round' });
   if (icono === 'memo') {
@@ -54,14 +53,6 @@ function IconoTipoDoc({ icono, activo }) {
       </svg>
     );
   }
-  if (icono === 'stop') {
-    return (
-      <svg className="disc-tipo-card-svg disc-tipo-card-svg--susp" viewBox="0 0 24 24" width="32" height="32" aria-hidden>
-        <circle cx="12" cy="12" r="9" {...stroke(1.35)} stroke="currentColor" />
-        <line x1="7" y1="7" x2="17" y2="17" stroke="currentColor" {...stroke(1.35)} />
-      </svg>
-    );
-  }
   if (icono === 'star') {
     return (
       <svg
@@ -84,7 +75,6 @@ function IconoTipoDoc({ icono, activo }) {
   return null;
 }
 
-/** D├¡as calendario inclusivos entre dos fechas YYYY-MM-DD. */
 function diasSuspensionEntreFechas(isoIni, isoFin) {
   if (!isoIni || !isoFin) return 0;
   const p = (s) => {
@@ -97,19 +87,34 @@ function diasSuspensionEntreFechas(isoIni, isoFin) {
   return Math.floor((t1 - t0) / 86400000) + 1;
 }
 
+function etiquetaUsuario(u) {
+  if (!u || typeof u !== 'object') return '';
+  return String(u.nombre_usuario ?? u.nombre ?? '').trim();
+}
+
+function codigoUsuarioDesde(u) {
+  if (!u || typeof u !== 'object') return null;
+  const c = u.cod_usuario ?? u.id;
+  if (c == null || c === '') return null;
+  return String(c);
+}
+
 function ModalFormularioComunicacion({
   mostrar,
   cerrar,
   registroEditar,
   empleados = [],
+  usuarios = [],
   alExito,
 }) {
   const esEdicion = registroEditar != null && codigoDisciplinarioDesde(registroEditar) != null;
   const codEdicion = esEdicion ? codigoDisciplinarioDesde(registroEditar) : null;
+  const sesion = usuarioSesionLocal();
 
   const [tipoComunicacion, setTipoComunicacion] = useState('MEMORANDO');
   const [codEmpleado, setCodEmpleado] = useState('');
-  const [docEmpleadoInput, setDocEmpleadoInput] = useState('');
+  const [codEmisor, setCodEmisor] = useState('');
+  const [estadoForm, setEstadoForm] = useState('BORRADOR');
   const [fechaEmision, setFechaEmision] = useState('');
   const [motivo, setMotivo] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -118,13 +123,45 @@ function ModalFormularioComunicacion({
   const [enviando, setEnviando] = useState(false);
   const [errorGeneral, setErrorGeneral] = useState('');
 
+  const opcionesEmpleados = useMemo(() => {
+    return empleados
+      .map((e) => {
+        const cod = codigoEmpleadoDesde(e);
+        if (cod == null) return null;
+        return { valor: String(cod), etiqueta: nombreCompletoEmpleado(e) };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, 'es'));
+  }, [empleados]);
+
+  const opcionesEmisores = useMemo(() => {
+    const lista = usuarios.length
+      ? usuarios
+      : sesion?.user
+        ? [sesion.user]
+        : [];
+    return lista
+      .map((u) => {
+        const cod = codigoUsuarioDesde(u);
+        const etq = etiquetaUsuario(u);
+        if (!cod || !etq) return null;
+        return { valor: cod, etiqueta: etq };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, 'es'));
+  }, [usuarios, sesion]);
+
   useEffect(() => {
     if (!mostrar) return;
     setErrorGeneral('');
+    const codSesion = sesion?.cod != null ? String(sesion.cod) : '';
     if (esEdicion) {
       const r = normalizarRegistroComunicacion(registroEditar) ?? registroEditar;
       setTipoComunicacion(canonicalTipoApi(r.tipo_comunicacion));
       setCodEmpleado(r.cod_empleado != null ? String(r.cod_empleado) : '');
+      setCodEmisor(r.cod_usuario != null ? String(r.cod_usuario) : codSesion);
+      const est = canonicalEstadoApi(r.estado_comunicacion);
+      setEstadoForm(est === 'NOTIFICADO' ? 'NOTIFICADO' : est === 'EMITIDO' ? 'EMITIDO' : 'BORRADOR');
       setFechaEmision(r.fecha_emision ? String(r.fecha_emision).slice(0, 10) : '');
       setMotivo(r.motivo_comunicacion != null ? String(r.motivo_comunicacion) : '');
       setDescripcion(r.descripcion != null ? String(r.descripcion) : '');
@@ -134,64 +171,57 @@ function ModalFormularioComunicacion({
       const hoy = new Date().toISOString().slice(0, 10);
       setTipoComunicacion('MEMORANDO');
       setCodEmpleado('');
-      setDocEmpleadoInput('');
+      setCodEmisor(codSesion);
+      setEstadoForm('BORRADOR');
       setFechaEmision(hoy);
       setMotivo('');
       setDescripcion('');
       setFechaIniSusp('');
       setFechaFinSusp('');
     }
-  }, [mostrar, registroEditar, esEdicion]);
+  }, [mostrar, registroEditar, esEdicion, sesion?.cod]);
 
-  useEffect(() => {
-    if (!mostrar || !esEdicion || !codEmpleado) return;
-    const emp = empleados.find((e) => String(codigoEmpleadoDesde(e)) === String(codEmpleado));
-    if (emp?.doc_iden != null) setDocEmpleadoInput(String(emp.doc_iden).trim());
-  }, [mostrar, esEdicion, codEmpleado, empleados]);
-
-  const esSuspension = canonicalTipoApi(tipoComunicacion) === 'SUSPENSION';
+  const esMemorando = esMemorandoConSuspension(tipoComunicacion);
   const esFelicitacion = canonicalTipoApi(tipoComunicacion) === 'FELICITACION';
+  const temaModal = claseTemaModalFormulario(tipoComunicacion);
 
   const diasSuspensionCalc = useMemo(
     () => diasSuspensionEntreFechas(fechaIniSusp, fechaFinSusp),
     [fechaIniSusp, fechaFinSusp],
   );
 
-  const empleadoResuelto = useMemo(() => {
-    if (!codEmpleado) return null;
-    return empleados.find((e) => String(codigoEmpleadoDesde(e)) === String(codEmpleado)) ?? null;
-  }, [codEmpleado, empleados]);
-
-  const nombreEmpleadoMostrado = empleadoResuelto ? nombreCompletoEmpleado(empleadoResuelto) : '';
+  const estadoApiDesdeForm = (est) => {
+    const c = canonicalEstadoApi(est);
+    if (c === 'BORRADOR') return ESTADO_INICIAL_AL_CREAR;
+    return c;
+  };
 
   const construirPayload = () => {
     const tipo = canonicalTipoApi(tipoComunicacion);
-    const reg = esEdicion ? (normalizarRegistroComunicacion(registroEditar) ?? registroEditar) : null;
-    let estado = esEdicion ? canonicalEstadoApi(reg?.estado_comunicacion) : ESTADO_INICIAL_AL_CREAR;
-    if (esEdicion && estado === 'BORRADOR') estado = ESTADO_INICIAL_AL_CREAR;
     const motivoCorto = motivo.trim().slice(0, MAX_MOTIVO_CHARS);
     const desc = descripcion.trim().slice(0, MAX_DESCRIPCION_CHARS);
     const codEmp = Number(codEmpleado);
     const payload = {
       tipo_comunicacion: tipo,
       fecha_emision: fechaEmision,
-      fecha_inicio_suspension: esSuspension && fechaIniSusp ? fechaIniSusp : null,
-      fecha_fin_suspension: esSuspension && fechaFinSusp ? fechaFinSusp : null,
-      estado_comunicacion: estado,
+      fecha_inicio_suspension: esMemorando && fechaIniSusp ? fechaIniSusp : null,
+      fecha_fin_suspension: esMemorando && fechaFinSusp ? fechaFinSusp : null,
+      estado_comunicacion: estadoApiDesdeForm(estadoForm),
       motivo_comunicacion: motivoCorto,
       descripcion: desc || null,
-      dias_suspension: esSuspension ? diasSuspensionCalc : null,
+      dias_suspension: esMemorando ? diasSuspensionCalc : null,
       cod_empleado: codEmp,
     };
     return payload;
   };
 
   const validar = () => {
-    if (!codEmpleado) return 'Indique un n├║mero de documento que corresponda a un empleado registrado.';
-    if (!fechaEmision) return 'Indique la fecha de emisi├│n.';
+    if (!codEmpleado) return 'Seleccione el empleado.';
+    if (!codEmisor) return 'Seleccione quién emite el documento.';
+    if (!fechaEmision) return 'Indique la fecha de emisión.';
     if (!motivo.trim()) return 'El motivo es obligatorio.';
-    if (esSuspension) {
-      if (!fechaIniSusp || !fechaFinSusp) return 'Indique fecha de inicio y fin de la suspensi├│n.';
+    if (esMemorando) {
+      if (!fechaIniSusp || !fechaFinSusp) return 'Indique fecha de inicio y fin de la suspensión.';
       if (diasSuspensionCalc <= 0) return 'La fecha de fin debe ser igual o posterior a la de inicio.';
     }
     return null;
@@ -228,7 +258,7 @@ function ModalFormularioComunicacion({
       mostrar={mostrar}
       cerrar={cerrar}
       titulo={esEdicion ? 'Editar documento disciplinario' : 'Nuevo documento disciplinario'}
-      classNameContenedor="modal-contenido--disciplinario-form"
+      classNameContenedor={`modal-contenido--disciplinario-form ${temaModal}`}
       confirmarAlCerrar
     >
       <div className="disc-modal-subtitulo disc-modal-subtitulo--marca">
@@ -246,7 +276,7 @@ function ModalFormularioComunicacion({
           <div className="disc-seccion-num">1</div>
           <div className="disc-seccion-body">
             <h3 className="disc-seccion-titulo">Tipo de documento</h3>
-            <div className="disc-tipo-grid">
+            <div className="disc-tipo-grid disc-tipo-grid--tres">
               {TIPOS_COMUNICACION.map((t) => {
                 const activo = tipoComunicacion === t.api;
                 return (
@@ -272,43 +302,61 @@ function ModalFormularioComunicacion({
           <div className="disc-seccion-body">
             <h3 className="disc-seccion-titulo">Personas involucradas</h3>
             <div className="disc-grid-2 disc-grid-personas">
-              <label className="disc-field disc-field--full">
-                <span className="disc-field-label">Documento del empleado *</span>
-                <input
-                  type="text"
-                  value={docEmpleadoInput}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setDocEmpleadoInput(v);
-                    const emp = buscarEmpleadoPorDocumento(empleados, v);
-                    const c = emp ? codigoEmpleadoDesde(emp) : null;
-                    setCodEmpleado(c != null ? String(c) : '');
-                  }}
-                  className="disc-input"
+              <label className="disc-field">
+                <span className="disc-field-label">Empleado *</span>
+                <select
+                  value={codEmpleado}
+                  onChange={(e) => setCodEmpleado(e.target.value)}
+                  className="disc-select"
                   disabled={esEdicion}
-                  placeholder="N├║mero de documento"
-                  autoComplete="off"
-                />
+                  required
+                >
+                  <option value="">Seleccionar…</option>
+                  {opcionesEmpleados.map((o) => (
+                    <option key={o.valor} value={o.valor}>
+                      {o.etiqueta}
+                    </option>
+                  ))}
+                </select>
               </label>
-              {nombreEmpleadoMostrado ? (
-                <div className="disc-field disc-field--full">
-                  <span className="disc-field-label">Nombre del empleado</span>
-                  <p className="disc-field-readonly disc-doc-nombre-resuelto">{nombreEmpleadoMostrado}</p>
-                </div>
-              ) : null}
-              {!esEdicion && docEmpleadoInput.trim() && !codEmpleado ? (
-                <p className="disc-doc-aviso disc-doc-aviso--alerta disc-field--full">
-                  No hay empleado registrado con ese documento.
-                </p>
-              ) : null}
-              <label className="disc-field disc-field--full disc-field-fecha-emision">
-                <span className="disc-field-label">Fecha emisi├│n</span>
+              <label className="disc-field">
+                <span className="disc-field-label">Emitido por *</span>
+                <select
+                  value={codEmisor}
+                  onChange={(e) => setCodEmisor(e.target.value)}
+                  className="disc-select"
+                  required
+                >
+                  <option value="">Seleccionar…</option>
+                  {opcionesEmisores.map((o) => (
+                    <option key={o.valor} value={o.valor}>
+                      {o.etiqueta}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="disc-field">
+                <span className="disc-field-label">Fecha emisión</span>
                 <input
                   type="date"
                   value={fechaEmision}
                   onChange={(e) => setFechaEmision(e.target.value)}
                   className="disc-input"
                 />
+              </label>
+              <label className="disc-field">
+                <span className="disc-field-label">Estado</span>
+                <select
+                  value={estadoForm}
+                  onChange={(e) => setEstadoForm(e.target.value)}
+                  className="disc-select"
+                >
+                  {ESTADOS_FORMULARIO.map((s) => (
+                    <option key={s.api} value={s.api}>
+                      {s.etiqueta}
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
           </div>
@@ -322,20 +370,19 @@ function ModalFormularioComunicacion({
             </h3>
             {esFelicitacion ? (
               <div className="disc-banner disc-banner--feli">
-                <p>Completa el motivo del reconocimiento y una descripci├│n del logro.</p>
+                <p>Completa el motivo del reconocimiento y una descripción del logro.</p>
               </div>
             ) : null}
             <label className="disc-field disc-field--full">
               <span className="disc-field-label">
-                {esFelicitacion ? 'Motivo del reconocimiento *' : 'Motivo *'}{' '}
-                <small className="disc-hint">(m├íx. {MAX_MOTIVO_CHARS} caracteres en API)</small>
+                {esFelicitacion ? 'Motivo del reconocimiento *' : 'Motivo *'}
               </span>
               <input
                 type="text"
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value.slice(0, MAX_MOTIVO_CHARS))}
                 maxLength={MAX_MOTIVO_CHARS}
-                placeholder={esFelicitacion ? 'Ej: Excelente desempe├▒o' : 'Raz├│n resumidaÔÇª'}
+                placeholder={esFelicitacion ? 'Ej: Excelente desempeño en proyecto…' : 'Razón resumida…'}
                 className="disc-input"
               />
               <span className="disc-counter">
@@ -344,7 +391,7 @@ function ModalFormularioComunicacion({
             </label>
             <label className="disc-field disc-field--full">
               <span className="disc-field-label">
-                {esFelicitacion ? 'Descripci├│n del logro' : 'Descripci├│n detallada'}
+                {esFelicitacion ? 'Descripción del logro' : 'Descripción detallada'}
               </span>
               <textarea
                 value={descripcion}
@@ -353,18 +400,33 @@ function ModalFormularioComunicacion({
                 maxLength={MAX_DESCRIPCION_CHARS}
                 placeholder={
                   esFelicitacion
-                    ? 'Detalla el logro o comportamiento a reconocerÔÇª'
-                    : 'Describe el caso con detalleÔÇª'
+                    ? 'Detalla el logro o comportamiento a reconocer…'
+                    : 'Describe el caso con detalle…'
                 }
                 className="disc-textarea"
               />
-              <span className="disc-counter disc-counter--textarea">{descripcion.length}/{MAX_DESCRIPCION_CHARS}</span>
+              <span className="disc-counter disc-counter--textarea">
+                {descripcion.length}/{MAX_DESCRIPCION_CHARS}
+              </span>
             </label>
-            {esSuspension ? (
+          </div>
+        </section>
+
+        {esMemorando ? (
+          <section className="disc-seccion disc-seccion--susp">
+            <div className="disc-seccion-num">4</div>
+            <div className="disc-seccion-body">
+              <h3 className="disc-seccion-titulo">Días de suspensión</h3>
               <div className="disc-suspension-box">
-                <div className="disc-grid-2">
+                <div className="disc-dias-wrap disc-dias-wrap--destacado">
+                  <span className="disc-dias-grande" aria-live="polite">
+                    {diasSuspensionCalc}
+                  </span>
+                  <span className="disc-dias-sufijo">días sin goce de salario</span>
+                </div>
+                <div className="disc-grid-2 disc-grid-susp-fechas">
                   <label className="disc-field">
-                    <span className="disc-field-label">Inicio suspensi├│n *</span>
+                    <span className="disc-field-label">Inicio suspensión *</span>
                     <input
                       type="date"
                       value={fechaIniSusp}
@@ -373,7 +435,7 @@ function ModalFormularioComunicacion({
                     />
                   </label>
                   <label className="disc-field">
-                    <span className="disc-field-label">Fin suspensi├│n *</span>
+                    <span className="disc-field-label">Fin suspensión *</span>
                     <input
                       type="date"
                       value={fechaFinSusp}
@@ -382,25 +444,15 @@ function ModalFormularioComunicacion({
                     />
                   </label>
                 </div>
-                <div className="disc-field disc-field--full">
-                  <span className="disc-field-label">D├¡as de suspensi├│n</span>
-                  <p className="disc-field-readonly disc-dias-susp-calc">
-                    {fechaIniSusp && fechaFinSusp && diasSuspensionCalc > 0
-                      ? `${diasSuspensionCalc} d├¡a${diasSuspensionCalc !== 1 ? 's' : ''} sin goce de salario (calculado con las fechas)`
-                      : fechaIniSusp && fechaFinSusp
-                        ? 'Ajuste las fechas: la fin debe ser igual o posterior al inicio.'
-                        : 'Complete inicio y fin para calcular los d├¡as autom├íticamente.'}
-                  </p>
-                </div>
               </div>
-            ) : null}
-          </div>
-        </section>
+            </div>
+          </section>
+        ) : null}
 
         <div className="modal-acciones disc-form-acciones">
           <BotonCancelarModal className="btn-cancelar" disabled={enviando} />
           <button type="submit" className="btn-guardar disc-btn-crear" disabled={enviando}>
-            {enviando ? 'GuardandoÔÇª' : esEdicion ? 'Actualizar documento' : 'Crear documento'}
+            {enviando ? 'Guardando…' : esEdicion ? 'Actualizar documento' : 'Crear documento'}
           </button>
         </div>
       </form>

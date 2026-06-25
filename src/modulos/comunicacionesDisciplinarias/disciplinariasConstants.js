@@ -1,12 +1,19 @@
-/** Valores enviados al API (string ≤50). Sin llamado verbal. */
+/** Valores enviados al API (string ≤50). Memorando incluye suspensión (días/fechas). */
 export const TIPOS_COMUNICACION = [
+  { api: 'LLAMADO_VERBAL', etiqueta: 'Llamado verbal', icono: 'chat' },
   { api: 'MEMORANDO', etiqueta: 'Memorando', icono: 'memo' },
-  { api: 'SUSPENSION', etiqueta: 'Suspensión', icono: 'stop' },
   { api: 'FELICITACION', etiqueta: 'Felicitación', icono: 'star' },
 ];
 
 /** Estados en UI y detalle (emitido → notificado). */
 export const ESTADOS_COMUNICACION = [
+  { api: 'EMITIDO', etiqueta: 'Emitido' },
+  { api: 'NOTIFICADO', etiqueta: 'Notificado' },
+];
+
+/** Opciones de estado en el formulario (borrador se guarda como emitido en API). */
+export const ESTADOS_FORMULARIO = [
+  { api: 'BORRADOR', etiqueta: 'Borrador' },
   { api: 'EMITIDO', etiqueta: 'Emitido' },
   { api: 'NOTIFICADO', etiqueta: 'Notificado' },
 ];
@@ -20,9 +27,10 @@ export const MAX_DESCRIPCION_CHARS = 500;
 export function canonicalTipoApi(valor) {
   const s = String(valor || '').toUpperCase().replace(/\s+/g, '_');
   if (s.includes('MEMORAND')) return 'MEMORANDO';
-  if (s.includes('SUSPENS')) return 'SUSPENSION';
+  if (s.includes('LLAMADO')) return 'LLAMADO_VERBAL';
+  if (s.includes('SUSPENS')) return 'MEMORANDO';
   if (s.includes('FELICIT')) return 'FELICITACION';
-  const ok = ['MEMORANDO', 'SUSPENSION', 'FELICITACION'];
+  const ok = ['LLAMADO_VERBAL', 'MEMORANDO', 'FELICITACION'];
   if (ok.includes(s)) return s;
   return s.slice(0, 50) || 'MEMORANDO';
 }
@@ -44,12 +52,17 @@ export function etiquetaTipo(valor) {
 
 export function etiquetaEstado(valor) {
   const c = canonicalEstadoApi(valor);
-  if (c === 'BORRADOR') return 'Emitido';
+  if (c === 'BORRADOR') return 'Borrador';
   return ESTADOS_COMUNICACION.find((e) => e.api === c)?.etiqueta ?? String(valor || '—');
 }
 
+/** Memorando lleva fechas y días de suspensión (antes era tipo SUSPENSION aparte). */
+export function esMemorandoConSuspension(tipo) {
+  return canonicalTipoApi(tipo) === 'MEMORANDO';
+}
+
 export function esSuspensionDisciplinaria(tipo) {
-  return canonicalTipoApi(tipo) === 'SUSPENSION';
+  return esMemorandoConSuspension(tipo);
 }
 
 export function listaTiposComunicacion() {
@@ -82,7 +95,7 @@ export function radicadoDesdeCod(cod) {
 export function claseBadgeTipo(tipoApi) {
   const c = canonicalTipoApi(tipoApi);
   if (c === 'MEMORANDO') return 'disc-badge--memo';
-  if (c === 'SUSPENSION') return 'disc-badge--susp';
+  if (c === 'LLAMADO_VERBAL') return 'disc-badge--llamado';
   if (c === 'FELICITACION') return 'disc-badge--feli';
   return 'disc-badge--neutral';
 }
@@ -92,4 +105,11 @@ export function claseBadgeEstado(estadoApi) {
   if (c === 'NOTIFICADO') return 'disc-badge-est--ok';
   if (c === 'EMITIDO' || c === 'BORRADOR') return 'disc-badge-est--emit';
   return 'disc-badge-est--emit';
+}
+
+export function claseTemaModalFormulario(tipoApi) {
+  const c = canonicalTipoApi(tipoApi);
+  if (c === 'FELICITACION') return 'modal-contenido--disc-feli';
+  if (c === 'MEMORANDO') return 'modal-contenido--disc-memo';
+  return 'modal-contenido--disc-llamado';
 }

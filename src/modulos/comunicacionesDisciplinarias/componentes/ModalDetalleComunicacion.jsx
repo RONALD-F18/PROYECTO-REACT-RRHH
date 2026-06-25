@@ -19,7 +19,7 @@ import {
 } from '../disciplinariasConstants';
 
 function formatearFechaMostrar(iso) {
-  if (!iso) return 'ÔÇö';
+  if (!iso) return '—';
   const t = String(iso).trim().slice(0, 10);
   const m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (m) return `${m[3]}/${m[2]}/${m[1]}`;
@@ -29,27 +29,27 @@ function formatearFechaMostrar(iso) {
 function nombreEmpleadoDesdeRegistro(r) {
   const emp = r?.empleado && typeof r.empleado === 'object' ? r.empleado : null;
   if (emp) return nombreCompletoEmpleado(emp);
-  return r?._nombreEmpleado ?? 'ÔÇö';
+  return r?._nombreEmpleado ?? '—';
 }
 
 function cargoEmpleadoDesdeRegistro(r) {
   const emp = r?.empleado && typeof r.empleado === 'object' ? r.empleado : null;
   if (emp) {
-    return emp.nomb_cargo ?? emp.nombre_cargo ?? emp.cargo?.nombre_cargo ?? emp.cargo?.nomb_cargo ?? 'ÔÇö';
+    return emp.nomb_cargo ?? emp.nombre_cargo ?? emp.cargo?.nombre_cargo ?? emp.cargo?.nomb_cargo ?? '—';
   }
-  return r?._cargoEmpleado ?? 'ÔÇö';
+  return r?._cargoEmpleado ?? '—';
 }
 
 function docEmpleadoDesdeRegistro(r) {
   const emp = r?.empleado && typeof r.empleado === 'object' ? r.empleado : null;
   if (emp?.doc_iden) return String(emp.doc_iden);
-  return r?._docEmpleado ?? 'ÔÇö';
+  return r?._docEmpleado ?? '—';
 }
 
 function nombreEmisorDesdeRegistro(r) {
   const u = r?.usuario && typeof r.usuario === 'object' ? r.usuario : null;
-  if (u) return String(u.nombre_usuario ?? u.nombre ?? 'ÔÇö');
-  return r?._nombreEmisor ?? 'ÔÇö';
+  if (u) return String(u.nombre_usuario ?? u.nombre ?? '—');
+  return r?._nombreEmisor ?? '—';
 }
 
 function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizado, onEditar, onEliminado }) {
@@ -134,11 +134,11 @@ function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizad
     <Modal
       mostrar={mostrar}
       cerrar={cerrar}
-      titulo={r ? `${radicado} ÔÇö ${tipoTxt}` : 'Detalle'}
+      titulo={r ? `${radicado} — ${tipoTxt}` : 'Detalle'}
       classNameContenedor="modal-contenido--disciplinario-detalle"
     >
       <div className="disc-detalle-body">
-        {cargando && !r ? <p className="contrato-pagina-cargando">CargandoÔÇª</p> : null}
+        {cargando && !r ? <p className="contrato-pagina-cargando">Cargando…</p> : null}
         {errorCarga && !r ? <p className="login-alerta-mensaje">{errorCarga}</p> : null}
         {r ? (
           <>
@@ -167,16 +167,16 @@ function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizad
             <div className="disc-paper">
               <div className="disc-paper-banner">
                 <strong>Talent Sphere S.A.S</strong>
-                <span>Gesti├│n de recursos humanos ┬À NIT: 900.123.456-7</span>
+                <span>Gestión de recursos humanos · NIT: 900.123.456-7</span>
               </div>
               <h2 className="disc-paper-tipo">{String(r.tipo_comunicacion || tipoTxt).toUpperCase()}</h2>
               <p className="disc-paper-radicado">Radicado {radicado}</p>
               <div className="disc-paper-meta">
                 <div>
-                  <span className="disc-paper-meta-label">Fecha de emisi├│n</span>
+                  <span className="disc-paper-meta-label">Fecha de emisión</span>
                   <strong>{formatearFechaMostrar(r.fecha_emision)}</strong>
                 </div>
-                <div className="disc-paper-meta-lugar">Bogot├í D.C., Colombia</div>
+                <div className="disc-paper-meta-lugar">Bogotá D.C., Colombia</div>
               </div>
 
               <div className="disc-paper-bloque">
@@ -184,28 +184,28 @@ function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizad
                 <p className="disc-paper-dirigido">
                   <strong>{nombreEmpleadoDesdeRegistro(r)}</strong>
                   <span>
-                    {cargoEmpleadoDesdeRegistro(r)} ÔÇö C.C. {docEmpleadoDesdeRegistro(r)}
+                    {cargoEmpleadoDesdeRegistro(r)} — C.C. {docEmpleadoDesdeRegistro(r)}
                   </span>
                 </p>
               </div>
 
               <div className="disc-paper-bloque disc-paper-bloque--motivo">
                 <h4>Motivo</h4>
-                <p>{r.motivo_comunicacion ?? 'ÔÇö'}</p>
+                <p>{r.motivo_comunicacion ?? '—'}</p>
               </div>
 
               <div className="disc-paper-bloque">
-                <h4>Descripci├│n del caso</h4>
-                <p className="disc-paper-desc">{r.descripcion?.trim() ? r.descripcion : 'ÔÇö'}</p>
+                <h4>Descripción del caso</h4>
+                <p className="disc-paper-desc">{r.descripcion?.trim() ? r.descripcion : '—'}</p>
               </div>
 
               {r.dias_suspension != null && Number(r.dias_suspension) > 0 ? (
                 <div className="disc-paper-susp">
-                  <strong>{r.dias_suspension}</strong> d├¡as de suspensi├│n
+                  <strong>{r.dias_suspension}</strong> días de suspensión
                   {r.fecha_inicio_suspension ? (
                     <span>
                       {' '}
-                      ({formatearFechaMostrar(r.fecha_inicio_suspension)} ÔÇö{' '}
+                      ({formatearFechaMostrar(r.fecha_inicio_suspension)} —{' '}
                       {formatearFechaMostrar(r.fecha_fin_suspension)})
                     </span>
                   ) : null}
@@ -215,8 +215,8 @@ function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizad
               <div className="disc-paper-nota">
                 <strong>Nota importante</strong>
                 <p>
-                  El trabajador tiene derecho a presentar descargos o defensas dentro de los cinco (5) d├¡as h├íbiles
-                  siguientes a la notificaci├│n, conforme al C├│digo Sustantivo del Trabajo.
+                  El trabajador tiene derecho a presentar descargos o defensas dentro de los cinco (5) días hábiles
+                  siguientes a la notificación, conforme al Código Sustantivo del Trabajo.
                 </p>
               </div>
 
@@ -224,12 +224,12 @@ function ModalDetalleComunicacion({ mostrar, cerrar, vistaFallback, onActualizad
                 <div>
                   <div className="disc-paper-firma-linea" />
                   <p className="disc-paper-firma-nombre">{nombreEmisorDesdeRegistro(r)}</p>
-                  <span className="disc-paper-firma-rol">Quien emite ┬À Firma y sello</span>
+                  <span className="disc-paper-firma-rol">Quien emite · Firma y sello</span>
                 </div>
                 <div>
                   <div className="disc-paper-firma-linea" />
                   <p className="disc-paper-firma-nombre">{nombreEmpleadoDesdeRegistro(r)}</p>
-                  <span className="disc-paper-firma-rol">Empleado ┬À Firma de recibido</span>
+                  <span className="disc-paper-firma-rol">Empleado · Firma de recibido</span>
                 </div>
               </div>
 

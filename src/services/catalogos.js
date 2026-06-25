@@ -46,7 +46,7 @@ export const CATALOGOS_FALLBACK = {
   horarios_trabajo: ['Tiempo completo', 'Medio tiempo', 'Por turnos'],
   estados_incapacidad: ['Activa', 'Finalizada', 'Cancelada'],
   estados_comunicacion: ['EMITIDO', 'NOTIFICADO'],
-  tipos_comunicacion: ['MEMORANDO', 'SUSPENSION', 'FELICITACION'],
+  tipos_comunicacion: ['LLAMADO_VERBAL', 'MEMORANDO', 'FELICITACION'],
   motivos_comunicacion: ['Incumplimiento', 'Desacato', 'Reincidencia', 'Conducta', 'Retraso'],
   estados_afiliacion: ['Activa', 'Inactiva', 'Suspendida'],
   tipos_regimen: ['Contributivo'],

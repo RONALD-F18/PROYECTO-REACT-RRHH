@@ -230,18 +230,18 @@ function ComunicacionesDisciplinarias() {
   const kpis = useMemo(() => {
     const base = filasFiltradas;
     let memorandos = 0;
-    let suspensiones = 0;
+    let llamadosVerbales = 0;
     let felicitaciones = 0;
     for (const r of base) {
       const t = r._tipoCanon;
       if (t === 'MEMORANDO') memorandos += 1;
-      if (t === 'SUSPENSION') suspensiones += 1;
+      if (t === 'LLAMADO_VERBAL') llamadosVerbales += 1;
       if (t === 'FELICITACION') felicitaciones += 1;
     }
     return {
       total: base.length,
       memorandos,
-      suspensiones,
+      llamadosVerbales,
       felicitaciones,
     };
   }, [filasFiltradas]);
@@ -262,7 +262,7 @@ function ComunicacionesDisciplinarias() {
           nombre: row._nombreEmpleado,
           cargo: row._cargoEmpleado,
           iniciales: row._iniciales,
-          porTipo: { MEMORANDO: 0, SUSPENSION: 0, FELICITACION: 0 },
+          porTipo: { MEMORANDO: 0, LLAMADO_VERBAL: 0, FELICITACION: 0 },
           ultima: '',
           total: 0,
         });
@@ -386,7 +386,7 @@ function ComunicacionesDisciplinarias() {
       <div className="disc-modulo">
         <EncabezadoModulo
           titulo="Comunicaciones Disciplinarias"
-          subtitulo="Memorandos, suspensiones y reconocimientos"
+          subtitulo="Llamados verbales, memorandos y felicitaciones"
           textoBoton="Nuevo documento"
           alHacerClic={abrirNuevo}
         />
@@ -411,9 +411,9 @@ function ComunicacionesDisciplinarias() {
             <span className="disc-kpi-valor">{kpis.memorandos}</span>
             <span className="disc-kpi-etiq">Memorandos</span>
           </div>
-          <div className="disc-kpi disc-kpi--susp">
-            <span className="disc-kpi-valor">{kpis.suspensiones}</span>
-            <span className="disc-kpi-etiq">Suspensiones</span>
+          <div className="disc-kpi disc-kpi--llamado">
+            <span className="disc-kpi-valor">{kpis.llamadosVerbales}</span>
+            <span className="disc-kpi-etiq">Llamados verbales</span>
           </div>
           <div className="disc-kpi disc-kpi--feli">
             <span className="disc-kpi-valor">{kpis.felicitaciones}</span>
@@ -504,7 +504,7 @@ function ComunicacionesDisciplinarias() {
                       </span>
                     </div>
                     <p className="disc-card-motivo">{row.motivo_comunicacion || '—'}</p>
-                    {row._tipoCanon === 'SUSPENSION' && row.dias_suspension != null && Number(row.dias_suspension) > 0 ? (
+                    {row._tipoCanon === 'MEMORANDO' && row.dias_suspension != null && Number(row.dias_suspension) > 0 ? (
                       <div className="disc-card-susp-dias">{row.dias_suspension} días de suspensión</div>
                     ) : null}
                     <footer className="disc-card-doc-foot">
@@ -574,11 +574,11 @@ function ComunicacionesDisciplinarias() {
                           : `${g.porTipo.MEMORANDO} Memorandos`}
                       </span>
                     ) : null}
-                    {g.porTipo.SUSPENSION > 0 ? (
-                      <span className="disc-emp-pill disc-emp-pill--susp">
-                        {g.porTipo.SUSPENSION === 1
-                          ? '1 Suspensión'
-                          : `${g.porTipo.SUSPENSION} Suspensiones`}
+                    {g.porTipo.LLAMADO_VERBAL > 0 ? (
+                      <span className="disc-emp-pill disc-emp-pill--llamado">
+                        {g.porTipo.LLAMADO_VERBAL === 1
+                          ? '1 Llamado verbal'
+                          : `${g.porTipo.LLAMADO_VERBAL} Llamados verbales`}
                       </span>
                     ) : null}
                     {g.porTipo.FELICITACION > 0 ? (
@@ -618,6 +618,7 @@ function ComunicacionesDisciplinarias() {
         }}
         registroEditar={registroEditar}
         empleados={empleados}
+        usuarios={usuarios}
         alExito={alExitoFormulario}
       />
 

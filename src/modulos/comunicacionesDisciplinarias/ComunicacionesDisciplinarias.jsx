@@ -20,7 +20,6 @@ import { esAdminSesionLocal } from '../../services/autenticacion';
 import { mensajeErrorApi } from '../../utils/mensajeErrorApi';
 import { ejecutarCargaEnFases } from '../../utils/cargaEnFases';
 import { alertaErrorApi, confirmarEliminacion } from '../../utils/alertasSwal';
-import { obtenerCatalogos } from '../../services/catalogos';
 import {
   TIPOS_COMUNICACION,
   ESTADOS_COMUNICACION,
@@ -31,8 +30,6 @@ import {
   radicadoDesdeCod,
   claseBadgeTipo,
   claseBadgeEstado,
-  listaEstadosComunicacion,
-  listaTiposComunicacion,
 } from './disciplinariasConstants';
 
 function IcoEditarDoc() {
@@ -144,7 +141,6 @@ function ComunicacionesDisciplinarias() {
   const [lista, setLista] = useState([]);
   const [empleados, setEmpleados] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
-  const [catalogos, setCatalogos] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [mensajeLista, setMensajeLista] = useState('');
   const [mensajeExito, setMensajeExito] = useState('');
@@ -197,11 +193,11 @@ function ComunicacionesDisciplinarias() {
         _docEmpleado: emp?.doc_iden != null ? String(emp.doc_iden) : '—',
         _iniciales: inicialesNombre(nombreEmp),
         _nombreEmisor: nombreUsu,
-        _tipoCanon: canonicalTipoApi(row.tipo_comunicacion, catalogos),
-        _estadoCanon: canonicalEstadoApi(row.estado_comunicacion, catalogos),
+        _tipoCanon: canonicalTipoApi(row.tipo_comunicacion),
+        _estadoCanon: canonicalEstadoApi(row.estado_comunicacion),
       };
     });
-  }, [lista, mapaEmpleados, mapaUsuarios, catalogos]);
+  }, [lista, mapaEmpleados, mapaUsuarios]);
 
   const filasFiltradas = useMemo(() => {
     const q = (criteriosFiltro.busqueda || '').trim().toLowerCase();
@@ -233,15 +229,26 @@ function ComunicacionesDisciplinarias() {
 
   const kpis = useMemo(() => {
     const base = filasFiltradas;
+    let memorandos = 0;
+    let suspensiones = 0;
+    let felicitaciones = 0;
+    for (const r of base) {
+      const t = r._tipoCanon;
+      if (t === 'MEMORANDO') memorandos += 1;
+      if (t === 'SUSPENSION') suspensiones += 1;
+      if (t === 'FELICITACION') felicitaciones += 1;
+    }
     return {
       total: base.length,
-      memorandos: base.length,
+      memorandos,
+      suspensiones,
+      felicitaciones,
     };
   }, [filasFiltradas]);
 
   const filtrosTipoDisponibles = useMemo(
-    () => listaTiposComunicacion(catalogos),
-    [catalogos],
+    () => TIPOS_COMUNICACION.map((t) => ({ valor: t.api, texto: t.etiqueta })),
+    [],
   );
 
   const gruposPorEmpleado = useMemo(() => {
@@ -255,7 +262,7 @@ function ComunicacionesDisciplinarias() {
           nombre: row._nombreEmpleado,
           cargo: row._cargoEmpleado,
           iniciales: row._iniciales,
-          porTipo: { MEMORANDO: 0, LLAMADO_VERBAL: 0, SUSPENSION: 0, FELICITACION: 0 },
+          porTipo: { MEMORANDO: 0, SUSPENSION: 0, FELICITACION: 0 },
           ultima: '',
           total: 0,
         });
@@ -291,11 +298,6 @@ function ComunicacionesDisciplinarias() {
     const secundarios = esAdmin
       ? [(op) => getEmpleadosCatalogo(op), (op) => getUsuarios(op)]
       : [(op) => getEmpleadosCatalogo(op)];
-    void obtenerCatalogos().then((c) => {
-      if (activo) setCatalogos(c);
-    }).catch(() => {
-      if (activo) setCatalogos(null);
-    });
     void ejecutarCargaEnFases({
       principal: (op) => getComunicacionesDisciplinarias(op),
       secundarios,
@@ -384,7 +386,7 @@ function ComunicacionesDisciplinarias() {
       <div className="disc-modulo">
         <EncabezadoModulo
           titulo="Comunicaciones Disciplinarias"
-          subtitulo="Registro y seguimiento de memorandos disciplinarios"
+          subtitulo="Memorandos, suspensiones y reconocimientos"
           textoBoton="Nuevo documento"
           alHacerClic={abrirNuevo}
         />
@@ -408,6 +410,14 @@ function ComunicacionesDisciplinarias() {
           <div className="disc-kpi disc-kpi--memo">
             <span className="disc-kpi-valor">{kpis.memorandos}</span>
             <span className="disc-kpi-etiq">Memorandos</span>
+          </div>
+          <div className="disc-kpi disc-kpi--susp">
+            <span className="disc-kpi-valor">{kpis.suspensiones}</span>
+            <span className="disc-kpi-etiq">Suspensiones</span>
+          </div>
+          <div className="disc-kpi disc-kpi--feli">
+            <span className="disc-kpi-valor">{kpis.felicitaciones}</span>
+            <span className="disc-kpi-etiq">Felicitaciones</span>
           </div>
         </div>
 
@@ -443,21 +453,17 @@ function ComunicacionesDisciplinarias() {
                 : 'Buscar por empleado o radicado…'
             }
             filtrosSelect={[
-              ...(filtrosTipoDisponibles.length > 1
-                ? [
-                    {
-                      nombre: 'tipo',
-                      etiqueta: 'Tipo',
-                      placeholder: 'Todos los tipos',
-                      opciones: filtrosTipoDisponibles.map((t) => ({ valor: t, texto: t })),
-                    },
-                  ]
-                : []),
+              {
+                nombre: 'tipo',
+                etiqueta: 'Tipo',
+                placeholder: 'Todos los tipos',
+                opciones: filtrosTipoDisponibles,
+              },
               {
                 nombre: 'estado',
                 etiqueta: 'Estado',
                 placeholder: 'Todos los estados',
-                opciones: listaEstadosComunicacion(catalogos).map((s) => ({ valor: s, texto: s })),
+                opciones: ESTADOS_COMUNICACION.map((s) => ({ valor: s.api, texto: s.etiqueta })),
               },
             ]}
             onFiltrar={(f) => {
@@ -568,13 +574,6 @@ function ComunicacionesDisciplinarias() {
                           : `${g.porTipo.MEMORANDO} Memorandos`}
                       </span>
                     ) : null}
-                    {g.porTipo.LLAMADO_VERBAL > 0 ? (
-                      <span className="disc-emp-pill disc-emp-pill--llamado">
-                        {g.porTipo.LLAMADO_VERBAL === 1
-                          ? '1 Llamado verbal'
-                          : `${g.porTipo.LLAMADO_VERBAL} Llamados verbales`}
-                      </span>
-                    ) : null}
                     {g.porTipo.SUSPENSION > 0 ? (
                       <span className="disc-emp-pill disc-emp-pill--susp">
                         {g.porTipo.SUSPENSION === 1
@@ -619,7 +618,6 @@ function ComunicacionesDisciplinarias() {
         }}
         registroEditar={registroEditar}
         empleados={empleados}
-        catalogos={catalogos}
         alExito={alExitoFormulario}
       />
 

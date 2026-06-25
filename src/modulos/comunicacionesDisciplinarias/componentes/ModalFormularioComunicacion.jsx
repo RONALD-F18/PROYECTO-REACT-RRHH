@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import Modal, { BotonCancelarModal } from '../../../componentes/comunes/Modal';
 import IconoBuho from '../../../componentes/comunes/IconoBuho';
 import { mensajeErrorApi } from '../../../utils/mensajeErrorApi';
@@ -21,14 +21,9 @@ import {
   ESTADO_INICIAL_AL_CREAR,
   MAX_MOTIVO_CHARS,
   MAX_DESCRIPCION_CHARS,
-  listaTiposComunicacion,
-  listaMotivosComunicacion,
-  esSuspensionDisciplinaria,
-  normalizarTipoComunicacion,
-  normalizarEstadoComunicacion,
 } from '../disciplinariasConstants';
 
-/** Iconos tipo línea / mockup (SVG, no emoji). */
+/** Iconos tipo l├¡nea / mockup (SVG, no emoji). */
 function IconoTipoDoc({ icono, activo }) {
   const stroke = (w) => ({ fill: 'none', strokeWidth: w, strokeLinecap: 'round', strokeLinejoin: 'round' });
   if (icono === 'memo') {
@@ -89,7 +84,7 @@ function IconoTipoDoc({ icono, activo }) {
   return null;
 }
 
-/** Días calendario inclusivos entre dos fechas YYYY-MM-DD. */
+/** D├¡as calendario inclusivos entre dos fechas YYYY-MM-DD. */
 function diasSuspensionEntreFechas(isoIni, isoFin) {
   if (!isoIni || !isoFin) return 0;
   const p = (s) => {
@@ -107,13 +102,12 @@ function ModalFormularioComunicacion({
   cerrar,
   registroEditar,
   empleados = [],
-  catalogos = null,
   alExito,
 }) {
   const esEdicion = registroEditar != null && codigoDisciplinarioDesde(registroEditar) != null;
   const codEdicion = esEdicion ? codigoDisciplinarioDesde(registroEditar) : null;
 
-  const [tipoComunicacion, setTipoComunicacion] = useState('Memorando');
+  const [tipoComunicacion, setTipoComunicacion] = useState('MEMORANDO');
   const [codEmpleado, setCodEmpleado] = useState('');
   const [docEmpleadoInput, setDocEmpleadoInput] = useState('');
   const [fechaEmision, setFechaEmision] = useState('');
@@ -129,7 +123,7 @@ function ModalFormularioComunicacion({
     setErrorGeneral('');
     if (esEdicion) {
       const r = normalizarRegistroComunicacion(registroEditar) ?? registroEditar;
-      setTipoComunicacion(normalizarTipoComunicacion(r.tipo_comunicacion));
+      setTipoComunicacion(canonicalTipoApi(r.tipo_comunicacion));
       setCodEmpleado(r.cod_empleado != null ? String(r.cod_empleado) : '');
       setFechaEmision(r.fecha_emision ? String(r.fecha_emision).slice(0, 10) : '');
       setMotivo(r.motivo_comunicacion != null ? String(r.motivo_comunicacion) : '');
@@ -138,7 +132,7 @@ function ModalFormularioComunicacion({
       setFechaFinSusp(r.fecha_fin_suspension ? String(r.fecha_fin_suspension).slice(0, 10) : '');
     } else {
       const hoy = new Date().toISOString().slice(0, 10);
-      setTipoComunicacion('Memorando');
+      setTipoComunicacion('MEMORANDO');
       setCodEmpleado('');
       setDocEmpleadoInput('');
       setFechaEmision(hoy);
@@ -155,10 +149,8 @@ function ModalFormularioComunicacion({
     if (emp?.doc_iden != null) setDocEmpleadoInput(String(emp.doc_iden).trim());
   }, [mostrar, esEdicion, codEmpleado, empleados]);
 
-  const tiposLista = useMemo(() => listaTiposComunicacion(catalogos), [catalogos]);
-  const motivosLista = useMemo(() => listaMotivosComunicacion(catalogos), [catalogos]);
-
-  const esSuspension = esSuspensionDisciplinaria(tipoComunicacion);
+  const esSuspension = canonicalTipoApi(tipoComunicacion) === 'SUSPENSION';
+  const esFelicitacion = canonicalTipoApi(tipoComunicacion) === 'FELICITACION';
 
   const diasSuspensionCalc = useMemo(
     () => diasSuspensionEntreFechas(fechaIniSusp, fechaFinSusp),
@@ -173,9 +165,10 @@ function ModalFormularioComunicacion({
   const nombreEmpleadoMostrado = empleadoResuelto ? nombreCompletoEmpleado(empleadoResuelto) : '';
 
   const construirPayload = () => {
-    const tipo = normalizarTipoComunicacion(tipoComunicacion);
+    const tipo = canonicalTipoApi(tipoComunicacion);
     const reg = esEdicion ? (normalizarRegistroComunicacion(registroEditar) ?? registroEditar) : null;
-    let estado = esEdicion ? normalizarEstadoComunicacion(reg?.estado_comunicacion) : ESTADO_INICIAL_AL_CREAR;
+    let estado = esEdicion ? canonicalEstadoApi(reg?.estado_comunicacion) : ESTADO_INICIAL_AL_CREAR;
+    if (esEdicion && estado === 'BORRADOR') estado = ESTADO_INICIAL_AL_CREAR;
     const motivoCorto = motivo.trim().slice(0, MAX_MOTIVO_CHARS);
     const desc = descripcion.trim().slice(0, MAX_DESCRIPCION_CHARS);
     const codEmp = Number(codEmpleado);
@@ -194,11 +187,11 @@ function ModalFormularioComunicacion({
   };
 
   const validar = () => {
-    if (!codEmpleado) return 'Indique un número de documento que corresponda a un empleado registrado.';
-    if (!fechaEmision) return 'Indique la fecha de emisión.';
+    if (!codEmpleado) return 'Indique un n├║mero de documento que corresponda a un empleado registrado.';
+    if (!fechaEmision) return 'Indique la fecha de emisi├│n.';
     if (!motivo.trim()) return 'El motivo es obligatorio.';
     if (esSuspension) {
-      if (!fechaIniSusp || !fechaFinSusp) return 'Indique fecha de inicio y fin de la suspensión.';
+      if (!fechaIniSusp || !fechaFinSusp) return 'Indique fecha de inicio y fin de la suspensi├│n.';
       if (diasSuspensionCalc <= 0) return 'La fecha de fin debe ser igual o posterior a la de inicio.';
     }
     return null;
@@ -243,34 +236,36 @@ function ModalFormularioComunicacion({
         <span>Comunicaciones Disciplinarias · Talent Sphere</span>
       </div>
       <form onSubmit={manejarSubmit} className="disc-form disc-form--layout">
-        {tiposLista.length > 1 ? (
+        {errorGeneral ? (
+          <div className="login-alerta login-alerta--error disc-form-alerta" role="alert">
+            <p className="login-alerta-mensaje">{errorGeneral}</p>
+          </div>
+        ) : null}
+
         <section className="disc-seccion">
           <div className="disc-seccion-num">1</div>
           <div className="disc-seccion-body">
             <h3 className="disc-seccion-titulo">Tipo de documento</h3>
             <div className="disc-tipo-grid">
-              {tiposLista.map((nombreTipo) => {
-                const activo = tipoComunicacion === nombreTipo;
+              {TIPOS_COMUNICACION.map((t) => {
+                const activo = tipoComunicacion === t.api;
                 return (
                   <button
-                    key={nombreTipo}
+                    key={t.api}
                     type="button"
-                    className={`disc-tipo-card ${activo ? 'disc-tipo-card--activo disc-tipo-card--memo' : ''}`}
-                    onClick={() => setTipoComunicacion(nombreTipo)}
+                    className={`disc-tipo-card ${activo ? `disc-tipo-card--activo disc-tipo-card--${t.icono}` : ''}`}
+                    onClick={() => setTipoComunicacion(t.api)}
                   >
                     <span className="disc-tipo-card-icon-wrap">
-                      <IconoTipoDoc icono="memo" activo={activo} />
+                      <IconoTipoDoc icono={t.icono} activo={activo} />
                     </span>
-                    <span className="disc-tipo-card-text">{nombreTipo}</span>
+                    <span className="disc-tipo-card-text">{t.etiqueta}</span>
                   </button>
                 );
               })}
             </div>
           </div>
         </section>
-        ) : (
-        <input type="hidden" name="tipo_comunicacion" value={tiposLista[0] ?? 'Memorando'} />
-        )}
 
         <section className="disc-seccion">
           <div className="disc-seccion-num">2</div>
@@ -291,7 +286,7 @@ function ModalFormularioComunicacion({
                   }}
                   className="disc-input"
                   disabled={esEdicion}
-                  placeholder="Número de documento"
+                  placeholder="N├║mero de documento"
                   autoComplete="off"
                 />
               </label>
@@ -307,7 +302,7 @@ function ModalFormularioComunicacion({
                 </p>
               ) : null}
               <label className="disc-field disc-field--full disc-field-fecha-emision">
-                <span className="disc-field-label">Fecha emisión</span>
+                <span className="disc-field-label">Fecha emisi├│n</span>
                 <input
                   type="date"
                   value={fechaEmision}
@@ -322,30 +317,45 @@ function ModalFormularioComunicacion({
         <section className="disc-seccion">
           <div className="disc-seccion-num">3</div>
           <div className="disc-seccion-body">
-            <h3 className="disc-seccion-titulo">Contenido del documento</h3>
+            <h3 className="disc-seccion-titulo">
+              {esFelicitacion ? 'Contenido del reconocimiento' : 'Contenido del documento'}
+            </h3>
+            {esFelicitacion ? (
+              <div className="disc-banner disc-banner--feli">
+                <p>Completa el motivo del reconocimiento y una descripci├│n del logro.</p>
+              </div>
+            ) : null}
             <label className="disc-field disc-field--full">
-              <span className="disc-field-label">Motivo *</span>
-              <select
+              <span className="disc-field-label">
+                {esFelicitacion ? 'Motivo del reconocimiento *' : 'Motivo *'}{' '}
+                <small className="disc-hint">(m├íx. {MAX_MOTIVO_CHARS} caracteres en API)</small>
+              </span>
+              <input
+                type="text"
                 value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
+                onChange={(e) => setMotivo(e.target.value.slice(0, MAX_MOTIVO_CHARS))}
+                maxLength={MAX_MOTIVO_CHARS}
+                placeholder={esFelicitacion ? 'Ej: Excelente desempe├▒o' : 'Raz├│n resumidaÔÇª'}
                 className="disc-input"
-              >
-                <option value="">Seleccione…</option>
-                {motivosLista.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
+              />
+              <span className="disc-counter">
+                {motivo.length}/{MAX_MOTIVO_CHARS}
+              </span>
             </label>
             <label className="disc-field disc-field--full">
-              <span className="disc-field-label">Descripción detallada</span>
+              <span className="disc-field-label">
+                {esFelicitacion ? 'Descripci├│n del logro' : 'Descripci├│n detallada'}
+              </span>
               <textarea
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value.slice(0, MAX_DESCRIPCION_CHARS))}
                 rows={5}
                 maxLength={MAX_DESCRIPCION_CHARS}
-                placeholder="Describe el caso con detalle…"
+                placeholder={
+                  esFelicitacion
+                    ? 'Detalla el logro o comportamiento a reconocerÔÇª'
+                    : 'Describe el caso con detalleÔÇª'
+                }
                 className="disc-textarea"
               />
               <span className="disc-counter disc-counter--textarea">{descripcion.length}/{MAX_DESCRIPCION_CHARS}</span>
@@ -354,7 +364,7 @@ function ModalFormularioComunicacion({
               <div className="disc-suspension-box">
                 <div className="disc-grid-2">
                   <label className="disc-field">
-                    <span className="disc-field-label">Inicio suspensión *</span>
+                    <span className="disc-field-label">Inicio suspensi├│n *</span>
                     <input
                       type="date"
                       value={fechaIniSusp}
@@ -363,7 +373,7 @@ function ModalFormularioComunicacion({
                     />
                   </label>
                   <label className="disc-field">
-                    <span className="disc-field-label">Fin suspensión *</span>
+                    <span className="disc-field-label">Fin suspensi├│n *</span>
                     <input
                       type="date"
                       value={fechaFinSusp}
@@ -373,13 +383,13 @@ function ModalFormularioComunicacion({
                   </label>
                 </div>
                 <div className="disc-field disc-field--full">
-                  <span className="disc-field-label">Días de suspensión</span>
+                  <span className="disc-field-label">D├¡as de suspensi├│n</span>
                   <p className="disc-field-readonly disc-dias-susp-calc">
                     {fechaIniSusp && fechaFinSusp && diasSuspensionCalc > 0
-                      ? `${diasSuspensionCalc} día${diasSuspensionCalc !== 1 ? 's' : ''} sin goce de salario (calculado con las fechas)`
+                      ? `${diasSuspensionCalc} d├¡a${diasSuspensionCalc !== 1 ? 's' : ''} sin goce de salario (calculado con las fechas)`
                       : fechaIniSusp && fechaFinSusp
                         ? 'Ajuste las fechas: la fin debe ser igual o posterior al inicio.'
-                        : 'Complete inicio y fin para calcular los días automáticamente.'}
+                        : 'Complete inicio y fin para calcular los d├¡as autom├íticamente.'}
                   </p>
                 </div>
               </div>
@@ -390,7 +400,7 @@ function ModalFormularioComunicacion({
         <div className="modal-acciones disc-form-acciones">
           <BotonCancelarModal className="btn-cancelar" disabled={enviando} />
           <button type="submit" className="btn-guardar disc-btn-crear" disabled={enviando}>
-            {enviando ? 'Guardando…' : esEdicion ? 'Actualizar documento' : 'Crear documento'}
+            {enviando ? 'GuardandoÔÇª' : esEdicion ? 'Actualizar documento' : 'Crear documento'}
           </button>
         </div>
       </form>
